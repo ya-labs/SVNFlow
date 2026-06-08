@@ -7,13 +7,15 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 ## Leitura inicial
 
 - [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
+- [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
 
 ## Estrutura atual
 
 ```text
 docs/
 `-- planejamento-inicial/
-    `-- mapa-do-problema.md
+    |-- mapa-do-problema.md
+    `-- matriz-de-alternativas.md
 ```
 
 ## Estrutura prevista
