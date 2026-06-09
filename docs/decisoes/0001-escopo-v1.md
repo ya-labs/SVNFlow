@@ -27,7 +27,8 @@ Na prática, isso significa:
 - exigir confirmação antes de aplicar alterações no checkout SVN;
 - permitir exportar uma alteração para um arquivo `.svnflow`;
 - permitir importar uma alteração recebida por arquivo `.svnflow`;
-- tratar a exportação como uma mini PR local, com título, contexto, mudanças, observações e prévia em Markdown;
+- tratar a exportação como uma mini PR local, com título, contexto, mudanças e observações em campos estruturados;
+- gerar um `pr.md` padronizado dentro do pacote `.svnflow`;
 - detectar automaticamente a branch Git atual durante a exportação;
 - mostrar autor, branch, arquivos alterados e resumo antes da aplicação;
 - manter histórico local simples de pacotes exportados e importados;
@@ -104,7 +105,7 @@ Essa decisão reduz o escopo e favorece uma entrega rápida.
 
 O produto continua local, visual e seguro. A colaboração passa a existir sem depender de infraestrutura extra, porque a alteração trafega em um arquivo controlado pelo próprio SVNFlow.
 
-O histórico local da aplicação deve ajudar a pessoa usuária a consultar pacotes gerados, importados e aplicados, mas não deve ser tratado como fonte oficial de auditoria na v1.
+O histórico local da aplicação deve ajudar a pessoa usuária a consultar pacotes gerados, importados e aplicados. Ele deve listar pacotes e renderizar o `pr.md` interno quando a pessoa abrir um registro, mas não deve ser tratado como fonte oficial de auditoria na v1.
 
 O risco principal é o pacote `.svnflow` precisar lidar bem com conflitos, arquivos removidos, renomeações, binários, encoding e diferenças de fim de linha. Esses pontos devem ser validados no protótipo antes de tratar o formato como estável.
 

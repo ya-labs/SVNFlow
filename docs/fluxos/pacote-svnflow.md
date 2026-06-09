@@ -6,7 +6,7 @@ O pacote `.svnflow` é o formato inicial de colaboração da v1.
 
 Ele permite que uma pessoa exporte uma alteração preparada no Git e que outra pessoa importe, revise e aplique essa alteração em um checkout SVN de desenvolvimento.
 
-O pacote não substitui Git, SVN ou Pull Request. Ele funciona como uma mini PR transportável: reúne contexto, mudanças, observações, arquivos afetados e conteúdo técnico necessário para aplicar a alteração.
+O pacote não substitui Git, SVN ou Pull Request. Ele funciona como uma mini PR transportável: reúne contexto, mudanças, observações, arquivos afetados, um `pr.md` padronizado e conteúdo técnico necessário para aplicar a alteração.
 
 ## Fluxo
 
@@ -37,20 +37,17 @@ Internamente, o pacote deve conter:
 - patch da alteração;
 - metadados da alteração;
 - lista de arquivos afetados;
-- título legível para revisão;
-- contexto informado em Markdown;
-- descrição do que mudou em Markdown;
-- observações opcionais em Markdown;
+- `pr.md` gerado a partir dos campos estruturados da exportação;
 - informações mínimas para validação antes da aplicação.
 
 Um pacote pode ser representado conceitualmente assim:
 
 ```text
 5647-bug001.svnflow
-|-- patch
-|-- metadados
-|-- arquivos
-`-- descricao
+|-- pr.md
+|-- manifest.json
+|-- patch.diff
+`-- files/
 ```
 
 O formato físico ainda deve ser validado no protótipo. Pode ser um arquivo compactado com manifesto interno, desde que continue simples de gerar, importar e validar.
@@ -65,9 +62,7 @@ A v1 deve considerar estes metadados:
 - data de exportação;
 - branch Git de origem;
 - lista de arquivos criados, modificados e removidos;
-- contexto informado pela pessoa autora;
-- descrição do que mudou;
-- observações opcionais;
+- dados estruturados usados para gerar o `pr.md`;
 - versão do formato `.svnflow`;
 - checksum ou validação equivalente do conteúdo do pacote.
 
@@ -106,6 +101,8 @@ Observações:
 
 A pessoa usuária deve conseguir revisar o conteúdo antes de aceitar.
 
+Essa prévia deve ser gerada a partir do `pr.md` interno do pacote, renderizado pelo app para facilitar leitura.
+
 ## Registro local
 
 Ao exportar ou importar um pacote, o SVNFlow deve criar um registro local simples com metadados.
@@ -124,6 +121,8 @@ Campos mínimos do registro:
 - status: gerado, importado, aplicado ou falhou.
 
 Na v1, o registro local não precisa duplicar o conteúdo completo do pacote. Ele deve guardar apenas metadados e referência para o arquivo local.
+
+Quando a pessoa abrir um registro do histórico, o app deve localizar o pacote referenciado e renderizar o `pr.md` interno. O histórico não deve manter vários arquivos Markdown separados como fonte principal.
 
 ## Regras de segurança
 

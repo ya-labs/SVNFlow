@@ -4,7 +4,9 @@
 
 A tela de exportação transforma uma alteração Git em um pacote `.svnflow` revisável.
 
-Na v1, essa tela deve funcionar como uma mini PR local: a pessoa descreve o contexto, explica o que mudou, revisa os arquivos afetados e gera um pacote que pode ser enviado para outra pessoa.
+Na v1, essa tela deve funcionar como uma mini PR local: a pessoa preenche campos simples, revisa os arquivos afetados e gera um pacote que pode ser enviado para outra pessoa.
+
+O SVNFlow deve transformar os campos preenchidos em um `pr.md` padronizado dentro do pacote `.svnflow`.
 
 ## Entrada do fluxo
 
@@ -37,15 +39,15 @@ A tela deve conter os seguintes campos:
 | --- | --- | --- | --- |
 | Branch | Automática | Sim | Detectada do Git e não deve começar vazia. |
 | Título | Pessoa usuária | Sim | Título curto da alteração. |
-| Contexto | Pessoa usuária | Sim | Campo em Markdown explicando o motivo da alteração. |
-| O que mudou | Pessoa usuária | Sim | Campo em Markdown descrevendo as mudanças. |
-| Observações | Pessoa usuária | Não | Campo em Markdown para riscos, dúvidas ou pontos de revisão. |
+| Contexto | Pessoa usuária | Sim | Campo simples explicando o motivo da alteração. |
+| O que mudou | Pessoa usuária | Sim | Campo simples descrevendo as mudanças. |
+| Observações | Pessoa usuária | Não | Campo simples para riscos, dúvidas ou pontos de revisão. |
 | Autor | Automática, revisável | Sim | Sugerido pelo ambiente Git quando possível. |
 | Arquivos alterados | Automática | Sim | Gerado pelo app, sem edição manual na v1. |
 
 ## Prévia
 
-A tela deve permitir alternar entre edição e prévia renderizada em Markdown.
+A tela deve permitir alternar entre edição dos campos e prévia do Markdown gerado.
 
 A prévia deve mostrar:
 
@@ -60,6 +62,44 @@ Observações
 ```
 
 O objetivo da prévia é deixar a alteração fácil de revisar antes de gerar o pacote.
+
+## Markdown gerado
+
+Ao gerar o pacote, o SVNFlow deve criar um `pr.md` interno usando os campos preenchidos.
+
+Modelo conceitual:
+
+```md
+# Corrige tooltip do checkout
+
+## Branch
+
+5647-bug001
+
+## Autor
+
+Marco
+
+## Arquivos alterados
+
+- checkout.controller.js
+- desconto.service.js
+
+## Contexto
+
+Durante a revisão do checkout, foi identificado que o tooltip não deixava clara a regra de desconto.
+
+## O que mudou
+
+- Ajustado texto do tooltip.
+- Mantido comportamento atual do cálculo.
+
+## Observações
+
+- Alteração visual simples.
+```
+
+O `pr.md` deve ficar dentro do pacote `.svnflow`. A v1 não deve salvar vários arquivos Markdown separados como fonte principal do histórico.
 
 ## Validações
 
@@ -78,6 +118,7 @@ Observações podem ficar vazias.
 Ao confirmar a exportação, o SVNFlow deve gerar um arquivo `.svnflow` contendo:
 
 - metadados da mini PR local;
+- `pr.md` gerado a partir dos campos preenchidos;
 - lista de arquivos afetados;
 - conteúdo técnico necessário para transportar a alteração;
 - dados mínimos para validação na importação.
@@ -107,6 +148,8 @@ Campos mínimos:
 
 Esse histórico serve para consulta dentro da aplicação. Ele não deve ser tratado como auditoria oficial da empresa ou substituto do SVN.
 
+Ao abrir um item do histórico, o app deve usar o caminho local do pacote para renderizar o `pr.md` interno.
+
 ## Cenários da v1
 
 A v1 deve cobrir:
@@ -114,6 +157,7 @@ A v1 deve cobrir:
 - exportação com branch detectada automaticamente;
 - campos obrigatórios bloqueando exportação inválida;
 - observações vazias permitidas;
-- Markdown renderizado na prévia;
+- Markdown gerado a partir dos campos estruturados;
+- `pr.md` interno renderizado na prévia;
 - pacote `.svnflow` gerado com metadados preenchidos;
 - registro local criado após exportação.

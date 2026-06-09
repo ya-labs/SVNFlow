@@ -44,7 +44,8 @@ Isso significa:
 - manter etapas críticas com confirmação explícita;
 - permitir que uma pessoa exporte uma alteração em um pacote `.svnflow`;
 - permitir que outra pessoa importe esse pacote, revise o resumo e aplique a alteração no checkout SVN de desenvolvimento;
-- usar uma tela de exportação no modelo de mini PR local, com branch automática e campos em Markdown;
+- usar uma tela de exportação no modelo de mini PR local, com branch automática e campos estruturados;
+- gerar um `pr.md` padronizado dentro do pacote `.svnflow`;
 - manter histórico local simples de pacotes exportados e importados;
 - manter o commit SVN como etapa protegida, não automática.
 
@@ -260,7 +261,7 @@ A alternativa C entra na v1 como proteção pragmática: o app guia o fluxo, mos
 
 A colaboração da v1 será tratada por pacote `.svnflow`, inspirado na alternativa D, mas com foco em experiência de produto: exportar, importar, revisar e aplicar. As alternativas E e F ficam fora do recorte rápido por exigirem governança ou infraestrutura adicional.
 
-O pacote `.svnflow` deve carregar metadados suficientes para revisão, como branch, título, contexto, descrição do que mudou, observações, autor e arquivos alterados. O app também deve manter um histórico local simples desses pacotes.
+O pacote `.svnflow` deve carregar metadados suficientes para revisão, como branch, título, contexto, descrição do que mudou, observações, autor e arquivos alterados. Esses campos devem gerar um `pr.md` interno no pacote. O app também deve manter um histórico local simples desses pacotes.
 
 Essa leitura é uma decisão de escopo para a v1, não uma decisão final de arquitetura para o produto completo.
 

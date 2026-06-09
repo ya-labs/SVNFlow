@@ -27,7 +27,8 @@ A v1 do SVNFlow deve priorizar um fluxo rápido e local combinando:
 - comandos `git` + `svn` para validação e aplicação controlada;
 - fluxo manual assistido para reduzir automação prematura;
 - colaboração por pacote `.svnflow` para transportar uma alteração revisável entre pessoas.
-- tela de exportação no modelo de mini PR local, com branch detectada automaticamente e campos em Markdown;
+- tela de exportação no modelo de mini PR local, com branch detectada automaticamente e campos estruturados;
+- geração de um `pr.md` padronizado dentro do pacote `.svnflow`;
 - histórico local simples para pacotes exportados e importados.
 
 Ainda não há decisão final sobre stack, arquitetura, comandos internos, empacotamento desktop ou uso direto de `git svn`.
