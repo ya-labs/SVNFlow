@@ -13,6 +13,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
 - [Pacote `.svnflow`](fluxos/pacote-svnflow.md)
 - [Exportação de alteração](fluxos/exportacao-alteracao.md)
+- [Importação de alteração](fluxos/importacao-alteracao.md)
 
 ## Estrutura atual
 
@@ -24,6 +25,7 @@ docs/
 |   `-- 0002-contrato-inicial-pacote-svnflow.md
 |-- fluxos/
 |   |-- exportacao-alteracao.md
+|   |-- importacao-alteracao.md
 |   `-- pacote-svnflow.md
 |-- planejamento-inicial/
 |   |-- mapa-do-problema.md
