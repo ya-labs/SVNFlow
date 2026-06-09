@@ -18,18 +18,22 @@ Exportar Alteração
 
 Antes de abrir a tela, o SVNFlow deve buscar automaticamente:
 
-- branch Git atual;
+- branch de origem da alteração;
+- base de comparação para gerar o patch, normalmente `main` local;
 - autor sugerido, quando disponível;
 - arquivos alterados;
 - caminho do projeto Git;
 - nome sugerido do pacote.
 
-O nome sugerido do pacote deve ser baseado na branch:
+O nome sugerido do pacote deve ser baseado na branch de origem, apenas para rastreabilidade:
 
 ```text
-Branch: 5647-bug001
+Branch de origem: 5647-bug001
+Base de comparação: main
 Pacote sugerido: 5647-bug001.svnflow
 ```
+
+O fluxo recomendado não exige merge na `main` local antes da exportação. O pacote representa a diferença entre a branch de origem e a base de comparação.
 
 ## Formulário
 
@@ -37,7 +41,8 @@ A tela deve conter os seguintes campos:
 
 | Campo | Origem | Obrigatório | Observação |
 | --- | --- | --- | --- |
-| Branch | Automática | Sim | Detectada do Git e não deve começar vazia. |
+| Branch de origem | Automática | Sim | Branch onde a alteração foi desenvolvida. |
+| Base de comparação | Automática ou configurada | Sim | Referência usada para gerar o `patch.diff`, normalmente `main` local. |
 | Título | Pessoa usuária | Sim | Título curto da alteração. |
 | Contexto | Pessoa usuária | Sim | Campo simples explicando o motivo da alteração. |
 | O que mudou | Pessoa usuária | Sim | Campo simples descrevendo as mudanças. |
@@ -53,7 +58,8 @@ A prévia deve mostrar:
 
 ```text
 Título
-Branch
+Branch de origem
+Base de comparação
 Autor
 Arquivos alterados
 Contexto
@@ -72,9 +78,13 @@ Modelo conceitual:
 ```md
 # Corrige tooltip do checkout
 
-## Branch
+## Branch de origem
 
 5647-bug001
+
+## Base de comparação
+
+main
 
 ## Autor
 
@@ -105,7 +115,8 @@ O `pr.md` deve ficar dentro do pacote `.svnflow`. A v1 não deve salvar vários 
 
 O SVNFlow deve bloquear a geração do pacote quando:
 
-- a branch não for detectada;
+- a branch de origem não for detectada;
+- a base de comparação não for definida;
 - o título estiver vazio;
 - o contexto estiver vazio;
 - o campo `O que mudou` estiver vazio;
@@ -123,6 +134,8 @@ Ao confirmar a exportação, o SVNFlow deve gerar um arquivo `.svnflow` contendo
 - conteúdo técnico necessário para transportar a alteração;
 - dados mínimos para validação na importação.
 
+O conteúdo técnico deve ser gerado a partir da comparação entre branch de origem e base de comparação.
+
 Depois de gerar o pacote, o app deve mostrar:
 
 - caminho do arquivo gerado;
@@ -139,7 +152,8 @@ Campos mínimos:
 
 - tipo: exportado;
 - título;
-- branch;
+- branch de origem;
+- base de comparação;
 - autor;
 - data;
 - caminho local do pacote;
@@ -154,7 +168,8 @@ Ao abrir um item do histórico, o app deve usar o caminho local do pacote para r
 
 A v1 deve cobrir:
 
-- exportação com branch detectada automaticamente;
+- exportação com branch de origem detectada automaticamente;
+- exportação com base de comparação definida;
 - campos obrigatórios bloqueando exportação inválida;
 - observações vazias permitidas;
 - Markdown gerado a partir dos campos estruturados;
