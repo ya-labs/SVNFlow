@@ -62,6 +62,7 @@ Leitura inicial recomendada:
 - [Mapa do problema](docs/planejamento-inicial/mapa-do-problema.md)
 - [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](docs/decisoes/0002-contrato-inicial-pacote-svnflow.md)
+- [Mapa de etapas da v1](docs/planejamento-v1/mapa-de-etapas-v1.md)
 - [Pacote `.svnflow`](docs/fluxos/pacote-svnflow.md)
 - [Exportação de alteração](docs/fluxos/exportacao-alteracao.md)
 
@@ -83,7 +84,4 @@ docs: descrição curta
 
 ## Próximas etapas
 
-- Desenhar o fluxo visual mínimo de exportação e importação.
-- Validar histórico local simples de pacotes exportados e importados.
-- Validar geração e aplicação de patch em ambiente fictício.
-- Avaliar o papel de `git svn` fora do escopo imediato da v1.
+As próximas etapas da v1 estão organizadas no [Mapa de etapas da v1](docs/planejamento-v1/mapa-de-etapas-v1.md).

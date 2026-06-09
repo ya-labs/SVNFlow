@@ -10,6 +10,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
 - [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](decisoes/0002-contrato-inicial-pacote-svnflow.md)
+- [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
 - [Pacote `.svnflow`](fluxos/pacote-svnflow.md)
 - [Exportação de alteração](fluxos/exportacao-alteracao.md)
 
@@ -24,16 +25,18 @@ docs/
 |-- fluxos/
 |   |-- exportacao-alteracao.md
 |   `-- pacote-svnflow.md
-`-- planejamento-inicial/
-    |-- mapa-do-problema.md
-    `-- matriz-de-alternativas.md
+|-- planejamento-inicial/
+|   |-- mapa-do-problema.md
+|   `-- matriz-de-alternativas.md
+`-- planejamento-v1/
+    `-- mapa-de-etapas-v1.md
 ```
 
 ## Estrutura prevista
 
 A estrutura deve crescer conforme as issues forem avançando.
 
-No momento, não há outras pastas obrigatórias. Crie apenas os documentos necessários para o recorte atual do projeto.
+Crie apenas os documentos necessários para o recorte atual do projeto.
 
 ## Padrões da YA LABS
 
