@@ -33,7 +33,7 @@ As etapas devem evitar:
 
 ## 9. Contratos operacionais dos comandos
 
-Status: `próxima`
+Status: `documentada`
 
 Objetivo:
 
@@ -56,6 +56,10 @@ Critério de conclusão:
 - operações listadas com entrada, saída, confirmação exigida e falhas esperadas;
 - comandos sensíveis marcados como protegidos;
 - nenhuma stack final escolhida.
+
+Documento relacionado:
+
+- [Contratos operacionais dos comandos](../contratos/operacoes-v1.md)
 
 ## 10. Prova técnica de geração do patch
 
