@@ -193,7 +193,7 @@ Documento relacionado:
 
 ## 7. Protótipo técnico
 
-Status: `pendente`
+Status: `documentada`
 
 Objetivo:
 
@@ -214,6 +214,10 @@ Critério de conclusão:
 - erros principais identificados;
 - limitações da v1 documentadas;
 - decisão de stack e arquitetura preparada com base em evidência.
+
+Documento relacionado:
+
+- [Plano do protótipo técnico da v1](../prototipo/plano-prototipo-v1.md)
 
 ## Próxima issue recomendada
 
