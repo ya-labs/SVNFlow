@@ -59,7 +59,7 @@ Use quando quiser entender a evolução estimada do projeto além da v1 imediata
 
 Documentos:
 
-- [Mapa de mapas de etapas](planejamento/mapa-de-mapas-de-etapas.md)
+- [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
 
 ### `docs/decisoes/`
 

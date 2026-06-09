@@ -1,10 +1,10 @@
-# Mapa de Mapas de Etapas do SVNFlow
+# Roteiro Geral de Etapas do SVNFlow
 
 ## Objetivo
 
-Este documento organiza uma estimativa de evolução do SVNFlow até a conclusão do projeto.
+Este documento organiza uma estimativa geral de evolução do SVNFlow até a conclusão do projeto.
 
-Ele não detalha o conteúdo de cada mapa. A intenção é definir uma visão navegável dos grandes blocos de trabalho que podem orientar as próximas issues, branches e Pull Requests.
+Ele não detalha o conteúdo de cada etapa futura. A intenção é definir uma visão navegável dos grandes blocos de trabalho que podem orientar as próximas issues, branches e Pull Requests.
 
 Este planejamento é ajustável. A ordem, quantidade e escopo dos mapas podem mudar conforme provas técnicas, validações de uso e decisões do projeto.
 
