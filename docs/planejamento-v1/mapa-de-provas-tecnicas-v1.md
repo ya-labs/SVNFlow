@@ -8,6 +8,17 @@ O objetivo é reduzir risco antes da implementação do app desktop, validando e
 
 Este mapa não define stack, arquitetura final ou implementação definitiva.
 
+## Resumo
+
+| Campo | Valor |
+| --- | --- |
+| Mapa | 03 - Provas Técnicas da v1 |
+| Status geral | `em andamento` |
+| Próxima issue | #28 |
+| Objetivo | validar comportamento técnico antes da implementação desktop |
+| Escopo | provas técnicas em ambiente fictício |
+| Fora de escopo | stack final, arquitetura desktop e protótipo visual |
+
 ## Critérios do Mapa
 
 Cada prova técnica deve ter:
@@ -40,6 +51,31 @@ Status possíveis:
 6. Protótipo navegável da v1
 7. Critérios de pronto da v1
 ```
+
+## Trilha
+
+```text
+03 - Provas Técnicas da v1
+├── #28 Geração do patch        próxima
+├── #29 Aplicação do patch      pendente
+├── #30 svn update              pendente
+├── #31 Base Git local          pendente
+├── #32 Histórico local         pendente
+├── #33 Protótipo navegável     pendente
+└── #34 Critérios de pronto     pendente
+```
+
+## Rastreabilidade
+
+| Ordem | Issue | Etapa | Documento | Status |
+| --- | --- | --- | --- | --- |
+| 1 | #28 | Geração do patch | `mapa-de-provas-tecnicas-v1.md` | `próxima` |
+| 2 | #29 | Aplicação do patch | `mapa-de-provas-tecnicas-v1.md` | `pendente` |
+| 3 | #30 | `svn update` | `mapa-de-provas-tecnicas-v1.md` | `pendente` |
+| 4 | #31 | Base Git local | `mapa-de-provas-tecnicas-v1.md` | `pendente` |
+| 5 | #32 | Histórico local | `mapa-de-provas-tecnicas-v1.md` | `pendente` |
+| 6 | #33 | Protótipo navegável | `mapa-de-provas-tecnicas-v1.md` | `pendente` |
+| 7 | #34 | Critérios de pronto | `mapa-de-provas-tecnicas-v1.md` | `pendente` |
 
 ## 1. Geração de Patch
 

@@ -6,6 +6,16 @@ Este documento organiza as etapas da v1 do SVNFlow até um protótipo usável.
 
 O mapa deve orientar as próximas issues e evitar decisões fora de ordem. Ele não define stack, arquitetura final ou implementação definitiva.
 
+## Resumo
+
+| Campo | Valor |
+| --- | --- |
+| Mapa | 01 - Funcional da v1 |
+| Status geral | `documentada` |
+| Próxima issue | mapa 02 já documentado; seguir issue #28 |
+| Objetivo | organizar fluxos funcionais até um protótipo usável |
+| Escopo | decisões, fluxos funcionais e protótipo técnico |
+
 ## Critérios do mapa
 
 Cada etapa deve ter:
@@ -35,6 +45,33 @@ Status possíveis:
 7. Atualização da base local a partir do SVN
 8. Protótipo técnico
 ```
+
+## Trilha
+
+```text
+01 - Funcional da v1
+├── Base de decisão da v1                 concluída
+├── Fluxo de exportação                   documentada
+├── Fluxo de importação                   documentada
+├── Aplicação do patch                    documentada
+├── Histórico local simples               pendente
+├── Commit SVN protegido                  pendente
+├── Atualização da base local pelo SVN    documentada
+└── Protótipo técnico                     documentada
+```
+
+## Rastreabilidade
+
+| Ordem | Etapa | Documento | Status |
+| --- | --- | --- | --- |
+| 1 | Base de decisão da v1 | `0001-escopo-v1.md`, `0002-contrato-inicial-pacote-svnflow.md` | `concluída` |
+| 2 | Fluxo de exportação | `exportacao-alteracao.md` | `documentada` |
+| 3 | Fluxo de importação | `importacao-alteracao.md` | `documentada` |
+| 4 | Aplicação do patch | `aplicacao-patch-svn.md` | `documentada` |
+| 5 | Histórico local simples | `historico-local-pacotes.md` | `pendente` |
+| 6 | Commit SVN protegido | `0003-commit-svn-protegido.md` | `pendente` |
+| 7 | Atualização da base local pelo SVN | `atualizacao-base-local-svn.md` | `documentada` |
+| 8 | Protótipo técnico | `plano-prototipo-v1.md` | `documentada` |
 
 ## 1. Base de decisão da v1
 

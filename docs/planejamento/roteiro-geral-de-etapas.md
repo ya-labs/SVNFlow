@@ -8,10 +8,23 @@ Ele não detalha o conteúdo de cada etapa futura. A intenção é definir uma v
 
 Este planejamento é ajustável. A ordem, quantidade e escopo dos mapas podem mudar conforme provas técnicas, validações de uso e decisões do projeto.
 
+## Resumo
+
+| Campo | Valor |
+| --- | --- |
+| Documento | Roteiro Geral de Etapas |
+| Status geral | `em andamento` |
+| Próxima execução | #28 |
+| Objetivo | orientar os grandes blocos do SVNFlow até pós-v1 |
+| Padrão visual | resumo, trilha textual e rastreabilidade |
+
 ## Padrão para Mapas de Etapas
 
 Todo mapa de etapas do SVNFlow deve seguir um formato mínimo:
 
+- resumo;
+- trilha textual fixa, quando houver sequência de etapas;
+- tabela de rastreabilidade;
 - objetivo do mapa;
 - critérios do mapa;
 - visão geral das etapas;
@@ -46,6 +59,31 @@ A estimativa inicial é trabalhar com 7 mapas principais.
 6. Mapa de validação e release experimental
 7. Mapa de evolução pós-v1
 ```
+
+## Trilha
+
+```text
+SVNFlow
+├── 01 - Descoberta e visão inicial       concluída
+├── 02 - Documentação da v1               em andamento
+├── 03 - Provas técnicas da v1            documentada
+├── 04 - Protótipo navegável da v1        pendente
+├── 05 - Implementação desktop da v1      pendente
+├── 06 - Validação e release experimental pendente
+└── 07 - Evolução pós-v1                  pendente
+```
+
+## Rastreabilidade
+
+| Ordem | Mapa | Documento principal | Status |
+| --- | --- | --- | --- |
+| 1 | Descoberta e visão inicial | `mapa-do-problema.md` | `concluída` |
+| 2 | Documentação da v1 | `mapa-de-etapas-v1.md`, `proximo-bloco-etapas-v1.md` | `em andamento` |
+| 3 | Provas técnicas da v1 | `mapa-de-provas-tecnicas-v1.md` | `documentada` |
+| 4 | Protótipo navegável da v1 | pendente | `pendente` |
+| 5 | Implementação desktop da v1 | pendente | `pendente` |
+| 6 | Validação e release experimental | pendente | `pendente` |
+| 7 | Evolução pós-v1 | pendente | `pendente` |
 
 ## 1. Mapa de Descoberta e Visão Inicial
 
