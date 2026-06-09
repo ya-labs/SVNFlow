@@ -9,6 +9,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
 - [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
 - [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
+- [Contrato inicial do pacote `.svnflow`](decisoes/0002-contrato-inicial-pacote-svnflow.md)
 - [Pacote `.svnflow`](fluxos/pacote-svnflow.md)
 - [Exportação de alteração](fluxos/exportacao-alteracao.md)
 
@@ -18,7 +19,8 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 docs/
 |-- README.md
 |-- decisoes/
-|   `-- 0001-escopo-v1.md
+|   |-- 0001-escopo-v1.md
+|   `-- 0002-contrato-inicial-pacote-svnflow.md
 |-- fluxos/
 |   |-- exportacao-alteracao.md
 |   `-- pacote-svnflow.md

@@ -155,7 +155,6 @@ As perguntas abaixo devem alimentar as próximas etapas:
 - O fluxo deve exigir dois diretórios locais, um Git e um SVN?
 - Como o app deve mapear arquivos removidos no Git para remoções no SVN?
 - Como validar que o checkout SVN está atualizado antes de aplicar alterações?
-- Qual deve ser o contrato mínimo do pacote `.svnflow`?
 - Como deve funcionar o histórico local simples de pacotes exportados e importados?
 - O botão `sync` deve existir na v1 ou o fluxo deve começar por exportar/importar?
 - O commit SVN deve existir na v1 ou ficar fora do primeiro protótipo funcional?
@@ -168,7 +167,6 @@ As perguntas abaixo devem alimentar as próximas etapas:
 Os próximos passos do projeto são:
 
 - detalhar o fluxo de exportação e importação do pacote `.svnflow`;
-- definir os metadados mínimos do pacote;
 - definir a tela de exportação como mini PR local;
 - definir o histórico local simples da aplicação;
 - validar geração e aplicação de patch em ambiente fictício;

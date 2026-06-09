@@ -6,7 +6,9 @@ O pacote `.svnflow` é o formato inicial de colaboração da v1.
 
 Ele permite que uma pessoa exporte uma alteração preparada no Git e que outra pessoa importe, revise e aplique essa alteração em um checkout SVN de desenvolvimento.
 
-O pacote não substitui Git, SVN ou Pull Request. Ele funciona como uma mini PR transportável: reúne contexto, mudanças, observações, arquivos afetados, um `pr.md` padronizado e conteúdo técnico necessário para aplicar a alteração.
+O pacote não substitui Git, SVN ou Pull Request. Ele funciona como uma mini PR transportável: reúne contexto, mudanças, observações, arquivos afetados, um `pr.md` padronizado e o patch necessário para aplicar a alteração.
+
+Na v1, o `.svnflow` é um arquivo ZIP renomeado.
 
 ## Fluxo
 
@@ -34,10 +36,10 @@ Aplicar na dev
 
 Internamente, o pacote deve conter:
 
-- patch da alteração;
-- metadados da alteração;
-- lista de arquivos afetados;
+- `patch.diff` com a alteração técnica aplicável;
+- `manifest.json` com metadados da alteração;
 - `pr.md` gerado a partir dos campos estruturados da exportação;
+- lista de arquivos afetados;
 - informações mínimas para validação antes da aplicação.
 
 Um pacote pode ser representado conceitualmente assim:
@@ -50,7 +52,15 @@ Um pacote pode ser representado conceitualmente assim:
 `-- files/
 ```
 
-O formato físico ainda deve ser validado no protótipo. Pode ser um arquivo compactado com manifesto interno, desde que continue simples de gerar, importar e validar.
+A pasta `files/` fica reservada para casos futuros, como arquivos binários ou cenários em que patch não for suficiente. Na v1, a alteração técnica deve ser transportada primeiro por `patch.diff`.
+
+## Transporte por patch
+
+O `patch.diff` é a receita da alteração.
+
+A pessoa usuária não deve editar arquivos manualmente ao importar um pacote. O SVNFlow deve aplicar o patch no checkout SVN depois da validação e do aceite explícito.
+
+Se o patch não encaixar no destino, o app deve bloquear a aplicação e mostrar erro claro, sem sobrescrever arquivos automaticamente.
 
 ## Metadados mínimos
 
@@ -132,7 +142,9 @@ Antes de aplicar um pacote, o app deve validar:
 - se o checkout SVN está limpo ou em estado permitido;
 - se o pacote é válido;
 - se a versão do formato é suportada;
+- se o `patch.diff` existe e pode ser interpretado;
 - se os arquivos do pacote ainda fazem sentido no destino;
+- se o patch encaixa no checkout SVN antes da aplicação;
 - se há risco claro de conflito;
 - se a pessoa confirmou a aplicação.
 

@@ -46,6 +46,7 @@ Isso significa:
 - permitir que outra pessoa importe esse pacote, revise o resumo e aplique a alteração no checkout SVN de desenvolvimento;
 - usar uma tela de exportação no modelo de mini PR local, com branch automática e campos estruturados;
 - gerar um `pr.md` padronizado dentro do pacote `.svnflow`;
+- transportar a alteração técnica por `patch.diff`;
 - manter histórico local simples de pacotes exportados e importados;
 - manter o commit SVN como etapa protegida, não automática.
 
@@ -261,15 +262,13 @@ A alternativa C entra na v1 como proteção pragmática: o app guia o fluxo, mos
 
 A colaboração da v1 será tratada por pacote `.svnflow`, inspirado na alternativa D, mas com foco em experiência de produto: exportar, importar, revisar e aplicar. As alternativas E e F ficam fora do recorte rápido por exigirem governança ou infraestrutura adicional.
 
-O pacote `.svnflow` deve carregar metadados suficientes para revisão, como branch, título, contexto, descrição do que mudou, observações, autor e arquivos alterados. Esses campos devem gerar um `pr.md` interno no pacote. O app também deve manter um histórico local simples desses pacotes.
+O pacote `.svnflow` deve carregar metadados suficientes para revisão, como branch, título, contexto, descrição do que mudou, observações, autor e arquivos alterados. Esses campos devem gerar um `pr.md` interno no pacote. A alteração técnica deve ser transportada por `patch.diff`, e o app também deve manter um histórico local simples desses pacotes.
 
 Essa leitura é uma decisão de escopo para a v1, não uma decisão final de arquitetura para o produto completo.
 
 ## Perguntas para as Próximas Decisões
 
 - A v1 deve exigir dois diretórios locais, um Git e um SVN?
-- Qual deve ser o contrato mínimo do pacote `.svnflow`?
-- O pacote deve armazenar apenas patch e metadados ou também cópia de arquivos quando necessário?
 - Qual armazenamento local simples será usado para o histórico da aplicação?
 - O botão `sync` deve existir na v1 ou o fluxo deve começar separado entre exportar e importar?
 - O commit SVN deve existir na v1 ou ficar fora do primeiro protótipo funcional?
@@ -281,7 +280,6 @@ Essa leitura é uma decisão de escopo para a v1, não uma decisão final de arq
 ## Próximos Passos
 
 - Detalhar o fluxo de exportação e importação do pacote `.svnflow`.
-- Definir quais metadados são obrigatórios no pacote.
 - Definir o histórico local simples de exportações e importações.
 - Validar geração e aplicação de patch em ambiente fictício.
 - Definir quais operações são apenas leitura, quais alteram o checkout SVN e quais exigem confirmação explícita.

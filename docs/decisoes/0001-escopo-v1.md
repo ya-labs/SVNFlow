@@ -29,6 +29,7 @@ Na prática, isso significa:
 - permitir importar uma alteração recebida por arquivo `.svnflow`;
 - tratar a exportação como uma mini PR local, com título, contexto, mudanças e observações em campos estruturados;
 - gerar um `pr.md` padronizado dentro do pacote `.svnflow`;
+- transportar a alteração técnica por `patch.diff` dentro do pacote;
 - detectar automaticamente a branch Git atual durante a exportação;
 - mostrar autor, branch, arquivos alterados e resumo antes da aplicação;
 - manter histórico local simples de pacotes exportados e importados;
@@ -111,7 +112,6 @@ O risco principal é o pacote `.svnflow` precisar lidar bem com conflitos, arqui
 
 ## Próximos passos
 
-- Definir o contrato mínimo do pacote `.svnflow`.
 - Desenhar a tela de exportação no modelo de mini PR local.
 - Definir o histórico local simples de pacotes exportados e importados.
 - Validar geração e aplicação de patch em projeto fictício.
