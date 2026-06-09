@@ -14,6 +14,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
 - [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
 - [Aplicação do patch no checkout SVN](fluxos/aplicacao-patch-svn.md)
+- [Atualização da base local a partir do SVN](fluxos/atualizacao-base-local-svn.md)
 - [Pacote `.svnflow`](fluxos/pacote-svnflow.md)
 - [Exportação de alteração](fluxos/exportacao-alteracao.md)
 - [Histórico local de pacotes](fluxos/historico-local-pacotes.md)
@@ -30,6 +31,7 @@ docs/
 |   `-- 0003-commit-svn-protegido.md
 |-- fluxos/
 |   |-- aplicacao-patch-svn.md
+|   |-- atualizacao-base-local-svn.md
 |   |-- exportacao-alteracao.md
 |   |-- historico-local-pacotes.md
 |   |-- importacao-alteracao.md

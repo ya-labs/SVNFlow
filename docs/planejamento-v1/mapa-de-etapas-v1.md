@@ -32,7 +32,8 @@ Status possíveis:
 4. Aplicação do patch
 5. Histórico local simples
 6. Commit SVN protegido
-7. Protótipo técnico
+7. Atualização da base local a partir do SVN
+8. Protótipo técnico
 ```
 
 ## 1. Base de decisão da v1
@@ -191,7 +192,36 @@ Documento relacionado:
 
 - [Decisão 0003: Commit SVN protegido](../decisoes/0003-commit-svn-protegido.md)
 
-## 7. Protótipo técnico
+## 7. Atualização da base local a partir do SVN
+
+Status: `documentada`
+
+Objetivo:
+
+Definir como o SVNFlow ajuda a pessoa usuária a receber alterações já publicadas no SVN oficial.
+
+Saída esperada:
+
+- botão **Atualizar Base pelo SVN**;
+- validação de checkout SVN configurado;
+- alerta para alterações locais não publicadas;
+- execução assistida de `svn update`;
+- exibição de arquivos recebidos, conflitos e revisão SVN resultante;
+- exibição de `svn status` ao final;
+- orientação para manter a base Git local alinhada sem merge automático em branches de trabalho.
+
+Critério de conclusão:
+
+- fluxo documentado;
+- diferença entre pacote `.svnflow` e `svn update` registrada;
+- limites de automação sobre a base Git local definidos;
+- validações mínimas descritas.
+
+Documento relacionado:
+
+- [Atualização da base local a partir do SVN](../fluxos/atualizacao-base-local-svn.md)
+
+## 8. Protótipo técnico
 
 Status: `documentada`
 
@@ -206,6 +236,7 @@ Saída esperada:
 - renderizar `pr.md`;
 - aplicar `patch.diff` em checkout SVN de teste;
 - exibir `svn status`;
+- atualizar base local a partir do SVN em checkout de teste;
 - registrar histórico local simples.
 
 Critério de conclusão:
@@ -221,17 +252,17 @@ Documento relacionado:
 
 ## Próxima issue recomendada
 
-A próxima issue recomendada é detalhar o fluxo de importação.
+A próxima issue recomendada é validar o protótipo técnico da v1.
 
 Motivo:
 
-- o contrato do pacote já está definido;
-- a exportação já está documentada;
-- a importação conecta colaboração, revisão e aplicação;
-- sem importação, o pacote `.svnflow` ainda não fecha o ciclo da v1.
+- os principais fluxos da v1 já estão documentados;
+- o contrato do pacote `.svnflow` já está definido;
+- a aplicação por patch e a atualização pelo SVN precisam ser validadas em ambiente fictício;
+- o protótipo deve gerar evidência antes de decisões de stack e arquitetura final.
 
 Título sugerido:
 
 ```text
-Documentar fluxo de importação de alteração
+Validar protótipo técnico da v1
 ```

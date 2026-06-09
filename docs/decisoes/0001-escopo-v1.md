@@ -34,7 +34,8 @@ Na prática, isso significa:
 - registrar a base de comparação usada para gerar o patch;
 - mostrar autor, branch de origem, base de comparação, arquivos alterados e resumo antes da aplicação;
 - manter histórico local simples de pacotes exportados e importados;
-- aplicar a alteração no checkout SVN de desenvolvimento somente após aceite explícito.
+- aplicar a alteração no checkout SVN de desenvolvimento somente após aceite explícito;
+- permitir atualizar a base local pelo SVN depois que alterações forem publicadas no repositório oficial.
 
 ## Fluxo principal
 
@@ -100,7 +101,8 @@ Ficam fora do recorte imediato:
 - arquitetura final do app desktop;
 - banco de dados complexo para histórico;
 - auditoria oficial de alterações;
-- sincronização completa com histórico SVN.
+- sincronização completa com histórico SVN;
+- merge automático em branches Git de trabalho após `svn update`.
 
 ## Consequências
 
@@ -117,4 +119,5 @@ O risco principal é o pacote `.svnflow` precisar lidar bem com conflitos, arqui
 - Desenhar a tela de exportação no modelo de mini PR local.
 - Definir o histórico local simples de pacotes exportados e importados.
 - Validar geração e aplicação de patch em projeto fictício.
+- Documentar o fluxo do botão **Atualizar Base pelo SVN**.
 - Definir mensagens de erro e bloqueios quando Git ou SVN estiverem em estado inválido.

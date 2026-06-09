@@ -14,6 +14,7 @@ A proposta inicial é estudar uma camada visual e guiada para operações como:
 - pré-visualizar arquivos que seriam levados ao SVN;
 - aplicar alterações em um checkout SVN de forma controlada;
 - consultar `svn status`;
+- atualizar a base local a partir do SVN;
 - sugerir mensagem de commit;
 - executar um fluxo assistido até antes do commit SVN;
 - proteger o commit SVN com validação explícita.
@@ -30,7 +31,8 @@ A v1 do SVNFlow deve priorizar um fluxo rápido e local combinando:
 - tela de exportação no modelo de mini PR local, com branch de origem detectada automaticamente e campos estruturados;
 - geração de um `pr.md` padronizado dentro do pacote `.svnflow`;
 - transporte técnico da alteração por `patch.diff`;
-- histórico local simples para pacotes exportados e importados.
+- histórico local simples para pacotes exportados e importados;
+- botão **Atualizar Base pelo SVN** para receber alterações já publicadas no repositório oficial.
 
 Ainda não há decisão final sobre stack, arquitetura, comandos internos, empacotamento desktop ou uso direto de `git svn`.
 
@@ -65,6 +67,7 @@ Leitura inicial recomendada:
 - [Mapa de etapas da v1](docs/planejamento-v1/mapa-de-etapas-v1.md)
 - [Pacote `.svnflow`](docs/fluxos/pacote-svnflow.md)
 - [Exportação de alteração](docs/fluxos/exportacao-alteracao.md)
+- [Atualização da base local a partir do SVN](docs/fluxos/atualizacao-base-local-svn.md)
 
 ## Fluxo de trabalho
 
