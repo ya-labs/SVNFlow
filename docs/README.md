@@ -14,6 +14,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Aplicação do patch no checkout SVN](fluxos/aplicacao-patch-svn.md)
 - [Pacote `.svnflow`](fluxos/pacote-svnflow.md)
 - [Exportação de alteração](fluxos/exportacao-alteracao.md)
+- [Histórico local de pacotes](fluxos/historico-local-pacotes.md)
 - [Importação de alteração](fluxos/importacao-alteracao.md)
 
 ## Estrutura atual
@@ -27,6 +28,7 @@ docs/
 |-- fluxos/
 |   |-- aplicacao-patch-svn.md
 |   |-- exportacao-alteracao.md
+|   |-- historico-local-pacotes.md
 |   |-- importacao-alteracao.md
 |   `-- pacote-svnflow.md
 |-- planejamento-inicial/

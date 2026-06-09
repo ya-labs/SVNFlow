@@ -164,6 +164,10 @@ Critério de conclusão:
 - campos mínimos do histórico documentados;
 - limites do histórico local registrados.
 
+Documento relacionado:
+
+- [Histórico local de pacotes](../fluxos/historico-local-pacotes.md)
+
 ## 6. Commit SVN protegido
 
 Status: `pendente`
