@@ -118,7 +118,7 @@ Documento relacionado:
 
 ## 4. Aplicação do patch
 
-Status: `pendente`
+Status: `documentada`
 
 Objetivo:
 
@@ -138,6 +138,10 @@ Critério de conclusão:
 - comportamento esperado documentado;
 - falhas comuns descritas;
 - prova técnica executada em projeto fictício.
+
+Documento relacionado:
+
+- [Aplicação do patch no checkout SVN](../fluxos/aplicacao-patch-svn.md)
 
 ## 5. Histórico local simples
 
