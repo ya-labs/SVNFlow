@@ -1,19 +1,19 @@
-# Mapa de Etapas da v1
+# Mapa 01 - Visão Funcional da v1
 
 ## Objetivo
 
-Este documento organiza as etapas da v1 do SVNFlow até um protótipo usável.
+Este documento organiza a visão funcional inicial da v1 do SVNFlow.
 
-O mapa deve orientar as próximas issues e evitar decisões fora de ordem. Ele não define stack, arquitetura final ou implementação definitiva.
+O mapa registra as decisões, fluxos e limites funcionais já documentados para a v1. Ele não define stack, arquitetura final ou implementação definitiva.
 
 ## Resumo
 
 | Campo | Valor |
 | --- | --- |
-| Mapa | 01 - Funcional da v1 |
-| Status geral | `documentada` |
-| Próxima issue | mapa 02 já documentado; seguir issue #28 |
-| Objetivo | organizar fluxos funcionais até um protótipo usável |
+| Mapa | 01 - Visão Funcional da v1 |
+| Status geral | `concluído` |
+| Próxima issue | concluído; continuidade no Mapa 03 pela issue #28 |
+| Objetivo | registrar a visão funcional inicial da v1 |
 | Escopo | decisões, fluxos funcionais e protótipo técnico |
 
 ## Critérios do mapa
@@ -49,13 +49,13 @@ Status possíveis:
 ## Trilha
 
 ```text
-01 - Funcional da v1
+01 - Visão Funcional da v1
 ├── Base de decisão da v1                 concluída
 ├── Fluxo de exportação                   documentada
 ├── Fluxo de importação                   documentada
 ├── Aplicação do patch                    documentada
-├── Histórico local simples               pendente
-├── Commit SVN protegido                  pendente
+├── Histórico local simples               documentada
+├── Commit SVN protegido                  documentada
 ├── Atualização da base local pelo SVN    documentada
 └── Protótipo técnico                     documentada
 ```
@@ -64,14 +64,14 @@ Status possíveis:
 
 | Ordem | Etapa | Documento | Status |
 | --- | --- | --- | --- |
-| 1 | Base de decisão da v1 | `0001-escopo-v1.md`, `0002-contrato-inicial-pacote-svnflow.md` | `concluída` |
-| 2 | Fluxo de exportação | `exportacao-alteracao.md` | `documentada` |
-| 3 | Fluxo de importação | `importacao-alteracao.md` | `documentada` |
-| 4 | Aplicação do patch | `aplicacao-patch-svn.md` | `documentada` |
-| 5 | Histórico local simples | `historico-local-pacotes.md` | `pendente` |
-| 6 | Commit SVN protegido | `0003-commit-svn-protegido.md` | `pendente` |
-| 7 | Atualização da base local pelo SVN | `atualizacao-base-local-svn.md` | `documentada` |
-| 8 | Protótipo técnico | `plano-prototipo-v1.md` | `documentada` |
+| 1 | Base de decisão da v1 | `docs/decisoes/0001-escopo-v1.md`, `docs/decisoes/0002-contrato-inicial-pacote-svnflow.md` | `concluída` |
+| 2 | Fluxo de exportação | `docs/fluxos/exportacao-alteracao.md` | `documentada` |
+| 3 | Fluxo de importação | `docs/fluxos/importacao-alteracao.md` | `documentada` |
+| 4 | Aplicação do patch | `docs/fluxos/aplicacao-patch-svn.md` | `documentada` |
+| 5 | Histórico local simples | `docs/fluxos/historico-local-pacotes.md` | `documentada` |
+| 6 | Commit SVN protegido | `docs/decisoes/0003-commit-svn-protegido.md` | `documentada` |
+| 7 | Atualização da base local pelo SVN | `docs/fluxos/atualizacao-base-local-svn.md` | `documentada` |
+| 8 | Protótipo técnico | `docs/prototipo/plano-prototipo-v1.md` | `documentada` |
 
 ## 1. Base de decisão da v1
 
@@ -96,8 +96,8 @@ Critério de conclusão:
 
 Documentos relacionados:
 
-- [Decisão 0001: Escopo da v1](../decisoes/0001-escopo-v1.md)
-- [Decisão 0002: Contrato inicial do pacote `.svnflow`](../decisoes/0002-contrato-inicial-pacote-svnflow.md)
+- [Decisão 0001: Escopo da v1](../../decisoes/0001-escopo-v1.md)
+- [Decisão 0002: Contrato inicial do pacote `.svnflow`](../../decisoes/0002-contrato-inicial-pacote-svnflow.md)
 
 ## 2. Fluxo de exportação
 
@@ -125,7 +125,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Exportação de alteração](../fluxos/exportacao-alteracao.md)
+- [Exportação de alteração](../../fluxos/exportacao-alteracao.md)
 
 ## 3. Fluxo de importação
 
@@ -152,7 +152,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Importação de alteração](../fluxos/importacao-alteracao.md)
+- [Importação de alteração](../../fluxos/importacao-alteracao.md)
 
 ## 4. Aplicação do patch
 
@@ -179,11 +179,11 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Aplicação do patch no checkout SVN](../fluxos/aplicacao-patch-svn.md)
+- [Aplicação do patch no checkout SVN](../../fluxos/aplicacao-patch-svn.md)
 
 ## 5. Histórico local simples
 
-Status: `pendente`
+Status: `documentada`
 
 Objetivo:
 
@@ -204,11 +204,11 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Histórico local de pacotes](../fluxos/historico-local-pacotes.md)
+- [Histórico local de pacotes](../../fluxos/historico-local-pacotes.md)
 
 ## 6. Commit SVN protegido
 
-Status: `pendente`
+Status: `documentada`
 
 Objetivo:
 
@@ -227,7 +227,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Decisão 0003: Commit SVN protegido](../decisoes/0003-commit-svn-protegido.md)
+- [Decisão 0003: Commit SVN protegido](../../decisoes/0003-commit-svn-protegido.md)
 
 ## 7. Atualização da base local a partir do SVN
 
@@ -256,7 +256,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Atualização da base local a partir do SVN](../fluxos/atualizacao-base-local-svn.md)
+- [Atualização da base local a partir do SVN](../../fluxos/atualizacao-base-local-svn.md)
 
 ## 8. Protótipo técnico
 
@@ -285,22 +285,22 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Plano do protótipo técnico da v1](../prototipo/plano-prototipo-v1.md)
-- [Próximo bloco de etapas da v1](proximo-bloco-etapas-v1.md)
+- [Plano do protótipo técnico da v1](../../prototipo/plano-prototipo-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](../02-contratos-validacoes/contratos-validacoes-v1.md)
 
-## Próxima issue recomendada
+## Conclusão do Mapa
 
-A próxima issue recomendada é documentar os contratos operacionais dos comandos.
+Este mapa está concluído como visão funcional inicial da v1.
 
 Motivo:
 
 - os principais fluxos da v1 já estão documentados;
 - o contrato do pacote `.svnflow` já está definido;
-- a implementação depende de entradas, saídas, confirmações e bloqueios claros;
-- os contratos operacionais devem orientar as provas técnicas antes de decisões de stack e arquitetura final.
+- os contratos operacionais foram documentados em etapa posterior;
+- a continuidade do desenvolvimento documental agora acontece no Mapa 03.
 
-Título sugerido:
+Próxima execução operacional:
 
 ```text
-Documentar contratos operacionais dos comandos
+#28 Documentar prova técnica de geração do patch
 ```

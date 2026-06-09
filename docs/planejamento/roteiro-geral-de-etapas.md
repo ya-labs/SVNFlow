@@ -2,204 +2,105 @@
 
 ## Objetivo
 
-Este documento organiza uma estimativa geral de evolução do SVNFlow até a conclusão do projeto.
+Este documento registra o avanço do desenvolvimento documental e técnico do SVNFlow.
 
-Ele não detalha o conteúdo de cada etapa futura. A intenção é definir uma visão navegável dos grandes blocos de trabalho que podem orientar as próximas issues, branches e Pull Requests.
+Ele deve responder:
 
-Este planejamento é ajustável. A ordem, quantidade e escopo dos mapas podem mudar conforme provas técnicas, validações de uso e decisões do projeto.
+- o que já foi feito;
+- qual etapa está em andamento;
+- qual é a próxima tarefa recomendada;
+- quais issues e PRs sustentam a rastreabilidade.
+
+Este roteiro não é um guia de localização da documentação. Para encontrar pastas, documentos e índices, use o [Guia de Consulta da Documentação](../guia-da-documentacao.md).
 
 ## Resumo
 
 | Campo | Valor |
 | --- | --- |
-| Documento | Roteiro Geral de Etapas |
 | Status geral | `em andamento` |
-| Próxima execução | #28 |
-| Objetivo | orientar os grandes blocos do SVNFlow até pós-v1 |
-| Padrão visual | resumo, trilha textual e rastreabilidade |
+| Etapa atual | reorganização do roteiro e dos mapas de planejamento |
+| Issue atual | #42 |
+| Próxima execução operacional | #28 |
+| Project GitHub | `ya labs development` |
+| Critério para avançar | PR da issue #42 mergeado e links validados |
 
-## Padrão para Mapas de Etapas
-
-Todo mapa de etapas do SVNFlow deve seguir um formato mínimo:
-
-- resumo;
-- trilha textual fixa, quando houver sequência de etapas;
-- tabela de rastreabilidade;
-- objetivo do mapa;
-- critérios do mapa;
-- visão geral das etapas;
-- lista de etapas numeradas;
-- status de cada etapa;
-- saída esperada;
-- critério de conclusão;
-- documentos relacionados;
-- próxima issue recomendada.
-
-Status recomendados:
-
-- `concluída`;
-- `documentada`;
-- `próxima`;
-- `pendente`;
-- `bloqueada`;
-- `replanejada`.
-
-Um mapa de etapas deve orientar o trabalho, não substituir issues. Cada etapa relevante ainda deve virar issue própria ou fazer parte de uma issue documental de lote quando o escopo for pequeno e relacionado.
-
-## Estimativa de Mapas Até a Conclusão
-
-A estimativa inicial é trabalhar com 7 mapas principais.
-
-```text
-1. Mapa de descoberta e visão inicial
-2. Mapa documental da v1
-3. Mapa de provas técnicas da v1
-4. Mapa do protótipo navegável da v1
-5. Mapa de implementação desktop da v1
-6. Mapa de validação e release experimental
-7. Mapa de evolução pós-v1
-```
-
-## Trilha
+## Trilha Atual
 
 ```text
 SVNFlow
-├── 01 - Descoberta e visão inicial       concluída
-├── 02 - Documentação da v1               em andamento
-├── 03 - Provas técnicas da v1            documentada
-├── 04 - Protótipo navegável da v1        pendente
-├── 05 - Implementação desktop da v1      pendente
-├── 06 - Validação e release experimental pendente
-└── 07 - Evolução pós-v1                  pendente
+├── Descoberta inicial                    concluída
+├── Alternativas e escopo da v1           concluída
+├── Fluxos funcionais da v1               concluída
+├── Contratos operacionais da v1          concluída
+├── Mapas e rastreabilidade documental    concluída
+├── Reorganização do roteiro e mapas      em andamento (#42)
+└── Provas técnicas da v1                 próxima (#28)
 ```
 
-## Rastreabilidade
+## Etapas Concluídas
 
-| Ordem | Mapa | Documento principal | Status |
+| Etapa | Evidência principal | Issue | PR | Resultado |
+| --- | --- | --- | --- | --- |
+| Descoberta inicial | `docs/planejamento-inicial/mapa-do-problema.md` | #1 | #4 | problema público e preventivo documentado |
+| Matriz de alternativas | `docs/planejamento-inicial/matriz-de-alternativas.md` | #3 | #6 | alternativas iniciais comparadas |
+| Escopo da v1 e pacote SVNFlow | `docs/decisoes/0001-escopo-v1.md`, `docs/decisoes/0002-contrato-inicial-pacote-svnflow.md` | #7, #9 | #8, #10 | recorte inicial e contrato do pacote definidos |
+| Visão funcional da v1 | `docs/planejamento-v1/01-visao-funcional/visao-funcional-v1.md` | #11 | #12 | fluxos funcionais principais organizados |
+| Fluxos operacionais | `docs/fluxos/` e `docs/decisoes/0003-commit-svn-protegido.md` | #13, #15, #17, #19, #21, #23 | #14, #16, #18, #20, #22, #24 | exportação, importação, aplicação, histórico, commit protegido e atualização pelo SVN documentados |
+| Contratos operacionais | `docs/contratos/operacoes-v1.md` | #27 | #35 | comandos, entradas, saídas, bloqueios e confirmações documentados |
+| Planejamento das próximas validações | `docs/planejamento-v1/02-contratos-validacoes/contratos-validacoes-v1.md` | #25 | #26 | ponte entre visão funcional e provas técnicas registrada |
+| Mapa de provas técnicas | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | #38 | #39 | sequência #28 a #34 organizada |
+| Padrão visual dos mapas | mapas oficiais da v1 | #40 | #41 | resumo, trilha textual e rastreabilidade padronizados |
+
+## Etapa Atual
+
+| Campo | Valor |
+| --- | --- |
+| Issue | #42 |
+| Tema | reorganizar roteiro e mapas de planejamento |
+| Objetivo | separar roteiro de desenvolvimento do guia de documentação |
+| Saída esperada | roteiro como linha do tempo e mapas em pastas numeradas |
+| Status | `em andamento` |
+
+Critérios de conclusão da etapa atual:
+
+- roteiro geral não duplicar o papel do guia da documentação;
+- mapas da v1 ficarem em pastas numeradas por ordem;
+- Mapa 01 ficar `concluído`;
+- Mapa 02 ficar `documentado`;
+- Mapa 03 ficar `em andamento`;
+- links atualizados após os movimentos;
+- issue #42 vinculada ao Project `ya labs development`;
+- PR da issue #42 mergeado.
+
+## Próximas Etapas
+
+| Ordem | Issue | Etapa | Status |
 | --- | --- | --- | --- |
-| 1 | Descoberta e visão inicial | `mapa-do-problema.md` | `concluída` |
-| 2 | Documentação da v1 | `mapa-de-etapas-v1.md`, `proximo-bloco-etapas-v1.md` | `em andamento` |
-| 3 | Provas técnicas da v1 | `mapa-de-provas-tecnicas-v1.md` | `documentada` |
-| 4 | Protótipo navegável da v1 | pendente | `pendente` |
-| 5 | Implementação desktop da v1 | pendente | `pendente` |
-| 6 | Validação e release experimental | pendente | `pendente` |
-| 7 | Evolução pós-v1 | pendente | `pendente` |
+| 1 | #28 | Documentar prova técnica de geração do patch | `próxima` |
+| 2 | #29 | Documentar prova técnica de aplicação do patch | `pendente` |
+| 3 | #30 | Documentar prova técnica de `svn update` | `pendente` |
+| 4 | #31 | Documentar estratégia da base Git local | `pendente` |
+| 5 | #32 | Documentar modelo inicial do histórico local | `pendente` |
+| 6 | #33 | Documentar protótipo navegável da v1 | `pendente` |
+| 7 | #34 | Documentar critérios de pronto da v1 | `pendente` |
 
-## 1. Mapa de Descoberta e Visão Inicial
+## Critério Para Avançar
 
-Status: `concluída`
+A próxima execução operacional deve ser a issue #28 somente depois que:
 
-Papel:
+- a reorganização da issue #42 estiver mergeada;
+- os links dos mapas reorganizados estiverem válidos;
+- o roteiro apontar claramente que #28 é a próxima tarefa;
+- o Project `ya labs development` estiver sendo usado nas issues novas.
 
-Organizar o entendimento inicial do problema, alternativas e escopo conceitual do produto.
+## Regras de Atualização
 
-Documentos atuais relacionados:
+Atualize este roteiro quando:
 
-- [Mapa do problema](../planejamento-inicial/mapa-do-problema.md)
-- [Matriz de alternativas](../planejamento-inicial/matriz-de-alternativas.md)
-- [Decisão de escopo da v1](../decisoes/0001-escopo-v1.md)
+- uma etapa de desenvolvimento for concluída;
+- uma issue mudar a próxima execução recomendada;
+- uma decisão alterar a ordem das próximas tarefas;
+- um mapa novo for criado;
+- uma etapa planejada for replanejada ou bloqueada.
 
-## 2. Mapa Documental da v1
-
-Status: `em andamento`
-
-Papel:
-
-Consolidar decisões, fluxos, contratos operacionais e limites da v1 antes de implementação.
-
-Documentos atuais relacionados:
-
-- [Mapa de etapas da v1](../planejamento-v1/mapa-de-etapas-v1.md)
-- [Próximo bloco de etapas da v1](../planejamento-v1/proximo-bloco-etapas-v1.md)
-- [Contratos operacionais dos comandos](../contratos/operacoes-v1.md)
-- [Contrato inicial do pacote `.svnflow`](../decisoes/0002-contrato-inicial-pacote-svnflow.md)
-- [Commit SVN protegido](../decisoes/0003-commit-svn-protegido.md)
-
-## 3. Mapa de Provas Técnicas da v1
-
-Status: `documentada`
-
-Papel:
-
-Planejar e acompanhar validações práticas em ambiente fictício antes da escolha final de stack e arquitetura.
-
-Este mapa deve cobrir provas como:
-
-- geração de `patch.diff`;
-- aplicação de patch em checkout SVN fictício;
-- execução de `svn update`;
-- comportamento com arquivos criados, modificados, removidos, renomeados e binários;
-- limites do histórico local;
-- mensagens de falha candidatas para interface.
-
-Documento atual relacionado:
-
-- [Mapa de provas técnicas da v1](../planejamento-v1/mapa-de-provas-tecnicas-v1.md)
-
-## 4. Mapa do Protótipo Navegável da v1
-
-Status: `pendente`
-
-Papel:
-
-Planejar a experiência navegável que conecta os principais fluxos da v1.
-
-Este mapa deve orientar telas, estados, confirmações, bloqueios e navegação entre:
-
-- exportação;
-- importação;
-- prévia;
-- aplicação;
-- status SVN;
-- histórico local;
-- atualização pelo SVN;
-- commit protegido ou etapa manual assistida.
-
-## 5. Mapa de Implementação Desktop da v1
-
-Status: `pendente`
-
-Papel:
-
-Organizar a implementação do app desktop local depois que as provas técnicas e o protótipo navegável reduzirem os principais riscos.
-
-Este mapa deve ser criado somente quando houver decisão mínima sobre stack, arquitetura e empacotamento.
-
-## 6. Mapa de Validação e Release Experimental
-
-Status: `pendente`
-
-Papel:
-
-Organizar validação da v1 em ambiente controlado, ainda sem código corporativo real no repositório público.
-
-Este mapa deve cobrir critérios de pronto, empacotamento experimental, testes em cenário fictício, limitações conhecidas e preparação de release.
-
-## 7. Mapa de Evolução Pós-v1
-
-Status: `pendente`
-
-Papel:
-
-Registrar melhorias futuras depois que a v1 estiver validada.
-
-Possíveis temas:
-
-- suporte ampliado a arquivos binários;
-- integração opcional com `git svn`;
-- melhorias de colaboração;
-- histórico local mais completo;
-- templates de mensagem;
-- automações adicionais com confirmação explícita.
-
-## Como Usar Este Documento
-
-Este documento deve ser usado como índice de planejamento.
-
-Quando um bloco começar, crie ou atualize o mapa específico daquele bloco. Quando uma prova técnica ou decisão mudar a direção do projeto, atualize este mapa para manter a estimativa realista.
-
-Não é necessário criar todos os mapas de uma vez. Crie o próximo mapa apenas quando ele ajudar a orientar issues concretas.
-
-## Próxima Evolução Recomendada
-
-O próximo mapa a ser criado deve ser o mapa de provas técnicas da v1, porque os contratos operacionais já foram documentados e as próximas issues existentes tratam de geração de patch, aplicação de patch e `svn update`.
+Não use este roteiro para explicar a estrutura completa das pastas. Esse papel pertence ao [Guia de Consulta da Documentação](../guia-da-documentacao.md).

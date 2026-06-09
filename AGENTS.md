@@ -16,7 +16,7 @@ A IA deve:
 - evitar overengineering;
 - não definir stack, arquitetura ou implementação sem issue e decisão explícita;
 - sugerir mensagem de commit ao alterar arquivos;
-- manter rastreabilidade entre issue, branch, commit e Pull Request.
+- manter rastreabilidade entre issue, Project, branch, commit e Pull Request.
 
 ## Contexto do projeto
 
@@ -43,9 +43,10 @@ Antes de executar uma alteração relevante, valide:
 
 1. Branch atual.
 2. Issue relacionada.
-3. Tipo da alteração.
-4. Área afetada.
-5. Compatibilidade com o fluxo da YA LABS.
+3. Vínculo da issue ao Project `ya labs development`.
+4. Tipo da alteração.
+5. Área afetada.
+6. Compatibilidade com o fluxo da YA LABS.
 
 Se não houver issue ou se a branch estiver incompatível, avise antes de editar ou registre a exceção autorizada.
 
