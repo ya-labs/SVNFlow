@@ -39,7 +39,9 @@ A prévia deve mostrar:
 
 - `pr.md` renderizado;
 - autor;
-- branch de origem;
+- branch de origem da alteração;
+- base de comparação usada para gerar o patch, quando disponível;
+- destino de aplicação previsto, quando disponível;
 - título;
 - arquivos afetados;
 - data de exportação;
@@ -66,7 +68,9 @@ Campos mínimos:
 
 - tipo: importado;
 - título;
-- branch;
+- branch de origem;
+- base de comparação;
+- destino de aplicação, quando informado;
 - autor;
 - data de importação;
 - caminho local do pacote;

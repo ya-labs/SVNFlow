@@ -30,8 +30,9 @@ Na prática, isso significa:
 - tratar a exportação como uma mini PR local, com título, contexto, mudanças e observações em campos estruturados;
 - gerar um `pr.md` padronizado dentro do pacote `.svnflow`;
 - transportar a alteração técnica por `patch.diff` dentro do pacote;
-- detectar automaticamente a branch Git atual durante a exportação;
-- mostrar autor, branch, arquivos alterados e resumo antes da aplicação;
+- registrar a branch de origem da alteração durante a exportação;
+- registrar a base de comparação usada para gerar o patch;
+- mostrar autor, branch de origem, base de comparação, arquivos alterados e resumo antes da aplicação;
 - manter histórico local simples de pacotes exportados e importados;
 - aplicar a alteração no checkout SVN de desenvolvimento somente após aceite explícito.
 
@@ -59,7 +60,8 @@ O app apresenta uma prévia:
 
 ```text
 Autor: Marco
-Branch: 5647-bug001
+Branch de origem: 5647-bug001
+Base de comparação: main
 
 Arquivos:
 - checkout.controller.js
