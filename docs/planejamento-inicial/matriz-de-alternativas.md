@@ -4,7 +4,7 @@
 
 Este documento compara alternativas para o SVNFlow apoiar fluxos locais em que Git organiza e prepara alterações, enquanto SVN permanece como destino oficial de publicação.
 
-A matriz não escolhe uma solução final. O objetivo é organizar hipóteses, benefícios, limitações, riscos e pontos que precisam de prova de conceito antes de qualquer implementação.
+A matriz começou como comparação de hipóteses. Com a decisão inicial da v1, ela também registra quais alternativas entram no primeiro recorte do produto.
 
 ## Critérios de Comparação
 
@@ -23,12 +23,32 @@ As alternativas são avaliadas pelos seguintes critérios:
 
 | Alternativa | Resumo | Potencial para v1 |
 | --- | --- | --- |
-| A. SVNFlow com comandos `git` + `svn` | App coordena diretórios Git e SVN usando comandos nativos. | Alto |
+| A. SVNFlow com comandos `git` + `svn` | App coordena diretórios Git e SVN usando comandos nativos. | Escolhida para v1 |
 | B. SVNFlow usando `git svn` | App usa `git svn` como camada principal de interoperabilidade. | Médio |
-| C. Fluxo manual assistido | App guia a pessoa, mas deixa operações críticas manuais. | Médio |
+| C. Fluxo manual assistido | App guia a pessoa, mas deixa operações críticas manuais. | Escolhida para v1 |
 | D. Patches entre Git e SVN | App gera/aplica patches para transportar alterações. | Médio |
-| E. Repositório Git compartilhado autorizado | Git vira camada colaborativa intermediária, com SVN como publicação final. | Médio |
+| E. Repositório Git compartilhado autorizado | Git vira camada colaborativa intermediária, com SVN como publicação final. | Fora da v1 rápida |
 | F. Bare repo local ou em rede | Repositório Git simples compartilhado em pasta/rede autorizada. | Baixo a médio |
+
+## Decisão Inicial para v1
+
+A v1 do SVNFlow será guiada pela combinação:
+
+```text
+A + C + colaboração por pacote .svnflow
+```
+
+Isso significa:
+
+- usar comandos `git` e `svn` como base operacional;
+- manter etapas críticas com confirmação explícita;
+- permitir que uma pessoa exporte uma alteração em um pacote `.svnflow`;
+- permitir que outra pessoa importe esse pacote, revise o resumo e aplique a alteração no checkout SVN de desenvolvimento;
+- usar uma tela de exportação no modelo de mini PR local, com branch automática e campos em Markdown;
+- manter histórico local simples de pacotes exportados e importados;
+- manter o commit SVN como etapa protegida, não automática.
+
+O objetivo da v1 é entregar um fluxo útil rapidamente, sem servidor próprio, sem repositório Git compartilhado obrigatório e sem depender de `git svn` no primeiro momento.
 
 ## A. SVNFlow com Comandos `git` + `svn`
 
@@ -232,30 +252,36 @@ Nesta alternativa, um repositório Git bare em pasta local ou rede autorizada fu
 
 ## Leitura Inicial da Matriz
 
-A alternativa A parece a melhor candidata para uma primeira prova de conceito do SVNFlow porque combina bem com a ideia de aplicativo desktop local, visual e controlado.
+A alternativa A foi escolhida como base da v1 porque combina bem com a ideia de aplicativo desktop local, visual e controlado.
 
 A alternativa B precisa ser investigada com cuidado porque `git svn` já resolve parte da interoperabilidade, mas pode trazer complexidades próprias de histórico, merges e instalação.
 
-A alternativa C pode ser útil como protótipo de experiência, mas não deve ser tratada como objetivo final se não reduzir trabalho operacional.
+A alternativa C entra na v1 como proteção pragmática: o app guia o fluxo, mostra prévias e confirmações, mas evita automatizar etapas sensíveis cedo demais.
 
-As alternativas D, E e F podem ser complementares, dependendo do nível de colaboração necessário e das restrições do ambiente.
+A colaboração da v1 será tratada por pacote `.svnflow`, inspirado na alternativa D, mas com foco em experiência de produto: exportar, importar, revisar e aplicar. As alternativas E e F ficam fora do recorte rápido por exigirem governança ou infraestrutura adicional.
 
-Essa leitura não é uma decisão final. Ela apenas orienta quais hipóteses devem ser testadas primeiro.
+O pacote `.svnflow` deve carregar metadados suficientes para revisão, como branch, título, contexto, descrição do que mudou, observações, autor e arquivos alterados. O app também deve manter um histórico local simples desses pacotes.
+
+Essa leitura é uma decisão de escopo para a v1, não uma decisão final de arquitetura para o produto completo.
 
 ## Perguntas para as Próximas Decisões
 
 - A v1 deve exigir dois diretórios locais, um Git e um SVN?
-- O SVNFlow deve suportar `git svn` já na primeira prova de conceito?
-- O botão `sync` deve parar sempre antes do commit SVN?
-- O commit SVN deve existir na v1 ou ficar fora do primeiro protótipo?
+- Qual deve ser o contrato mínimo do pacote `.svnflow`?
+- O pacote deve armazenar apenas patch e metadados ou também cópia de arquivos quando necessário?
+- Qual armazenamento local simples será usado para o histórico da aplicação?
+- O botão `sync` deve existir na v1 ou o fluxo deve começar separado entre exportar e importar?
+- O commit SVN deve existir na v1 ou ficar fora do primeiro protótipo funcional?
 - Como o app deve tratar arquivos removidos, renomeados e binários?
 - Como a aplicação deve apresentar diferenças sem enviar conteúdo para fora da máquina?
-- Qual é o mínimo necessário para duas pessoas usarem o fluxo com segurança?
 - Quais logs locais são úteis sem registrar conteúdo sensível?
+- Como validar que o pacote importado foi aplicado exatamente como previsto?
 
 ## Próximos Passos
 
-- Definir a primeira prova de conceito com base na alternativa A.
-- Criar uma issue específica para validar o comportamento do `git svn` em ambiente de teste.
-- Desenhar o fluxo visual mínimo do SVNFlow.
+- Detalhar o fluxo de exportação e importação do pacote `.svnflow`.
+- Definir quais metadados são obrigatórios no pacote.
+- Definir o histórico local simples de exportações e importações.
+- Validar geração e aplicação de patch em ambiente fictício.
 - Definir quais operações são apenas leitura, quais alteram o checkout SVN e quais exigem confirmação explícita.
+- Criar uma issue separada para avaliar `git svn` depois do primeiro recorte funcional.

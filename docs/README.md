@@ -8,11 +8,20 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 
 - [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
 - [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
+- [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
+- [Pacote `.svnflow`](fluxos/pacote-svnflow.md)
+- [Exportação de alteração](fluxos/exportacao-alteracao.md)
 
 ## Estrutura atual
 
 ```text
 docs/
+|-- README.md
+|-- decisoes/
+|   `-- 0001-escopo-v1.md
+|-- fluxos/
+|   |-- exportacao-alteracao.md
+|   `-- pacote-svnflow.md
 `-- planejamento-inicial/
     |-- mapa-do-problema.md
     `-- matriz-de-alternativas.md
@@ -20,19 +29,9 @@ docs/
 
 ## Estrutura prevista
 
-A estrutura deve crescer conforme as issues forem avançando:
+A estrutura deve crescer conforme as issues forem avançando.
 
-```text
-docs/
-|-- README.md
-|-- planejamento-inicial/
-|   |-- mapa-do-problema.md
-|   `-- matriz-de-alternativas.md
-`-- decisoes/
-    `-- README.md
-```
-
-Crie apenas os documentos necessários para o momento atual do projeto.
+No momento, não há outras pastas obrigatórias. Crie apenas os documentos necessários para o recorte atual do projeto.
 
 ## Padrões da YA LABS
 

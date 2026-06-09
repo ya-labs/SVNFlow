@@ -20,7 +20,15 @@ A proposta inicial é estudar uma camada visual e guiada para operações como:
 
 ## Estado do projeto
 
-Este repositório está em fase inicial de documentação e descoberta.
+Este repositório está em fase inicial de documentação e descoberta, com uma decisão inicial de escopo para a v1.
+
+A v1 do SVNFlow deve priorizar um fluxo rápido e local combinando:
+
+- comandos `git` + `svn` para validação e aplicação controlada;
+- fluxo manual assistido para reduzir automação prematura;
+- colaboração por pacote `.svnflow` para transportar uma alteração revisável entre pessoas.
+- tela de exportação no modelo de mini PR local, com branch detectada automaticamente e campos em Markdown;
+- histórico local simples para pacotes exportados e importados.
 
 Ainda não há decisão final sobre stack, arquitetura, comandos internos, empacotamento desktop ou uso direto de `git svn`.
 
@@ -50,6 +58,9 @@ Leitura inicial recomendada:
 
 - [Documentação do projeto](docs/README.md)
 - [Mapa do problema](docs/planejamento-inicial/mapa-do-problema.md)
+- [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
+- [Pacote `.svnflow`](docs/fluxos/pacote-svnflow.md)
+- [Exportação de alteração](docs/fluxos/exportacao-alteracao.md)
 
 ## Fluxo de trabalho
 
@@ -69,7 +80,8 @@ docs: descrição curta
 
 ## Próximas etapas
 
-- Consolidar a matriz de alternativas para o fluxo Git + SVN.
-- Avaliar o papel de `git svn` no produto.
-- Definir critérios mínimos para um protótipo desktop local.
-- Criar documentação de decisões conforme o projeto amadurecer.
+- Desenhar o fluxo visual mínimo de exportação e importação.
+- Definir o contrato inicial do pacote `.svnflow`.
+- Validar histórico local simples de pacotes exportados e importados.
+- Validar geração e aplicação de patch em ambiente fictício.
+- Avaliar o papel de `git svn` fora do escopo imediato da v1.

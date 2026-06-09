@@ -48,6 +48,8 @@ A primeira visão do produto é uma interface visual com botões para executar e
 
 - `check`: verificar se Git e SVN estão em estado adequado para iniciar;
 - `preview`: mostrar os arquivos que seriam levados para o SVN;
+- `export`: gerar um pacote `.svnflow` a partir da branch Git atual;
+- `import`: importar um pacote `.svnflow` recebido de outra pessoa;
 - `apply`: aplicar alterações no checkout SVN;
 - `status`: mostrar o estado atual do SVN;
 - `commit-message`: sugerir uma mensagem de commit baseada em branch e commits Git;
@@ -66,10 +68,11 @@ Mesmo assim, a existência do `git svn` não elimina o espaço do SVNFlow. O foc
 - organizar o fluxo em etapas compreensíveis;
 - proteger operações sensíveis com prévias e confirmações;
 - facilitar o uso por mais de uma pessoa;
+- permitir colaboração por transporte local de alterações;
 - documentar decisões e limites de forma clara;
 - reduzir dependência de comandos manuais memorizados.
 
-O projeto deve avaliar se a melhor implementação usa comandos `git` e `svn`, chama `git svn`, combina abordagens ou mantém etapas manuais. Essa decisão pertence à matriz de alternativas.
+O projeto avaliou essas opções na matriz de alternativas. Para a v1, a decisão inicial é usar comandos `git` + `svn`, manter fluxo manual assistido e adicionar colaboração por pacote `.svnflow`.
 
 ## Necessidades Que o Fluxo Precisa Preservar
 
@@ -82,6 +85,7 @@ Um fluxo útil para esse cenário precisa preservar algumas capacidades:
 - mostrar claramente o que será criado, modificado ou removido;
 - evitar publicação acidental no SVN;
 - permitir que mais de uma pessoa utilize o mesmo processo;
+- permitir que uma pessoa exporte uma alteração e outra importe, revise e integre;
 - manter rastreabilidade entre tarefa, alteração e commit SVN;
 - funcionar localmente sem enviar código para servidor externo.
 
@@ -137,7 +141,7 @@ Nesta etapa, o SVNFlow não pretende:
 - escolher stack do app desktop;
 - definir arquitetura final;
 - implementar botões ou comandos;
-- decidir se usará `git svn`;
+- exigir `git svn` na v1;
 - substituir políticas internas de empresas;
 - armazenar ou referenciar código corporativo real;
 - automatizar commit SVN sem confirmação.
@@ -148,14 +152,14 @@ A comparação de alternativas será tratada em uma etapa própria.
 
 As perguntas abaixo devem alimentar as próximas etapas:
 
-- O SVNFlow deve usar comandos `git` e `svn` diretamente ou chamar `git svn`?
 - O fluxo deve exigir dois diretórios locais, um Git e um SVN?
 - Como o app deve mapear arquivos removidos no Git para remoções no SVN?
 - Como validar que o checkout SVN está atualizado antes de aplicar alterações?
-- O botão `sync` deve parar sempre antes do commit SVN?
-- O commit SVN deve existir na v1 ou ficar fora da primeira versão?
+- Qual deve ser o contrato mínimo do pacote `.svnflow`?
+- Como deve funcionar o histórico local simples de pacotes exportados e importados?
+- O botão `sync` deve existir na v1 ou o fluxo deve começar por exportar/importar?
+- O commit SVN deve existir na v1 ou ficar fora do primeiro protótipo funcional?
 - Como gerar mensagem de commit a partir de branch e commits Git?
-- Como permitir que duas pessoas usem o mesmo fluxo com segurança?
 - Quais logs locais o app deve manter sem registrar conteúdo sensível?
 - Como apresentar diffs de forma útil sem expor dados fora da máquina?
 
@@ -163,9 +167,10 @@ As perguntas abaixo devem alimentar as próximas etapas:
 
 Os próximos passos do projeto são:
 
-- atualizar a visão do projeto de Git2Svn para SVNFlow;
-- levantar uma matriz de alternativas considerando `git svn` como referência principal;
-- comparar benefícios, limitações e riscos de cada abordagem;
-- definir critérios mínimos para um protótipo desktop local;
-- criar a documentação inicial do projeto conforme o padrão da YA LABS;
+- detalhar o fluxo de exportação e importação do pacote `.svnflow`;
+- definir os metadados mínimos do pacote;
+- definir a tela de exportação como mini PR local;
+- definir o histórico local simples da aplicação;
+- validar geração e aplicação de patch em ambiente fictício;
+- desenhar o fluxo visual mínimo da v1;
 - manter o repositório público livre de informações sensíveis.
