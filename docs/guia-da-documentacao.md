@@ -49,6 +49,7 @@ Use quando quiser saber em que ponto a v1 está e quais etapas vêm depois.
 Documentos:
 
 - [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
+- [Mapa de provas técnicas da v1](planejamento-v1/mapa-de-provas-tecnicas-v1.md)
 - [Próximo bloco de etapas da v1](planejamento-v1/proximo-bloco-etapas-v1.md)
 
 ### `docs/planejamento/`

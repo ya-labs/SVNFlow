@@ -79,7 +79,7 @@ Documentos atuais relacionados:
 
 ## 3. Mapa de Provas Técnicas da v1
 
-Status: `pendente`
+Status: `documentada`
 
 Papel:
 
@@ -93,6 +93,10 @@ Este mapa deve cobrir provas como:
 - comportamento com arquivos criados, modificados, removidos, renomeados e binários;
 - limites do histórico local;
 - mensagens de falha candidatas para interface.
+
+Documento atual relacionado:
+
+- [Mapa de provas técnicas da v1](../planejamento-v1/mapa-de-provas-tecnicas-v1.md)
 
 ## 4. Mapa do Protótipo Navegável da v1
 
