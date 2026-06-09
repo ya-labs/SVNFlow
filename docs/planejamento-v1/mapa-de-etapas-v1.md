@@ -249,20 +249,21 @@ Critério de conclusão:
 Documento relacionado:
 
 - [Plano do protótipo técnico da v1](../prototipo/plano-prototipo-v1.md)
+- [Próximo bloco de etapas da v1](proximo-bloco-etapas-v1.md)
 
 ## Próxima issue recomendada
 
-A próxima issue recomendada é validar o protótipo técnico da v1.
+A próxima issue recomendada é documentar os contratos operacionais dos comandos.
 
 Motivo:
 
 - os principais fluxos da v1 já estão documentados;
 - o contrato do pacote `.svnflow` já está definido;
-- a aplicação por patch e a atualização pelo SVN precisam ser validadas em ambiente fictício;
-- o protótipo deve gerar evidência antes de decisões de stack e arquitetura final.
+- a implementação depende de entradas, saídas, confirmações e bloqueios claros;
+- os contratos operacionais devem orientar as provas técnicas antes de decisões de stack e arquitetura final.
 
 Título sugerido:
 
 ```text
-Validar protótipo técnico da v1
+Documentar contratos operacionais dos comandos
 ```

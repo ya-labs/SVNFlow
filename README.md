@@ -65,6 +65,7 @@ Leitura inicial recomendada:
 - [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](docs/decisoes/0002-contrato-inicial-pacote-svnflow.md)
 - [Mapa de etapas da v1](docs/planejamento-v1/mapa-de-etapas-v1.md)
+- [Próximo bloco de etapas da v1](docs/planejamento-v1/proximo-bloco-etapas-v1.md)
 - [Pacote `.svnflow`](docs/fluxos/pacote-svnflow.md)
 - [Exportação de alteração](docs/fluxos/exportacao-alteracao.md)
 - [Atualização da base local a partir do SVN](docs/fluxos/atualizacao-base-local-svn.md)
