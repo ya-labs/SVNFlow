@@ -15,6 +15,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Commit SVN protegido](decisoes/0003-commit-svn-protegido.md)
 - [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
 - [Próximo bloco de etapas da v1](planejamento-v1/proximo-bloco-etapas-v1.md)
+- [Mapa de provas técnicas da v1](planejamento-v1/mapa-de-provas-tecnicas-v1.md)
 - [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
 - [Contratos operacionais dos comandos](contratos/operacoes-v1.md)
 - [Aplicação do patch no checkout SVN](fluxos/aplicacao-patch-svn.md)
@@ -50,6 +51,7 @@ docs/
 |   `-- roteiro-geral-de-etapas.md
 |-- planejamento-v1/
 |   |-- mapa-de-etapas-v1.md
+|   |-- mapa-de-provas-tecnicas-v1.md
 |   `-- proximo-bloco-etapas-v1.md
 `-- prototipo/
     `-- plano-prototipo-v1.md
