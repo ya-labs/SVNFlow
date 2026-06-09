@@ -67,12 +67,12 @@ Status: `documentada`
 
 Objetivo:
 
-Definir como uma pessoa transforma uma branch Git em um pacote `.svnflow` revisável.
+Definir como uma pessoa transforma uma alteração preparada em uma branch Git em um pacote `.svnflow` revisável.
 
 Saída esperada:
 
 - tela de exportação no modelo de mini PR local;
-- branch detectada automaticamente;
+- branch de origem detectada automaticamente;
 - campos estruturados para título, contexto, mudanças e observações;
 - geração de `pr.md` dentro do pacote;
 - geração de `patch.diff`;
@@ -91,7 +91,7 @@ Documento relacionado:
 
 ## 3. Fluxo de importação
 
-Status: `próxima`
+Status: `documentada`
 
 Objetivo:
 
@@ -102,7 +102,7 @@ Saída esperada:
 - tela para selecionar pacote `.svnflow`;
 - validação da estrutura do pacote;
 - renderização do `pr.md`;
-- exibição de autor, branch, arquivos afetados e status do pacote;
+- exibição de autor, branch de origem, base de comparação, arquivos afetados e status do pacote;
 - ação explícita para aceitar ou cancelar;
 - registro local do pacote importado.
 
@@ -111,6 +111,10 @@ Critério de conclusão:
 - fluxo de importação documentado;
 - validações antes da aplicação definidas;
 - estados de sucesso, cancelamento e falha descritos.
+
+Documento relacionado:
+
+- [Importação de alteração](../fluxos/importacao-alteracao.md)
 
 ## 4. Aplicação do patch
 
@@ -134,6 +138,10 @@ Critério de conclusão:
 - comportamento esperado documentado;
 - falhas comuns descritas;
 - prova técnica executada em projeto fictício.
+
+Documento relacionado:
+
+- [Aplicação do patch no checkout SVN](../fluxos/aplicacao-patch-svn.md)
 
 ## 5. Histórico local simples
 

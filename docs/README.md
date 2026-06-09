@@ -11,9 +11,11 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](decisoes/0002-contrato-inicial-pacote-svnflow.md)
 - [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
+- [Aplicação do patch no checkout SVN](fluxos/aplicacao-patch-svn.md)
 - [Pacote `.svnflow`](fluxos/pacote-svnflow.md)
 - [Exportação de alteração](fluxos/exportacao-alteracao.md)
 - [Histórico local de pacotes](fluxos/historico-local-pacotes.md)
+- [Importação de alteração](fluxos/importacao-alteracao.md)
 
 ## Estrutura atual
 
@@ -24,8 +26,10 @@ docs/
 |   |-- 0001-escopo-v1.md
 |   `-- 0002-contrato-inicial-pacote-svnflow.md
 |-- fluxos/
+|   |-- aplicacao-patch-svn.md
 |   |-- exportacao-alteracao.md
 |   |-- historico-local-pacotes.md
+|   |-- importacao-alteracao.md
 |   `-- pacote-svnflow.md
 |-- planejamento-inicial/
 |   |-- mapa-do-problema.md

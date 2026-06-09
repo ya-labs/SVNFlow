@@ -48,7 +48,7 @@ A primeira visão do produto é uma interface visual com botões para executar e
 
 - `check`: verificar se Git e SVN estão em estado adequado para iniciar;
 - `preview`: mostrar os arquivos que seriam levados para o SVN;
-- `export`: gerar um pacote `.svnflow` a partir da branch Git atual;
+- `export`: gerar um pacote `.svnflow` a partir de uma alteração preparada no Git;
 - `import`: importar um pacote `.svnflow` recebido de outra pessoa;
 - `apply`: aplicar alterações no checkout SVN;
 - `status`: mostrar o estado atual do SVN;

@@ -70,18 +70,28 @@ A v1 deve considerar estes metadados:
 - título;
 - autor;
 - data de exportação;
-- branch Git de origem;
+- branch de origem da alteração;
+- base de comparação usada para gerar o patch;
+- destino de aplicação previsto, quando informado;
 - lista de arquivos criados, modificados e removidos;
 - dados estruturados usados para gerar o `pr.md`;
 - versão do formato `.svnflow`;
 - checksum ou validação equivalente do conteúdo do pacote.
 
-A branch Git deve ser detectada automaticamente no momento da exportação. O nome sugerido do arquivo deve usar essa branch, por exemplo:
+A branch de origem deve ser detectada automaticamente no momento da exportação. Ela serve para rastreabilidade, não como destino de aplicação.
+
+A base de comparação deve indicar de onde o `patch.diff` foi gerado, normalmente `main` local. O destino de aplicação é o checkout SVN escolhido na importação ou aplicação.
+
+O nome sugerido do arquivo pode usar a branch de origem, por exemplo:
 
 ```text
-Branch: 5647-bug001
+Branch de origem: 5647-bug001
+Base de comparação: main
+Destino de aplicação: checkout SVN/dev
 Pacote sugerido: 5647-bug001.svnflow
 ```
+
+O pacote `.svnflow` não representa uma branch Git de destino. Ele representa uma alteração exportada a partir de uma branch de origem, comparada contra uma base local, para ser aplicada depois em um checkout SVN.
 
 ## Prévia na importação
 
@@ -89,7 +99,9 @@ Ao importar um pacote, o SVNFlow deve mostrar uma tela objetiva antes de qualque
 
 ```text
 Autor: Marco
-Branch: 5647-bug001
+Branch de origem: 5647-bug001
+Base de comparação: main
+Destino de aplicação: checkout SVN/dev
 
 Arquivos:
 - checkout.controller.js
@@ -123,7 +135,9 @@ Campos mínimos do registro:
 
 - tipo: exportado ou importado;
 - título;
-- branch;
+- branch de origem;
+- base de comparação;
+- destino de aplicação, quando informado;
 - autor;
 - data;
 - caminho local do pacote;
