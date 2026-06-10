@@ -61,12 +61,12 @@ docs/
 Leitura inicial recomendada:
 
 - [Documentação do projeto](docs/README.md)
-- [Mapa do problema](docs/planejamento-inicial/mapa-do-problema.md)
+- [Mapa do problema](docs/planejamento/00-inicial/mapa-do-problema.md)
 - [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](docs/decisoes/0002-contrato-inicial-pacote-svnflow.md)
-- [Roteiro geral de etapas](docs/planejamento/roteiro-geral-de-etapas.md)
-- [Mapa 01 - Visão Funcional da v1](docs/planejamento-v1/visao-funcional-v1.md)
-- [Mapa 03 - Provas Técnicas da v1](docs/planejamento-v1/provas-tecnicas-v1.md)
+- [Roteiro geral de etapas](docs/planejamento/99-geral/roteiro-geral-de-etapas.md)
+- [Mapa 01 - Visão Funcional da v1](docs/planejamento/01-v1/01-visao-funcional-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](docs/planejamento/01-v1/03-provas-tecnicas-v1.md)
 - [Pacote `.svnflow`](docs/fluxos/pacote-svnflow.md)
 - [Exportação de alteração](docs/fluxos/exportacao-alteracao.md)
 - [Atualização da base local a partir do SVN](docs/fluxos/atualizacao-base-local-svn.md)
@@ -74,12 +74,6 @@ Leitura inicial recomendada:
 ## Fluxo de trabalho
 
 Este projeto segue os padrões da YA LABS documentados no Handbook.
-
-Mudanças relevantes devem seguir o fluxo:
-
-```text
-Issue -> Branch -> Commit -> Pull Request -> Merge -> Validação
-```
 
 Para documentação, use commits no formato:
 
@@ -89,4 +83,4 @@ docs: descrição curta
 
 ## Próximas etapas
 
-As próximas etapas da v1 estão organizadas no [Roteiro geral de etapas](docs/planejamento/roteiro-geral-de-etapas.md).
+As próximas etapas da v1 estão organizadas no [Roteiro geral de etapas](docs/planejamento/99-geral/roteiro-geral-de-etapas.md).

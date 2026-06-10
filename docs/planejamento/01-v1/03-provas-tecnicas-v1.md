@@ -14,7 +14,6 @@ Este mapa não define stack, arquitetura final ou implementação definitiva.
 | --- | --- |
 | Mapa | 03 - Provas Técnicas da v1 |
 | Status geral | `em andamento` |
-| Próxima issue | #30 |
 | Objetivo | validar comportamento técnico antes da implementação desktop |
 | Escopo | provas técnicas em ambiente fictício |
 | Fora de escopo | stack final, arquitetura desktop e protótipo visual |
@@ -28,7 +27,6 @@ Cada prova técnica deve ter:
 - saída esperada;
 - critério de conclusão;
 - falhas ou limites observados;
-- relação com as issues abertas;
 - indicação do que fica fora da prova.
 
 Status possíveis:
@@ -56,34 +54,30 @@ Status possíveis:
 
 ```text
 03 - Provas Técnicas da v1
-├── #28 Geração do patch        documentada
-├── #29 Aplicação do patch      documentada
-├── #30 svn update              próxima
-├── #31 Base Git local          pendente
-├── #32 Histórico local         pendente
-├── #33 Protótipo navegável     pendente
-└── #34 Critérios de pronto     pendente
+├── Geração do patch        documentada
+├── Aplicação do patch      em validação
+├── svn update              pendente
+├── Base Git local          pendente
+├── Histórico local         pendente
+├── Protótipo navegável     pendente
+└── Critérios de pronto     pendente
 ```
 
 ## Rastreabilidade
 
-| Ordem | Issue | Etapa | Documento | Status |
-| --- | --- | --- | --- | --- |
-| 1 | #28 | Geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` | `documentada` |
-| 2 | #29 | Aplicação do patch | `docs/prototipo/prova-tecnica-aplicacao-patch.md` | `documentada` |
-| 3 | #30 | `svn update` | `docs/planejamento-v1/provas-tecnicas-v1.md` | `próxima` |
-| 4 | #31 | Base Git local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
-| 5 | #32 | Histórico local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
-| 6 | #33 | Protótipo navegável | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
-| 7 | #34 | Critérios de pronto | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| Ordem | Etapa | Documento | Status da etapa |
+| --- | --- | --- | --- |
+| 1 | Geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` | `documentada` |
+| 2 | Aplicação do patch | este mapa | `em validação` |
+| 3 | `svn update` | este mapa | `pendente` |
+| 4 | Base Git local | este mapa | `pendente` |
+| 5 | Histórico local | este mapa | `pendente` |
+| 6 | Protótipo navegável | este mapa | `pendente` |
+| 7 | Critérios de pronto | este mapa | `pendente` |
 
 ## 1. Geração de Patch
 
 Status: `documentada`
-
-Issue relacionada:
-
-- #28 Documentar prova técnica de geração do patch
 
 Objetivo:
 
@@ -106,15 +100,11 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Prova técnica: Geração de Patch](../prototipo/prova-tecnica-geracao-patch.md)
+- [Prova técnica: Geração de Patch](../../prototipo/prova-tecnica-geracao-patch.md)
 
 ## 2. Aplicação de Patch
 
-Status: `documentada`
-
-Issue relacionada:
-
-- #29 Documentar prova técnica de aplicação do patch
+Status: `em validação`
 
 Objetivo:
 
@@ -134,17 +124,9 @@ Critério de conclusão:
 - falha controlada em cenário incompatível;
 - estado final do checkout SVN documentado.
 
-Documento relacionado:
-
-- [Prova técnica: Aplicação de Patch](../prototipo/prova-tecnica-aplicacao-patch.md)
-
 ## 3. Atualização pelo SVN
 
-Status: `próxima`
-
-Issue relacionada:
-
-- #30 Documentar prova técnica de svn update
+Status: `pendente`
 
 Objetivo:
 
@@ -168,10 +150,6 @@ Critério de conclusão:
 
 Status: `pendente`
 
-Issue relacionada:
-
-- #31 Documentar estratégia da base Git local
-
 Objetivo:
 
 Definir como a base Git local deve acompanhar alterações recebidas pelo SVN sem criar merge automático em branches de trabalho.
@@ -192,10 +170,6 @@ Critério de conclusão:
 ## 5. Modelo Inicial do Histórico Local
 
 Status: `pendente`
-
-Issue relacionada:
-
-- #32 Documentar modelo inicial do histórico local
 
 Objetivo:
 
@@ -218,10 +192,6 @@ Critério de conclusão:
 
 Status: `pendente`
 
-Issue relacionada:
-
-- #33 Documentar protótipo navegável da v1
-
 Objetivo:
 
 Montar uma experiência navegável que conecte os fluxos principais da v1 em ambiente fictício.
@@ -243,10 +213,6 @@ Critério de conclusão:
 
 Status: `pendente`
 
-Issue relacionada:
-
-- #34 Documentar critérios de pronto da v1
-
 Objetivo:
 
 Definir o que precisa estar validado para considerar a v1 pronta para implementação ou entrega experimental.
@@ -267,7 +233,7 @@ Critério de conclusão:
 
 ## Ordem Recomendada
 
-A ordem recomendada é seguir as issues #28 a #34.
+A ordem recomendada é seguir a sequência técnica abaixo.
 
 Motivo:
 
@@ -289,12 +255,6 @@ Este mapa não pretende:
 - empacotar aplicação;
 - usar código corporativo real.
 
-## Próxima Issue Recomendada
+## Próxima Etapa do Mapa
 
-A próxima issue recomendada é:
-
-```text
-#30 Documentar prova técnica de svn update
-```
-
-Ela continua a sequência prática das validações técnicas da v1, validando a atualização do checkout SVN pela base oficial.
+A próxima etapa do mapa é documentar e validar a aplicação do patch em checkout SVN fictício, usando como entrada o `patch.diff` descrito na prova de geração.

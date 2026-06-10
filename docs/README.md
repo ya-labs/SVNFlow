@@ -6,17 +6,17 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 
 ## Leitura inicial
 
-- [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
-- [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
+- [Mapa do problema](planejamento/00-inicial/mapa-do-problema.md)
+- [Matriz de alternativas](planejamento/00-inicial/matriz-de-alternativas.md)
 - [Guia de consulta da documentação](guia-da-documentacao.md)
 - [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
-- [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
+- [Roteiro geral de etapas](planejamento/99-geral/roteiro-geral-de-etapas.md)
 - [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](decisoes/0002-contrato-inicial-pacote-svnflow.md)
 - [Commit SVN protegido](decisoes/0003-commit-svn-protegido.md)
-- [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
-- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/contratos-validacoes-v1.md)
-- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
+- [Mapa 01 - Visão Funcional da v1](planejamento/01-v1/01-visao-funcional-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](planejamento/01-v1/02-contratos-validacoes-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](planejamento/01-v1/03-provas-tecnicas-v1.md)
 - [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
 - [Prova técnica: Geração de Patch](prototipo/prova-tecnica-geracao-patch.md)
 - [Contratos operacionais dos comandos](contratos/operacoes-v1.md)
@@ -47,15 +47,16 @@ docs/
 |   |-- historico-local-pacotes.md
 |   |-- importacao-alteracao.md
 |   `-- pacote-svnflow.md
-|-- planejamento-inicial/
-|   |-- mapa-do-problema.md
-|   `-- matriz-de-alternativas.md
 |-- planejamento/
-|   `-- roteiro-geral-de-etapas.md
-|-- planejamento-v1/
-|   |-- contratos-validacoes-v1.md
-|   |-- provas-tecnicas-v1.md
-|   `-- visao-funcional-v1.md
+|   |-- 00-inicial/
+|   |   |-- mapa-do-problema.md
+|   |   `-- matriz-de-alternativas.md
+|   |-- 01-v1/
+|   |   |-- 01-visao-funcional-v1.md
+|   |   |-- 02-contratos-validacoes-v1.md
+|   |   `-- 03-provas-tecnicas-v1.md
+|   `-- 99-geral/
+|       `-- roteiro-geral-de-etapas.md
 `-- prototipo/
     |-- plano-prototipo-v1.md
     `-- prova-tecnica-geracao-patch.md
@@ -63,7 +64,7 @@ docs/
 
 ## Estrutura prevista
 
-A estrutura deve crescer conforme as issues forem avançando.
+A estrutura deve crescer conforme a documentação precisar de novos blocos duráveis.
 
 Crie apenas os documentos necessários para o recorte atual do projeto.
 
@@ -74,11 +75,8 @@ Este projeto segue os padrões da YA LABS documentados no Handbook.
 Use o Handbook como referência para:
 
 - fluxo de trabalho com GitHub;
-- padrão de issues;
 - padrão de branches;
 - padrão de commits;
-- padrão de Pull Requests;
-- vínculo de issues ao Project `ya labs development`;
 - boas práticas de documentação;
 - uso de IA.
 

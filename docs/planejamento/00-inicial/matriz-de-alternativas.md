@@ -223,7 +223,7 @@ Nesta alternativa, um repositório Git bare em pasta local ou rede autorizada fu
 
 ### Limitações
 
-- Não oferece interface de Pull Request, revisão rica ou issues.
+- Não oferece interface rica de revisão ou acompanhamento de tarefas.
 - Pode exigir disciplina manual alta.
 - Pode ser frágil se a pasta/rede não tiver controle adequado.
 
@@ -283,4 +283,4 @@ Essa leitura é uma decisão de escopo para a v1, não uma decisão final de arq
 - Definir o histórico local simples de exportações e importações.
 - Validar geração e aplicação de patch em ambiente fictício.
 - Definir quais operações são apenas leitura, quais alteram o checkout SVN e quais exigem confirmação explícita.
-- Criar uma issue separada para avaliar `git svn` depois do primeiro recorte funcional.
+- Registrar uma avaliação separada de `git svn` depois do primeiro recorte funcional.

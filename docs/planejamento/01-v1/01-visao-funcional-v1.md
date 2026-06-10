@@ -12,7 +12,6 @@ O mapa registra as decisões, fluxos e limites funcionais já documentados para 
 | --- | --- |
 | Mapa | 01 - Visão Funcional da v1 |
 | Status geral | `concluído` |
-| Próxima issue | concluído; continuidade no Mapa 03 |
 | Objetivo | registrar a visão funcional inicial da v1 |
 | Escopo | decisões, fluxos funcionais e protótipo técnico |
 
@@ -96,8 +95,8 @@ Critério de conclusão:
 
 Documentos relacionados:
 
-- [Decisão 0001: Escopo da v1](../decisoes/0001-escopo-v1.md)
-- [Decisão 0002: Contrato inicial do pacote `.svnflow`](../decisoes/0002-contrato-inicial-pacote-svnflow.md)
+- [Decisão 0001: Escopo da v1](../../decisoes/0001-escopo-v1.md)
+- [Decisão 0002: Contrato inicial do pacote `.svnflow`](../../decisoes/0002-contrato-inicial-pacote-svnflow.md)
 
 ## 2. Fluxo de exportação
 
@@ -125,7 +124,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Exportação de alteração](../fluxos/exportacao-alteracao.md)
+- [Exportação de alteração](../../fluxos/exportacao-alteracao.md)
 
 ## 3. Fluxo de importação
 
@@ -152,7 +151,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Importação de alteração](../fluxos/importacao-alteracao.md)
+- [Importação de alteração](../../fluxos/importacao-alteracao.md)
 
 ## 4. Aplicação do patch
 
@@ -179,7 +178,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Aplicação do patch no checkout SVN](../fluxos/aplicacao-patch-svn.md)
+- [Aplicação do patch no checkout SVN](../../fluxos/aplicacao-patch-svn.md)
 
 ## 5. Histórico local simples
 
@@ -204,7 +203,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Histórico local de pacotes](../fluxos/historico-local-pacotes.md)
+- [Histórico local de pacotes](../../fluxos/historico-local-pacotes.md)
 
 ## 6. Commit SVN protegido
 
@@ -227,7 +226,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Decisão 0003: Commit SVN protegido](../decisoes/0003-commit-svn-protegido.md)
+- [Decisão 0003: Commit SVN protegido](../../decisoes/0003-commit-svn-protegido.md)
 
 ## 7. Atualização da base local a partir do SVN
 
@@ -256,7 +255,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Atualização da base local a partir do SVN](../fluxos/atualizacao-base-local-svn.md)
+- [Atualização da base local a partir do SVN](../../fluxos/atualizacao-base-local-svn.md)
 
 ## 8. Protótipo técnico
 
@@ -285,8 +284,8 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Plano do protótipo técnico da v1](../prototipo/plano-prototipo-v1.md)
-- [Mapa 02 - Contratos e Validações da v1](contratos-validacoes-v1.md)
+- [Plano do protótipo técnico da v1](../../prototipo/plano-prototipo-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](02-contratos-validacoes-v1.md)
 
 ## Conclusão do Mapa
 
@@ -296,11 +295,4 @@ Motivo:
 
 - os principais fluxos da v1 já estão documentados;
 - o contrato do pacote `.svnflow` já está definido;
-- os contratos operacionais foram documentados em etapa posterior;
-- a continuidade do desenvolvimento documental agora acontece no Mapa 03.
-
-Próxima execução operacional:
-
-```text
-Mapa 03 - Provas Técnicas da v1
-```
+- os contratos operacionais foram documentados em etapa posterior.
