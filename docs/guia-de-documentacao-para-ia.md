@@ -32,7 +32,6 @@ Não leia todos os documentos por padrão. Comece pela menor fonte capaz de resp
 | --- | --- | --- | --- | --- |
 | `README.md` | Apresentar o projeto, visão geral, estado público e links principais. | Quando precisar entender o projeto em alto nível ou atualizar a entrada pública. | Quando mudar visão geral, links principais, escopo público ou leitura recomendada. | `SVNFlow`, `visão geral`, `estado do projeto`, `documentação` |
 | `AGENTS.md` | Definir regras para assistentes de IA no repositório. | Antes de qualquer alteração relevante ou dúvida sobre fluxo da IA. | Quando mudar regra de trabalho, fluxo obrigatório, segurança, postura ou governança da IA. | `IA`, `fluxo de trabalho`, `documentação`, `commit sugerido` |
-| `docs/README.md` | Índice público da documentação. | Quando precisar listar documentos existentes ou conferir estrutura. | Quando criar, mover, renomear ou remover documento relevante para navegação. | `leitura inicial`, `estrutura atual`, `padrões` |
 | `docs/guia-da-documentacao.md` | Guia humano de localização da documentação. | Quando precisar escolher a pasta correta ou orientar uma pessoa leitora. | Quando a estrutura documental mudar ou surgir novo documento relevante para consulta humana. | `pastas`, `onde atualizar`, `leitura rápida` |
 | `docs/guia-de-documentacao-para-ia.md` | Guia vivo de consulta e manutenção documental para IA. | Antes de leituras amplas, criação de docs ou alteração documental relevante. | Sempre que documento, premissa, matriz ou fluxo de consulta documental mudar. | `matriz`, `premissas`, `manual de atualização` |
 | `docs/planejamento/00-inicial/` | Registrar problema, contexto e alternativas iniciais. | Quando a tarefa envolver motivo do produto, problema original ou alternativas avaliadas. | Quando descoberta inicial ou alternativa relevante mudar sem virar decisão final. | `problema`, `alternativa`, `contexto`, `risco` |
@@ -50,7 +49,6 @@ Use estas regras antes de editar documentação:
 - Atualize sempre o documento principal da tarefa.
 - Atualize o mapa em andamento quando a tarefa mudar status documental de etapa, documento relacionado ou dependência entre etapas.
 - Não atualize mapas concluídos para refletir andamento de issues futuras.
-- Atualize `docs/README.md` somente quando o documento novo for importante para leitura inicial, quando a estrutura de pastas mudar ou quando houver mudança relevante no índice público.
 - Atualize `docs/guia-da-documentacao.md` somente quando criar uma nova categoria, mudar a função de uma pasta, mover documentos relevantes para navegação humana ou quando a localização deixar de ser óbvia.
 - Atualize este guia somente quando mudar regra de manutenção, fluxo de consulta, papel de uma pasta/documento ou padrão que a IA deve repetir.
 - Se mover, renomear ou remover documento, atualize apenas os links diretamente afetados e os índices necessários para evitar navegação quebrada.
@@ -58,7 +56,7 @@ Use estas regras antes de editar documentação:
 - Se alterar fluxo de uso, revise contratos e decisões relacionadas.
 - Se alterar contrato operacional, revise mapas da v1 e provas técnicas relacionadas.
 - Se alterar planejamento da v1, revise o roteiro geral somente quando a ordem macro do projeto mudar.
-- Se alterar `README.md`, confira se `docs/README.md` e o guia humano continuam coerentes.
+- Se alterar `README.md`, confira se o guia humano continua coerente com a entrada pública.
 - Se alterar `AGENTS.md`, confira se este guia continua compatível com as regras obrigatórias da IA.
 
 Ao finalizar alterações documentais:

@@ -55,7 +55,7 @@ Status possíveis:
 ```text
 03 - Provas Técnicas da v1
 ├── Geração do patch        documentada
-├── Aplicação do patch      em validação
+├── Aplicação do patch      documentada
 ├── svn update              pendente
 ├── Base Git local          pendente
 ├── Histórico local         pendente
@@ -68,7 +68,7 @@ Status possíveis:
 | Ordem | Etapa | Documento | Status da etapa |
 | --- | --- | --- | --- |
 | 1 | Geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` | `documentada` |
-| 2 | Aplicação do patch | este mapa | `em validação` |
+| 2 | Aplicação do patch | `docs/prototipo/prova-tecnica-aplicacao-patch.md` | `documentada` |
 | 3 | `svn update` | este mapa | `pendente` |
 | 4 | Base Git local | este mapa | `pendente` |
 | 5 | Histórico local | este mapa | `pendente` |
@@ -104,7 +104,7 @@ Documento relacionado:
 
 ## 2. Aplicação de Patch
 
-Status: `em validação`
+Status: `documentada`
 
 Objetivo:
 
@@ -123,6 +123,10 @@ Critério de conclusão:
 - patch aplicado em cenário simples;
 - falha controlada em cenário incompatível;
 - estado final do checkout SVN documentado.
+
+Documento relacionado:
+
+- [Prova Técnica: Aplicação de Patch](../../prototipo/prova-tecnica-aplicacao-patch.md)
 
 ## 3. Atualização pelo SVN
 
@@ -257,4 +261,4 @@ Este mapa não pretende:
 
 ## Próxima Etapa do Mapa
 
-A próxima etapa do mapa é documentar e validar a aplicação do patch em checkout SVN fictício, usando como entrada o `patch.diff` descrito na prova de geração.
+A próxima etapa do mapa é documentar e validar a atualização pelo SVN em checkout SVN fictício, incluindo saída esperada de `svn status` e falhas controladas de `svn update`.

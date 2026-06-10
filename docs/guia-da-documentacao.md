@@ -133,7 +133,6 @@ Use para orientar análise, edição, commits e PRs mantendo o padrão da YA LAB
 | --- | --- |
 | Visão geral do projeto | `README.md` |
 | Regras para IA | `AGENTS.md` |
-| Índice geral da documentação | `docs/README.md` |
 | Consulta e manutenção documental pela IA | `docs/guia-de-documentacao-para-ia.md` |
 | Problema, contexto e alternativas | `docs/planejamento/00-inicial/` |
 | Mapas de etapas da v1 | `docs/planejamento/01-v1/` |
@@ -151,12 +150,6 @@ Atualize sempre:
 
 - o documento principal da tarefa;
 - o mapa em andamento, quando houver mudança de status documental da etapa ou documento relacionado.
-
-Atualize `docs/README.md` quando:
-
-- o documento novo for importante para leitura inicial;
-- a estrutura de pastas mudar;
-- a navegação pública ficar incompleta sem o novo link.
 
 Atualize este guia quando:
 

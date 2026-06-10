@@ -60,7 +60,6 @@ docs/
 
 Leitura inicial recomendada:
 
-- [Documentação do projeto](docs/README.md)
 - [Mapa do problema](docs/planejamento/00-inicial/mapa-do-problema.md)
 - [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](docs/decisoes/0002-contrato-inicial-pacote-svnflow.md)

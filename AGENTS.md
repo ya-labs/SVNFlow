@@ -110,7 +110,7 @@ Ao alterar documentação:
 - diferencie problema, alternativa, decisão e implementação;
 - não transforme hipótese técnica em decisão final.
 
-Atualize índices e guias apenas quando isso melhorar a navegação ou preservar uma regra durável. Evite transformar toda alteração documental em atualização automática de `README.md`, `docs/README.md`, `docs/guia-da-documentacao.md` e `docs/guia-de-documentacao-para-ia.md`.
+Atualize índices e guias apenas quando isso melhorar a navegação ou preservar uma regra durável. Evite transformar toda alteração documental em atualização automática de `README.md`, `docs/guia-da-documentacao.md` e `docs/guia-de-documentacao-para-ia.md`.
 
 Mapas e documentos de produto não devem acompanhar issue atual, próxima issue, Pull Request ou status do GitHub Project. Issues e Pull Requests devem apontar para os mapas/documentos relacionados, não o contrário.
 
