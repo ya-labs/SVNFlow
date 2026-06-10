@@ -181,6 +181,11 @@ Critério de conclusão:
 - ações destrutivas bloqueadas;
 - relação entre Git local e SVN oficial clara.
 
+Documentos relacionados:
+
+- [Prova Técnica: Estratégia da Base Git Local](../../prototipo/prova-tecnica-base-git-local.md)
+- [Decisão 0004: Git assistido na v1 sem substituir fluxo de GitHub](../../decisoes/0004-git-assistido-v1.md)
+
 ## 14. Modelo inicial do histórico local
 
 Status: `pendente`

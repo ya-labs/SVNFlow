@@ -62,6 +62,7 @@ Leitura inicial recomendada:
 
 - [Mapa do problema](docs/planejamento/00-inicial/mapa-do-problema.md)
 - [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
+- [Decisão: Git assistido na v1](docs/decisoes/0004-git-assistido-v1.md)
 - [Contrato inicial do pacote `.svnflow`](docs/decisoes/0002-contrato-inicial-pacote-svnflow.md)
 - [Roteiro geral de etapas](docs/planejamento/99-geral/roteiro-geral-de-etapas.md)
 - [Mapa 01 - Visão Funcional da v1](docs/planejamento/01-v1/01-visao-funcional-v1.md)

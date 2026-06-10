@@ -178,6 +178,7 @@ Critério de conclusão:
 Documento relacionado:
 
 - [Prova Técnica: Estratégia da Base Git Local](../../prototipo/prova-tecnica-base-git-local.md)
+- [Decisão 0004: Git assistido na v1 sem substituir fluxo de GitHub](../../decisoes/0004-git-assistido-v1.md)
 
 ## 5. Modelo Inicial do Histórico Local
 
