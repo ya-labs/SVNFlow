@@ -12,7 +12,6 @@ O objetivo foi transformar os fluxos documentados em contratos operacionais e pr
 | --- | --- |
 | Mapa | 02 - Contratos e Validações da v1 |
 | Status geral | `documentado` |
-| Próxima issue | continuidade no Mapa 03 pela issue #29 |
 | Objetivo | registrar contratos operacionais e preparação das provas técnicas |
 | Escopo | contratos operacionais e preparação das provas técnicas |
 
@@ -45,28 +44,23 @@ As etapas devem evitar:
 
 ```text
 02 - Contratos e Validações da v1
-├── #27 Contratos operacionais dos comandos   documentada
-├── #28 Prova técnica de geração do patch     documentada
-├── #29 Prova técnica de aplicação do patch   próxima
-├── #30 Prova técnica de svn update           pendente
-├── #31 Estratégia da base Git local          pendente
-├── #32 Modelo inicial do histórico local     pendente
-├── #33 Protótipo navegável da v1             pendente
-└── #34 Critérios de pronto da v1             pendente
+├── Contratos operacionais dos comandos
+├── Prova técnica de geração do patch
+├── Prova técnica de aplicação do patch
+├── Prova técnica de svn update
+├── Estratégia da base Git local
+├── Modelo inicial do histórico local
+├── Protótipo navegável da v1
+└── Critérios de pronto da v1
 ```
 
-## Rastreabilidade
+## Documentos Relacionados
 
-| Ordem | Issue | Etapa | Documento | Status |
-| --- | --- | --- | --- | --- |
-| 9 | #27 | Contratos operacionais dos comandos | `docs/contratos/operacoes-v1.md` | `documentada` |
-| 10 | #28 | Prova técnica de geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` | `documentada` |
-| 11 | #29 | Prova técnica de aplicação do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `próxima` |
-| 12 | #30 | Prova técnica de `svn update` | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
-| 13 | #31 | Estratégia da base Git local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
-| 14 | #32 | Modelo inicial do histórico local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
-| 15 | #33 | Protótipo navegável da v1 | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
-| 16 | #34 | Critérios de pronto da v1 | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| Etapa | Documento |
+| --- | --- |
+| Contratos operacionais dos comandos | `docs/contratos/operacoes-v1.md` |
+| Prova técnica de geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` |
+| Provas técnicas da v1 | `docs/planejamento/01-v1/03-provas-tecnicas-v1.md` |
 
 ## 9. Contratos operacionais dos comandos
 
@@ -96,7 +90,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Contratos operacionais dos comandos](../contratos/operacoes-v1.md)
+- [Contratos operacionais dos comandos](../../contratos/operacoes-v1.md)
 
 ## 10. Prova técnica de geração do patch
 
@@ -121,7 +115,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Prova técnica: Geração de Patch](../prototipo/prova-tecnica-geracao-patch.md)
+- [Prova técnica: Geração de Patch](../../prototipo/prova-tecnica-geracao-patch.md)
 
 ## 11. Prova técnica de aplicação do patch
 
@@ -261,9 +255,3 @@ Motivo:
 - os contratos operacionais já foram documentados;
 - as próximas validações estão concentradas no Mapa 03;
 - ainda não há escolha de stack ou arquitetura final.
-
-Próxima execução operacional:
-
-```text
-#29 Documentar prova técnica de aplicação do patch
-```

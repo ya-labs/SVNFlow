@@ -178,13 +178,13 @@ Esta prova não cobre:
 - resolução automática de conflitos;
 - escolha de biblioteca, linguagem ou framework.
 
-## Resultado Esperado da Issue
+## Resultado Esperado da Prova
 
-Ao concluir a issue #28, o projeto deve ter:
+Ao concluir esta prova, o projeto deve ter:
 
 - cenário fictício de geração de patch documentado;
 - comandos candidatos registrados;
 - saída esperada definida;
 - critérios de revisão do patch definidos;
 - falhas e limites iniciais registrados;
-- base suficiente para iniciar a issue #29, sobre aplicação do patch.
+- base suficiente para documentar a aplicação do patch em checkout SVN fictício.

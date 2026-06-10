@@ -4,20 +4,20 @@
 
 Este documento ajuda a localizar rapidamente onde cada assunto do SVNFlow está documentado.
 
-Use este guia quando precisar entender a estrutura do projeto, encontrar uma decisão, localizar um fluxo ou descobrir qual documento deve ser atualizado em uma nova issue.
+Use este guia quando precisar entender a estrutura do projeto, encontrar uma decisão, localizar um fluxo ou descobrir qual documento deve ser atualizado.
 
 ## Leitura Rápida Recomendada
 
 Para entender o projeto em ordem:
 
 1. [README principal](../README.md)
-2. [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
-3. [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
+2. [Mapa do problema](planejamento/00-inicial/mapa-do-problema.md)
+3. [Matriz de alternativas](planejamento/00-inicial/matriz-de-alternativas.md)
 4. [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
 5. [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
-6. [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
-7. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
-8. [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
+6. [Mapa 01 - Visão Funcional da v1](planejamento/01-v1/01-visao-funcional-v1.md)
+7. [Roteiro geral de etapas](planejamento/99-geral/roteiro-geral-de-etapas.md)
+8. [Mapa 03 - Provas Técnicas da v1](planejamento/01-v1/03-provas-tecnicas-v1.md)
 
 ## Pastas
 
@@ -32,7 +32,7 @@ Documento principal:
 - [Documentação do SVNFlow](README.md)
 - [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
 
-### `docs/planejamento-inicial/`
+### `docs/planejamento/00-inicial/`
 
 Guarda documentos de descoberta e entendimento inicial.
 
@@ -40,10 +40,10 @@ Use quando quiser entender por que o SVNFlow existe, quais problemas resolve e q
 
 Documentos:
 
-- [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
-- [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
+- [Mapa do problema](planejamento/00-inicial/mapa-do-problema.md)
+- [Matriz de alternativas](planejamento/00-inicial/matriz-de-alternativas.md)
 
-### `docs/planejamento-v1/`
+### `docs/planejamento/01-v1/`
 
 Guarda mapas de etapas e planejamento da primeira versão.
 
@@ -51,11 +51,11 @@ Use quando quiser saber em que ponto a v1 está e quais etapas vêm depois.
 
 Documentos:
 
-- [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
-- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/contratos-validacoes-v1.md)
-- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
+- [Mapa 01 - Visão Funcional da v1](planejamento/01-v1/01-visao-funcional-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](planejamento/01-v1/02-contratos-validacoes-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](planejamento/01-v1/03-provas-tecnicas-v1.md)
 
-### `docs/planejamento/`
+### `docs/planejamento/99-geral/`
 
 Guarda documentos de planejamento transversal, que organizam etapas gerais do projeto.
 
@@ -63,7 +63,7 @@ Use quando quiser entender a sequência planejada de blocos até a conclusão do
 
 Documentos:
 
-- [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
+- [Roteiro geral de etapas](planejamento/99-geral/roteiro-geral-de-etapas.md)
 
 ### `docs/decisoes/`
 
@@ -135,9 +135,9 @@ Use para orientar análise, edição, commits e PRs mantendo o padrão da YA LAB
 | Regras para IA | `AGENTS.md` |
 | Índice geral da documentação | `docs/README.md` |
 | Consulta e manutenção documental pela IA | `docs/guia-de-documentacao-para-ia.md` |
-| Problema, contexto e alternativas | `docs/planejamento-inicial/` |
-| Mapas de etapas da v1 | `docs/planejamento-v1/` |
-| Planejamento transversal | `docs/planejamento/` |
+| Problema, contexto e alternativas | `docs/planejamento/00-inicial/` |
+| Mapas de etapas da v1 | `docs/planejamento/01-v1/` |
+| Planejamento transversal | `docs/planejamento/99-geral/` |
 | Decisões aceitas | `docs/decisoes/` |
 | Fluxos de uso | `docs/fluxos/` |
 | Contratos operacionais | `docs/contratos/` |
@@ -150,7 +150,7 @@ Nem toda alteração documental exige atualizar todos os índices.
 Atualize sempre:
 
 - o documento principal da tarefa;
-- o mapa relacionado, quando houver mudança de status, próxima issue ou rastreabilidade.
+- o mapa em andamento, quando houver mudança de status documental da etapa ou documento relacionado.
 
 Atualize `docs/README.md` quando:
 
@@ -196,7 +196,7 @@ Cada mapa oficial deve ficar como arquivo Markdown direto dentro da área corres
 Exemplo:
 
 ```text
-docs/planejamento-v1/visao-funcional-v1.md
+docs/planejamento/01-v1/01-visao-funcional-v1.md
 ```
 
 Cada mapa deve conter:
@@ -207,7 +207,9 @@ Cada mapa deve conter:
 - objetivo;
 - critérios;
 - etapas e status;
-- próxima execução ou conclusão do mapa.
+- próxima etapa do mapa, apenas quando o mapa estiver em andamento.
+
+Mapas concluídos devem permanecer estáticos e não devem registrar andamento de issues futuras. O GitHub Project e as issues controlam execução; os documentos registram conhecimento durável.
 
 ## Fluxo GitHub
 

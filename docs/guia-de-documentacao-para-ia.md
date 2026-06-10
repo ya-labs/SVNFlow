@@ -35,12 +35,12 @@ Não leia todos os documentos por padrão. Comece pela menor fonte capaz de resp
 | `docs/README.md` | Índice público da documentação. | Quando precisar listar documentos existentes ou conferir estrutura. | Quando criar, mover, renomear ou remover documento relevante para navegação. | `leitura inicial`, `estrutura atual`, `padrões` |
 | `docs/guia-da-documentacao.md` | Guia humano de localização da documentação. | Quando precisar escolher a pasta correta ou orientar uma pessoa leitora. | Quando a estrutura documental mudar ou surgir novo documento relevante para consulta humana. | `pastas`, `onde atualizar`, `leitura rápida` |
 | `docs/guia-de-documentacao-para-ia.md` | Guia vivo de consulta e manutenção documental para IA. | Antes de leituras amplas, criação de docs ou alteração documental relevante. | Sempre que documento, premissa, matriz ou fluxo de consulta documental mudar. | `matriz`, `premissas`, `manual de atualização` |
-| `docs/planejamento-inicial/` | Registrar problema, contexto e alternativas iniciais. | Quando a tarefa envolver motivo do produto, problema original ou alternativas avaliadas. | Quando descoberta inicial ou alternativa relevante mudar sem virar decisão final. | `problema`, `alternativa`, `contexto`, `risco` |
+| `docs/planejamento/00-inicial/` | Registrar problema, contexto e alternativas iniciais. | Quando a tarefa envolver motivo do produto, problema original ou alternativas avaliadas. | Quando descoberta inicial ou alternativa relevante mudar sem virar decisão final. | `problema`, `alternativa`, `contexto`, `risco` |
 | `docs/decisoes/` | Registrar decisões aceitas, contexto e consequências. | Quando precisar confirmar escolha já tomada ou evitar reabrir discussão decidida. | Quando uma decisão for aceita, substituída ou tiver consequência importante alterada. | `decisão`, `consequências`, `escopo`, `.svnflow`, `commit SVN` |
 | `docs/fluxos/` | Descrever comportamento esperado do produto para cada fluxo de uso. | Quando a tarefa envolver experiência, sequência de ações, validações ou mensagens de fluxo. | Quando comportamento esperado, entrada, saída ou limite de um fluxo mudar. | `exportação`, `importação`, `patch.diff`, `svn update`, `histórico local` |
 | `docs/contratos/` | Definir entradas, saídas, confirmações, bloqueios e falhas esperadas das operações. | Quando a tarefa envolver comando, validação, erro, bloqueio ou operação sensível. | Quando contrato operacional, falha esperada, confirmação ou saída de comando mudar. | `entrada`, `saída`, `bloqueio`, `falha`, `confirmação` |
-| `docs/planejamento-v1/` | Organizar mapas da v1, etapas, rastreabilidade e provas planejadas. | Quando a tarefa envolver bloco da v1, issue relacionada, prova técnica ou sequência documental. | Quando mudar etapa, premissa, rastreabilidade, documento relacionado ou divisão dos mapas. | `Mapa 01`, `Mapa 02`, `Mapa 03`, `prova técnica`, `issue` |
-| `docs/planejamento/roteiro-geral-de-etapas.md` | Planejar blocos gerais até o fim do projeto. | Quando precisar entender a ordem macro do projeto. | Somente quando a ordem macro, bloco geral ou escopo final mudar. | `etapas planejadas`, `roteiro`, `blocos`, `pós-v1` |
+| `docs/planejamento/01-v1/` | Organizar mapas da v1, etapas e provas planejadas. | Quando a tarefa envolver bloco da v1, mapa, prova técnica ou sequência documental. | Quando mudar etapa, premissa, documento relacionado ou divisão dos mapas. | `Mapa 01`, `Mapa 02`, `Mapa 03`, `prova técnica` |
+| `docs/planejamento/99-geral/roteiro-geral-de-etapas.md` | Planejar blocos gerais até o fim do projeto. | Quando precisar entender a ordem macro do projeto. | Somente quando a ordem macro, bloco geral ou escopo final mudar. | `etapas planejadas`, `roteiro`, `blocos`, `pós-v1` |
 | `docs/prototipo/` | Planejar validações, provas técnicas e protótipos antes da implementação real. | Quando a tarefa envolver protótipo técnico, prova técnica, validação prática ou critérios de teste. | Quando mudar plano de protótipo, cenário fictício, prova técnica ou evidência esperada. | `protótipo`, `prova técnica`, `validação`, `ambiente fictício`, `critério` |
 
 ## Manual de Atualização
@@ -48,7 +48,8 @@ Não leia todos os documentos por padrão. Comece pela menor fonte capaz de resp
 Use estas regras antes de editar documentação:
 
 - Atualize sempre o documento principal da tarefa.
-- Atualize o mapa relacionado quando a tarefa mudar status, próxima issue, rastreabilidade ou dependência entre etapas.
+- Atualize o mapa em andamento quando a tarefa mudar status documental de etapa, documento relacionado ou dependência entre etapas.
+- Não atualize mapas concluídos para refletir andamento de issues futuras.
 - Atualize `docs/README.md` somente quando o documento novo for importante para leitura inicial, quando a estrutura de pastas mudar ou quando houver mudança relevante no índice público.
 - Atualize `docs/guia-da-documentacao.md` somente quando criar uma nova categoria, mudar a função de uma pasta, mover documentos relevantes para navegação humana ou quando a localização deixar de ser óbvia.
 - Atualize este guia somente quando mudar regra de manutenção, fluxo de consulta, papel de uma pasta/documento ou padrão que a IA deve repetir.
@@ -86,7 +87,7 @@ Atualize o roteiro apenas quando mudar a ordem macro, o bloco geral ou o escopo 
 
 ### Mapas da v1
 
-Os mapas da v1 podem manter rastreabilidade com issues e documentos relacionados.
+Os mapas da v1 podem manter rastreabilidade com etapas e documentos relacionados.
 
 Eles não devem substituir:
 
@@ -95,7 +96,9 @@ Eles não devem substituir:
 - Project;
 - discussão operacional do GitHub.
 
-Use mapas para orientar sequência, escopo e dependências entre blocos.
+Use mapas para orientar sequência, escopo e dependências entre blocos. Issues e Pull Requests devem apontar para mapas, não o contrário.
+
+Mapas concluídos devem ficar estáticos. Apenas o mapa em andamento pode registrar status de suas etapas, sempre sem número de issue, próxima issue ou status do GitHub Project.
 
 ### Fluxos
 
