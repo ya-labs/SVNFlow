@@ -72,13 +72,23 @@ Leitura inicial recomendada:
 
 ## Fluxo de trabalho
 
-Este projeto segue os padrões da YA LABS documentados no Handbook.
+Este projeto segue os padrões da YA LABS documentados no YABook.
 
-Para documentação, use commits no formato:
+Referência oficial:
 
-```text
-docs: descrição curta
-```
+- [YABook - Handbook de Padrões Internos da YA LABS](https://github.com/ya-labs/YABook)
+
+No contexto do SVNFlow, o YABook é a fonte para padrões de:
+
+- fluxo de trabalho com GitHub Issues, Projects, branches, commits e Pull Requests;
+- uso de IA em desenvolvimento e documentação;
+- organização e manutenção de documentação técnica;
+- estrutura inicial de repositórios e templates.
+
+Separação de responsabilidades:
+
+- YABook define padrão organizacional;
+- SVNFlow mantém documentação específica do produto.
 
 ## Próximas etapas
 
