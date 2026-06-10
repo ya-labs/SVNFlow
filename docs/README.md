@@ -9,6 +9,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
 - [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
 - [Guia de consulta da documentação](guia-da-documentacao.md)
+- [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
 - [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
 - [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](decisoes/0002-contrato-inicial-pacote-svnflow.md)
@@ -36,6 +37,7 @@ docs/
 |   `-- 0003-commit-svn-protegido.md
 |-- contratos/
 |   `-- operacoes-v1.md
+|-- guia-de-documentacao-para-ia.md
 |-- guia-da-documentacao.md
 |-- fluxos/
 |   |-- aplicacao-patch-svn.md

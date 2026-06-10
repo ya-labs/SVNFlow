@@ -14,9 +14,10 @@ Para entender o projeto em ordem:
 2. [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
 3. [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
 4. [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
-5. [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
-6. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
-7. [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
+5. [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
+6. [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
+7. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
+8. [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 
 ## Pastas
 
@@ -29,6 +30,7 @@ Use quando quiser ver a estrutura atual, links principais e regras de segurança
 Documento principal:
 
 - [Documentação do SVNFlow](README.md)
+- [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
 
 ### `docs/planejamento-inicial/`
 
@@ -131,6 +133,7 @@ Use para orientar análise, edição, commits e PRs mantendo o padrão da YA LAB
 | Visão geral do projeto | `README.md` |
 | Regras para IA | `AGENTS.md` |
 | Índice geral da documentação | `docs/README.md` |
+| Consulta e manutenção documental pela IA | `docs/guia-de-documentacao-para-ia.md` |
 | Problema, contexto e alternativas | `docs/planejamento-inicial/` |
 | Mapas de etapas da v1 | `docs/planejamento-v1/` |
 | Planejamento transversal | `docs/planejamento/` |

@@ -54,13 +54,17 @@ Se não houver issue ou se a branch estiver incompatível, avise antes de editar
 
 Ao alterar documentação:
 
+- consulte o [Guia de Documentação Para IA](docs/guia-de-documentacao-para-ia.md) antes de leituras amplas, criação de documentos ou alteração documental relevante;
 - consulte o [Guia de Consulta da Documentação](docs/guia-da-documentacao.md) antes de criar, mover ou reorganizar documentos;
-- use o guia para escolher a pasta correta e identificar quais índices precisam ser atualizados;
+- use o guia da IA para localizar fontes, preservar premissas e identificar documentos relacionados;
+- use o guia de consulta para escolher a pasta correta e identificar quais índices precisam ser atualizados;
 - use Markdown limpo;
 - escreva em português com acentos;
 - mantenha o texto objetivo e fácil de consultar;
 - diferencie problema, alternativa, decisão e implementação;
 - não transforme hipótese técnica em decisão final.
+
+Ao receber uma sugestão de alteração documental, a IA deve validar a ideia contra as premissas dos guias, a documentação existente, os riscos e a simplicidade da solução antes de concordar.
 
 ## Commit sugerido
 
