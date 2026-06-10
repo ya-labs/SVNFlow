@@ -1,19 +1,19 @@
-# Próximo Bloco de Etapas da v1
+# Mapa 02 - Contratos e Validações da v1
 
 ## Objetivo
 
-Este documento detalha o próximo bloco de etapas da v1 do SVNFlow após o mapa funcional inicial.
+Este documento registra o bloco de contratos e validações que conectou a visão funcional inicial às provas técnicas da v1.
 
-O objetivo é transformar os fluxos documentados em validações técnicas progressivas, sem escolher stack, arquitetura final ou implementação definitiva antes da hora.
+O objetivo foi transformar os fluxos documentados em contratos operacionais e preparar a sequência de provas técnicas, sem escolher stack, arquitetura final ou implementação definitiva antes da hora.
 
 ## Resumo
 
 | Campo | Valor |
 | --- | --- |
 | Mapa | 02 - Contratos e Validações da v1 |
-| Status geral | `em andamento` |
-| Próxima issue | mapa 03 já criado; seguir issue #28 |
-| Objetivo | transformar fluxos documentados em contratos e validações técnicas |
+| Status geral | `documentado` |
+| Próxima issue | continuidade no Mapa 03 pela issue #28 |
+| Objetivo | registrar contratos operacionais e preparação das provas técnicas |
 | Escopo | contratos operacionais e preparação das provas técnicas |
 
 ## Critérios do bloco
@@ -59,14 +59,14 @@ As etapas devem evitar:
 
 | Ordem | Issue | Etapa | Documento | Status |
 | --- | --- | --- | --- | --- |
-| 9 | #27 | Contratos operacionais dos comandos | `operacoes-v1.md` | `documentada` |
-| 10 | #28 | Prova técnica de geração do patch | `proximo-bloco-etapas-v1.md` | `próxima` |
-| 11 | #29 | Prova técnica de aplicação do patch | `proximo-bloco-etapas-v1.md` | `pendente` |
-| 12 | #30 | Prova técnica de `svn update` | `proximo-bloco-etapas-v1.md` | `pendente` |
-| 13 | #31 | Estratégia da base Git local | `proximo-bloco-etapas-v1.md` | `pendente` |
-| 14 | #32 | Modelo inicial do histórico local | `proximo-bloco-etapas-v1.md` | `pendente` |
-| 15 | #33 | Protótipo navegável da v1 | `proximo-bloco-etapas-v1.md` | `pendente` |
-| 16 | #34 | Critérios de pronto da v1 | `proximo-bloco-etapas-v1.md` | `pendente` |
+| 9 | #27 | Contratos operacionais dos comandos | `docs/contratos/operacoes-v1.md` | `documentada` |
+| 10 | #28 | Prova técnica de geração do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `próxima` |
+| 11 | #29 | Prova técnica de aplicação do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 12 | #30 | Prova técnica de `svn update` | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 13 | #31 | Estratégia da base Git local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 14 | #32 | Modelo inicial do histórico local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 15 | #33 | Protótipo navegável da v1 | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 16 | #34 | Critérios de pronto da v1 | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
 
 ## 9. Contratos operacionais dos comandos
 
@@ -247,19 +247,19 @@ Critério de conclusão:
 - riscos aceitos registrados;
 - próximos passos após a v1 definidos.
 
-## Próxima issue recomendada
+## Conclusão do Mapa
 
-A próxima issue recomendada é documentar os contratos operacionais dos comandos.
+Este mapa está documentado como ponte entre a visão funcional e as provas técnicas.
 
 Motivo:
 
 - os fluxos funcionais já estão mapeados;
-- a implementação depende de entradas, saídas e bloqueios claros;
-- os contratos reduzem risco antes das provas técnicas;
-- ainda não exige escolher stack ou arquitetura final.
+- os contratos operacionais já foram documentados;
+- as próximas validações estão concentradas no Mapa 03;
+- ainda não há escolha de stack ou arquitetura final.
 
-Título sugerido:
+Próxima execução operacional:
 
 ```text
-Documentar contratos operacionais dos comandos
+#28 Documentar prova técnica de geração do patch
 ```

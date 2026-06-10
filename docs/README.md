@@ -13,9 +13,9 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](decisoes/0002-contrato-inicial-pacote-svnflow.md)
 - [Commit SVN protegido](decisoes/0003-commit-svn-protegido.md)
-- [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
-- [Próximo bloco de etapas da v1](planejamento-v1/proximo-bloco-etapas-v1.md)
-- [Mapa de provas técnicas da v1](planejamento-v1/mapa-de-provas-tecnicas-v1.md)
+- [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/contratos-validacoes-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 - [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
 - [Contratos operacionais dos comandos](contratos/operacoes-v1.md)
 - [Aplicação do patch no checkout SVN](fluxos/aplicacao-patch-svn.md)
@@ -50,9 +50,9 @@ docs/
 |-- planejamento/
 |   `-- roteiro-geral-de-etapas.md
 |-- planejamento-v1/
-|   |-- mapa-de-etapas-v1.md
-|   |-- mapa-de-provas-tecnicas-v1.md
-|   `-- proximo-bloco-etapas-v1.md
+|   |-- contratos-validacoes-v1.md
+|   |-- provas-tecnicas-v1.md
+|   `-- visao-funcional-v1.md
 `-- prototipo/
     `-- plano-prototipo-v1.md
 ```
@@ -74,6 +74,7 @@ Use o Handbook como referência para:
 - padrão de branches;
 - padrão de commits;
 - padrão de Pull Requests;
+- vínculo de issues ao Project `ya labs development`;
 - boas práticas de documentação;
 - uso de IA.
 

@@ -14,8 +14,9 @@ Para entender o projeto em ordem:
 2. [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
 3. [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
 4. [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
-5. [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
-6. [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
+5. [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
+6. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
+7. [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 
 ## Pastas
 
@@ -48,15 +49,15 @@ Use quando quiser saber em que ponto a v1 está e quais etapas vêm depois.
 
 Documentos:
 
-- [Mapa de etapas da v1](planejamento-v1/mapa-de-etapas-v1.md)
-- [Mapa de provas técnicas da v1](planejamento-v1/mapa-de-provas-tecnicas-v1.md)
-- [Próximo bloco de etapas da v1](planejamento-v1/proximo-bloco-etapas-v1.md)
+- [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/contratos-validacoes-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 
 ### `docs/planejamento/`
 
-Guarda documentos de planejamento transversal, que organizam mais de uma fase do projeto.
+Guarda documentos de planejamento transversal, que organizam etapas gerais do projeto.
 
-Use quando quiser entender a evolução estimada do projeto além da v1 imediata.
+Use quando quiser entender a sequência planejada de blocos até a conclusão do projeto.
 
 Documentos:
 
@@ -152,3 +153,32 @@ Não inclua:
 - trechos sensíveis de arquivos.
 
 Use exemplos genéricos e linguagem preventiva.
+
+## Padrão dos Mapas de Planejamento
+
+Cada mapa oficial deve ficar como arquivo Markdown direto dentro da área correspondente.
+
+Exemplo:
+
+```text
+docs/planejamento-v1/visao-funcional-v1.md
+```
+
+Cada mapa deve conter:
+
+- resumo;
+- trilha textual fixa;
+- tabela de rastreabilidade;
+- objetivo;
+- critérios;
+- etapas e status;
+- próxima execução ou conclusão do mapa.
+
+## Fluxo GitHub
+
+Toda issue nova do SVNFlow deve ser vinculada ao Project `ya labs development`, além de seguir o fluxo normal da YA LABS:
+
+- label adequada;
+- assignee;
+- branch correspondente;
+- Pull Request com `Closes #<issue>`.

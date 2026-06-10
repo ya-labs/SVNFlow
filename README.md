@@ -64,8 +64,9 @@ Leitura inicial recomendada:
 - [Mapa do problema](docs/planejamento-inicial/mapa-do-problema.md)
 - [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](docs/decisoes/0002-contrato-inicial-pacote-svnflow.md)
-- [Mapa de etapas da v1](docs/planejamento-v1/mapa-de-etapas-v1.md)
-- [Próximo bloco de etapas da v1](docs/planejamento-v1/proximo-bloco-etapas-v1.md)
+- [Roteiro geral de etapas](docs/planejamento/roteiro-geral-de-etapas.md)
+- [Mapa 01 - Visão Funcional da v1](docs/planejamento-v1/visao-funcional-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](docs/planejamento-v1/provas-tecnicas-v1.md)
 - [Pacote `.svnflow`](docs/fluxos/pacote-svnflow.md)
 - [Exportação de alteração](docs/fluxos/exportacao-alteracao.md)
 - [Atualização da base local a partir do SVN](docs/fluxos/atualizacao-base-local-svn.md)
@@ -88,4 +89,4 @@ docs: descrição curta
 
 ## Próximas etapas
 
-As próximas etapas da v1 estão organizadas no [Mapa de etapas da v1](docs/planejamento-v1/mapa-de-etapas-v1.md).
+As próximas etapas da v1 estão organizadas no [Roteiro geral de etapas](docs/planejamento/roteiro-geral-de-etapas.md).
