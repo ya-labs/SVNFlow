@@ -60,13 +60,13 @@ As etapas devem evitar:
 | Ordem | Issue | Etapa | Documento | Status |
 | --- | --- | --- | --- | --- |
 | 9 | #27 | Contratos operacionais dos comandos | `docs/contratos/operacoes-v1.md` | `documentada` |
-| 10 | #28 | Prova técnica de geração do patch | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | `próxima` |
-| 11 | #29 | Prova técnica de aplicação do patch | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | `pendente` |
-| 12 | #30 | Prova técnica de `svn update` | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | `pendente` |
-| 13 | #31 | Estratégia da base Git local | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | `pendente` |
-| 14 | #32 | Modelo inicial do histórico local | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | `pendente` |
-| 15 | #33 | Protótipo navegável da v1 | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | `pendente` |
-| 16 | #34 | Critérios de pronto da v1 | `docs/planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md` | `pendente` |
+| 10 | #28 | Prova técnica de geração do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `próxima` |
+| 11 | #29 | Prova técnica de aplicação do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 12 | #30 | Prova técnica de `svn update` | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 13 | #31 | Estratégia da base Git local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 14 | #32 | Modelo inicial do histórico local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 15 | #33 | Protótipo navegável da v1 | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 16 | #34 | Critérios de pronto da v1 | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
 
 ## 9. Contratos operacionais dos comandos
 
@@ -96,7 +96,7 @@ Critério de conclusão:
 
 Documento relacionado:
 
-- [Contratos operacionais dos comandos](../../contratos/operacoes-v1.md)
+- [Contratos operacionais dos comandos](../contratos/operacoes-v1.md)
 
 ## 10. Prova técnica de geração do patch
 

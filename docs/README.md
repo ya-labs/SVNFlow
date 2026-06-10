@@ -13,9 +13,9 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
 - [Contrato inicial do pacote `.svnflow`](decisoes/0002-contrato-inicial-pacote-svnflow.md)
 - [Commit SVN protegido](decisoes/0003-commit-svn-protegido.md)
-- [Mapa 01 - Visão Funcional da v1](planejamento-v1/01-visao-funcional/visao-funcional-v1.md)
-- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/02-contratos-validacoes/contratos-validacoes-v1.md)
-- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md)
+- [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/contratos-validacoes-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 - [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
 - [Contratos operacionais dos comandos](contratos/operacoes-v1.md)
 - [Aplicação do patch no checkout SVN](fluxos/aplicacao-patch-svn.md)
@@ -50,12 +50,9 @@ docs/
 |-- planejamento/
 |   `-- roteiro-geral-de-etapas.md
 |-- planejamento-v1/
-|   |-- 01-visao-funcional/
-|   |   `-- visao-funcional-v1.md
-|   |-- 02-contratos-validacoes/
-|   |   `-- contratos-validacoes-v1.md
-|   `-- 03-provas-tecnicas/
-|       `-- provas-tecnicas-v1.md
+|   |-- contratos-validacoes-v1.md
+|   |-- provas-tecnicas-v1.md
+|   `-- visao-funcional-v1.md
 `-- prototipo/
     `-- plano-prototipo-v1.md
 ```

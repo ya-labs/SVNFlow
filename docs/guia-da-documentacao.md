@@ -14,9 +14,9 @@ Para entender o projeto em ordem:
 2. [Mapa do problema](planejamento-inicial/mapa-do-problema.md)
 3. [Matriz de alternativas](planejamento-inicial/matriz-de-alternativas.md)
 4. [Decisão de escopo da v1](decisoes/0001-escopo-v1.md)
-5. [Mapa 01 - Visão Funcional da v1](planejamento-v1/01-visao-funcional/visao-funcional-v1.md)
+5. [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
 6. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
-7. [Mapa 03 - Provas Técnicas da v1](planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md)
+7. [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 
 ## Pastas
 
@@ -47,19 +47,17 @@ Guarda mapas de etapas e planejamento da primeira versão.
 
 Use quando quiser saber em que ponto a v1 está e quais etapas vêm depois.
 
-Os mapas oficiais da v1 ficam em pastas numeradas por ordem de execução.
-
 Documentos:
 
-- [Mapa 01 - Visão Funcional da v1](planejamento-v1/01-visao-funcional/visao-funcional-v1.md)
-- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/02-contratos-validacoes/contratos-validacoes-v1.md)
-- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/03-provas-tecnicas/provas-tecnicas-v1.md)
+- [Mapa 01 - Visão Funcional da v1](planejamento-v1/visao-funcional-v1.md)
+- [Mapa 02 - Contratos e Validações da v1](planejamento-v1/contratos-validacoes-v1.md)
+- [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 
 ### `docs/planejamento/`
 
-Guarda documentos de planejamento transversal, que organizam o avanço do projeto.
+Guarda documentos de planejamento transversal, que organizam etapas gerais do projeto.
 
-Use quando quiser entender o que já foi feito, qual etapa está em andamento e qual é a próxima tarefa recomendada.
+Use quando quiser entender a sequência planejada de blocos até a conclusão do projeto.
 
 Documentos:
 
@@ -158,12 +156,12 @@ Use exemplos genéricos e linguagem preventiva.
 
 ## Padrão dos Mapas de Planejamento
 
-Cada mapa oficial deve ficar em uma pasta numerada dentro da área correspondente.
+Cada mapa oficial deve ficar como arquivo Markdown direto dentro da área correspondente.
 
 Exemplo:
 
 ```text
-docs/planejamento-v1/01-visao-funcional/visao-funcional-v1.md
+docs/planejamento-v1/visao-funcional-v1.md
 ```
 
 Cada mapa deve conter:
