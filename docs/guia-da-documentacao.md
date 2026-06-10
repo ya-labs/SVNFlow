@@ -151,12 +151,6 @@ Atualize sempre:
 - o documento principal da tarefa;
 - o mapa em andamento, quando houver mudança de status documental da etapa ou documento relacionado.
 
-Atualize `docs/README.md` quando:
-
-- o documento novo for importante para leitura inicial;
-- a estrutura de pastas mudar;
-- a navegação pública ficar incompleta sem o novo link.
-
 Atualize este guia quando:
 
 - criar uma nova pasta ou categoria;
