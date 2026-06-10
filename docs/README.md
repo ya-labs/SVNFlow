@@ -18,6 +18,7 @@ O objetivo é registrar o entendimento do problema, alternativas, decisões e ev
 - [Mapa 02 - Contratos e Validações da v1](planejamento-v1/contratos-validacoes-v1.md)
 - [Mapa 03 - Provas Técnicas da v1](planejamento-v1/provas-tecnicas-v1.md)
 - [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
+- [Prova técnica: Geração de Patch](prototipo/prova-tecnica-geracao-patch.md)
 - [Contratos operacionais dos comandos](contratos/operacoes-v1.md)
 - [Aplicação do patch no checkout SVN](fluxos/aplicacao-patch-svn.md)
 - [Atualização da base local a partir do SVN](fluxos/atualizacao-base-local-svn.md)
@@ -56,7 +57,8 @@ docs/
 |   |-- provas-tecnicas-v1.md
 |   `-- visao-funcional-v1.md
 `-- prototipo/
-    `-- plano-prototipo-v1.md
+    |-- plano-prototipo-v1.md
+    `-- prova-tecnica-geracao-patch.md
 ```
 
 ## Estrutura prevista

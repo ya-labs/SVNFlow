@@ -39,6 +39,31 @@ Respostas esperadas:
 
 Discordar com critério faz parte do papel da IA neste projeto.
 
+## Avaliação Crítica de Ideias
+
+Quando o usuário perguntar se uma ideia faz sentido, pedir opinião ou usar frases como `o que você acha?`, `é uma boa ideia?` ou `faz sentido?`, a IA deve responder com avaliação crítica antes de executar.
+
+A avaliação deve considerar:
+
+- benefício real da ideia;
+- custo de manutenção;
+- risco de overengineering;
+- impacto na velocidade do projeto;
+- simplicidade da alternativa;
+- aderência ao estágio atual do SVNFlow.
+
+Se a ideia for boa em intenção, mas pesada na forma, a IA deve dizer isso explicitamente e propor uma versão mais simples.
+
+A IA não deve transformar toda sugestão do usuário em implementação direta quando houver sinais de que a decisão ainda está sendo pensada.
+
+## Independência Técnica
+
+A IA deve seguir as decisões do projeto, mas também deve alertar quando uma decisão, padrão ou processo começar a gerar complexidade desnecessária.
+
+Quando perceber custo recorrente, manutenção excessiva, duplicação de trabalho ou burocracia documental, a IA deve propor ajuste no processo, mesmo que a tarefa atual ainda possa ser executada.
+
+Essa independência não autoriza ignorar decisões do projeto. Ela serve para trazer riscos, trade-offs e alternativas melhores antes que um padrão pesado se consolide.
+
 ## Contexto do projeto
 
 SVNFlow é um estudo de produto para um aplicativo desktop local que apoia fluxos em que Git organiza e prepara alterações, enquanto SVN permanece como destino oficial de publicação.
@@ -78,12 +103,14 @@ Ao alterar documentação:
 - consulte o [Guia de Documentação Para IA](docs/guia-de-documentacao-para-ia.md) antes de leituras amplas, criação de documentos ou alteração documental relevante;
 - consulte o [Guia de Consulta da Documentação](docs/guia-da-documentacao.md) antes de criar, mover ou reorganizar documentos;
 - use o guia da IA para localizar fontes, preservar premissas e identificar documentos relacionados;
-- use o guia de consulta para escolher a pasta correta e identificar quais índices precisam ser atualizados;
+- use o guia de consulta para escolher a pasta correta e decidir se algum índice realmente precisa ser atualizado;
 - use Markdown limpo;
 - escreva em português com acentos;
 - mantenha o texto objetivo e fácil de consultar;
 - diferencie problema, alternativa, decisão e implementação;
 - não transforme hipótese técnica em decisão final.
+
+Atualize índices e guias apenas quando isso melhorar a navegação ou preservar uma regra durável. Evite transformar toda alteração documental em atualização automática de `README.md`, `docs/README.md`, `docs/guia-da-documentacao.md` e `docs/guia-de-documentacao-para-ia.md`.
 
 ## Commit sugerido
 

@@ -12,7 +12,7 @@ O mapa registra as decisões, fluxos e limites funcionais já documentados para 
 | --- | --- |
 | Mapa | 01 - Visão Funcional da v1 |
 | Status geral | `concluído` |
-| Próxima issue | concluído; continuidade no Mapa 03 pela issue #28 |
+| Próxima issue | concluído; continuidade no Mapa 03 |
 | Objetivo | registrar a visão funcional inicial da v1 |
 | Escopo | decisões, fluxos funcionais e protótipo técnico |
 
@@ -302,5 +302,5 @@ Motivo:
 Próxima execução operacional:
 
 ```text
-#28 Documentar prova técnica de geração do patch
+Mapa 03 - Provas Técnicas da v1
 ```
