@@ -71,7 +71,7 @@ Status possíveis:
 | 2 | Aplicação do patch | `docs/prototipo/prova-tecnica-aplicacao-patch.md` | `documentada` |
 | 3 | `svn update` | `docs/prototipo/prova-tecnica-svn-update.md` | `documentada` |
 | 4 | Base Git local | `docs/prototipo/prova-tecnica-base-git-local.md` | `documentada` |
-| 5 | Histórico local | este mapa | `próxima` |
+| 5 | Histórico local | `docs/fluxos/historico-local-pacotes.md` | `documentada` |
 | 6 | Protótipo navegável | este mapa | `pendente` |
 | 7 | Critérios de pronto | este mapa | `pendente` |
 
@@ -182,7 +182,7 @@ Documento relacionado:
 
 ## 5. Modelo Inicial do Histórico Local
 
-Status: `próxima`
+Status: `documentada`
 
 Objetivo:
 
@@ -200,6 +200,10 @@ Critério de conclusão:
 - modelo mínimo suficiente para protótipo;
 - limites do histórico local explícitos;
 - nenhuma dependência de banco complexo definida.
+
+Documento relacionado:
+
+- [Modelo do Histórico Local (v1)](../../fluxos/historico-local-pacotes.md) — especificação de protótipo e critérios de aceite (issue #32).
 
 ## 6. Protótipo Navegável da v1
 
