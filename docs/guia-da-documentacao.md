@@ -111,6 +111,7 @@ Use quando quiser entender o que precisa ser validado antes da implementação r
 Documentos:
 
 - [Plano do protótipo técnico da v1](prototipo/plano-prototipo-v1.md)
+- [Prova técnica: Geração de Patch](prototipo/prova-tecnica-geracao-patch.md)
 
 ## Documentos da Raiz
 

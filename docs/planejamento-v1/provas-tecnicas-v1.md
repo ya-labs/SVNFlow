@@ -14,7 +14,7 @@ Este mapa não define stack, arquitetura final ou implementação definitiva.
 | --- | --- |
 | Mapa | 03 - Provas Técnicas da v1 |
 | Status geral | `em andamento` |
-| Próxima issue | #28 |
+| Próxima issue | #29 |
 | Objetivo | validar comportamento técnico antes da implementação desktop |
 | Escopo | provas técnicas em ambiente fictício |
 | Fora de escopo | stack final, arquitetura desktop e protótipo visual |
@@ -56,8 +56,8 @@ Status possíveis:
 
 ```text
 03 - Provas Técnicas da v1
-├── #28 Geração do patch        próxima
-├── #29 Aplicação do patch      pendente
+├── #28 Geração do patch        documentada
+├── #29 Aplicação do patch      próxima
 ├── #30 svn update              pendente
 ├── #31 Base Git local          pendente
 ├── #32 Histórico local         pendente
@@ -69,8 +69,8 @@ Status possíveis:
 
 | Ordem | Issue | Etapa | Documento | Status |
 | --- | --- | --- | --- | --- |
-| 1 | #28 | Geração do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `próxima` |
-| 2 | #29 | Aplicação do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
+| 1 | #28 | Geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` | `documentada` |
+| 2 | #29 | Aplicação do patch | `docs/planejamento-v1/provas-tecnicas-v1.md` | `próxima` |
 | 3 | #30 | `svn update` | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
 | 4 | #31 | Base Git local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
 | 5 | #32 | Histórico local | `docs/planejamento-v1/provas-tecnicas-v1.md` | `pendente` |
@@ -79,7 +79,7 @@ Status possíveis:
 
 ## 1. Geração de Patch
 
-Status: `próxima`
+Status: `documentada`
 
 Issue relacionada:
 
@@ -104,9 +104,13 @@ Critério de conclusão:
 - falhas principais anotadas;
 - nenhuma dependência de código real.
 
+Documento relacionado:
+
+- [Prova técnica: Geração de Patch](../prototipo/prova-tecnica-geracao-patch.md)
+
 ## 2. Aplicação de Patch
 
-Status: `pendente`
+Status: `próxima`
 
 Issue relacionada:
 
@@ -286,7 +290,7 @@ Este mapa não pretende:
 A próxima issue recomendada é:
 
 ```text
-#28 Documentar prova técnica de geração do patch
+#29 Documentar prova técnica de aplicação do patch
 ```
 
-Ela inicia a sequência prática das validações técnicas da v1.
+Ela continua a sequência prática das validações técnicas da v1, usando como entrada o `patch.diff` descrito na prova de geração.

@@ -41,7 +41,7 @@ Não leia todos os documentos por padrão. Comece pela menor fonte capaz de resp
 | `docs/contratos/` | Definir entradas, saídas, confirmações, bloqueios e falhas esperadas das operações. | Quando a tarefa envolver comando, validação, erro, bloqueio ou operação sensível. | Quando contrato operacional, falha esperada, confirmação ou saída de comando mudar. | `entrada`, `saída`, `bloqueio`, `falha`, `confirmação` |
 | `docs/planejamento-v1/` | Organizar mapas da v1, etapas, rastreabilidade e provas planejadas. | Quando a tarefa envolver bloco da v1, issue relacionada, prova técnica ou sequência documental. | Quando mudar etapa, premissa, rastreabilidade, documento relacionado ou divisão dos mapas. | `Mapa 01`, `Mapa 02`, `Mapa 03`, `prova técnica`, `issue` |
 | `docs/planejamento/roteiro-geral-de-etapas.md` | Planejar blocos gerais até o fim do projeto. | Quando precisar entender a ordem macro do projeto. | Somente quando a ordem macro, bloco geral ou escopo final mudar. | `etapas planejadas`, `roteiro`, `blocos`, `pós-v1` |
-| `docs/prototipo/` | Planejar validações e protótipos antes da implementação real. | Quando a tarefa envolver protótipo técnico, validação prática ou critérios de teste. | Quando mudar plano de protótipo, cenário fictício ou evidência esperada. | `protótipo`, `validação`, `ambiente fictício`, `critério` |
+| `docs/prototipo/` | Planejar validações, provas técnicas e protótipos antes da implementação real. | Quando a tarefa envolver protótipo técnico, prova técnica, validação prática ou critérios de teste. | Quando mudar plano de protótipo, cenário fictício, prova técnica ou evidência esperada. | `protótipo`, `prova técnica`, `validação`, `ambiente fictício`, `critério` |
 
 ## Manual de Atualização
 
