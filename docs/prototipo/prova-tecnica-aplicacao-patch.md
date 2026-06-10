@@ -184,13 +184,13 @@ Esta prova não cobre:
 - implementação da interface visual;
 - atualização da base local pelo SVN.
 
-## Resultado Esperado da Issue
+## Resultado Esperado da Prova
 
-Ao concluir a issue #29, o projeto deve ter:
+Ao concluir esta prova, o projeto deve ter:
 
 - prova técnica de aplicação de patch documentada;
 - cenário compatível descrito;
 - cenário divergente descrito;
 - `svn status` esperado registrado;
 - mensagens de falha candidatas anotadas;
-- base suficiente para iniciar a issue #30, sobre `svn update`.
+- base suficiente para documentar a prova técnica de `svn update`.
