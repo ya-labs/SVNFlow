@@ -56,8 +56,8 @@ Status possíveis:
 03 - Provas Técnicas da v1
 ├── Geração do patch        documentada
 ├── Aplicação do patch      documentada
-├── svn update              pendente
-├── Base Git local          pendente
+├── svn update              documentada
+├── Base Git local          próxima
 ├── Histórico local         pendente
 ├── Protótipo navegável     pendente
 └── Critérios de pronto     pendente
@@ -69,8 +69,8 @@ Status possíveis:
 | --- | --- | --- | --- |
 | 1 | Geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` | `documentada` |
 | 2 | Aplicação do patch | `docs/prototipo/prova-tecnica-aplicacao-patch.md` | `documentada` |
-| 3 | `svn update` | este mapa | `pendente` |
-| 4 | Base Git local | este mapa | `pendente` |
+| 3 | `svn update` | `docs/prototipo/prova-tecnica-svn-update.md` | `documentada` |
+| 4 | Base Git local | este mapa | `próxima` |
 | 5 | Histórico local | este mapa | `pendente` |
 | 6 | Protótipo navegável | este mapa | `pendente` |
 | 7 | Critérios de pronto | este mapa | `pendente` |
@@ -130,7 +130,7 @@ Documento relacionado:
 
 ## 3. Atualização pelo SVN
 
-Status: `pendente`
+Status: `documentada`
 
 Objetivo:
 
@@ -149,6 +149,10 @@ Critério de conclusão:
 - `svn update` validado sem alterar código real;
 - saídas úteis para UI documentadas;
 - falhas comuns registradas.
+
+Documento relacionado:
+
+- [Prova Técnica: Atualização pelo SVN (`svn update`)](../../prototipo/prova-tecnica-svn-update.md)
 
 ## 4. Estratégia da Base Git Local
 
