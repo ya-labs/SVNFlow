@@ -57,8 +57,8 @@ Status possíveis:
 ├── Geração do patch        documentada
 ├── Aplicação do patch      documentada
 ├── svn update              documentada
-├── Base Git local          próxima
-├── Histórico local         pendente
+├── Base Git local          documentada
+├── Histórico local         próxima
 ├── Protótipo navegável     pendente
 └── Critérios de pronto     pendente
 ```
@@ -70,8 +70,8 @@ Status possíveis:
 | 1 | Geração do patch | `docs/prototipo/prova-tecnica-geracao-patch.md` | `documentada` |
 | 2 | Aplicação do patch | `docs/prototipo/prova-tecnica-aplicacao-patch.md` | `documentada` |
 | 3 | `svn update` | `docs/prototipo/prova-tecnica-svn-update.md` | `documentada` |
-| 4 | Base Git local | este mapa | `próxima` |
-| 5 | Histórico local | este mapa | `pendente` |
+| 4 | Base Git local | `docs/prototipo/prova-tecnica-base-git-local.md` | `documentada` |
+| 5 | Histórico local | este mapa | `próxima` |
 | 6 | Protótipo navegável | este mapa | `pendente` |
 | 7 | Critérios de pronto | este mapa | `pendente` |
 
@@ -156,7 +156,7 @@ Documento relacionado:
 
 ## 4. Estratégia da Base Git Local
 
-Status: `pendente`
+Status: `documentada`
 
 Objetivo:
 
@@ -175,9 +175,13 @@ Critério de conclusão:
 - ações destrutivas bloqueadas;
 - relação entre Git local e SVN oficial clara.
 
+Documento relacionado:
+
+- [Prova Técnica: Estratégia da Base Git Local](../../prototipo/prova-tecnica-base-git-local.md)
+
 ## 5. Modelo Inicial do Histórico Local
 
-Status: `pendente`
+Status: `próxima`
 
 Objetivo:
 
