@@ -102,6 +102,7 @@ Ao alterar documentação:
 
 - consulte o [Guia de Documentação Para IA](docs/guia-de-documentacao-para-ia.md) antes de leituras amplas, criação de documentos ou alteração documental relevante;
 - consulte o [Guia de Consulta da Documentação](docs/guia-da-documentacao.md) antes de criar, mover ou reorganizar documentos;
+- consulte o [Fluxo de Trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md) quando a tarefa envolver issue, branch, Pull Request, Project, milestone, épico ou subissue;
 - use o guia da IA para localizar fontes, preservar premissas e identificar documentos relacionados;
 - use o guia de consulta para escolher a pasta correta e decidir se algum índice realmente precisa ser atualizado;
 - mantenha trabalho, backlog, milestones, épicos e progresso operacional no GitHub, não em Markdown;

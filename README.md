@@ -23,6 +23,7 @@ Leitura recomendada:
 - [Arquitetura geral](docs/arquitetura/arquitetura-geral.md)
 - [Requisitos da V1](docs/requisitos/requisitos-v1.md)
 - [Fluxo principal da V1](docs/fluxos/fluxo-principal.md)
+- [Fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md)
 - [Roteiro geral de etapas](docs/planejamento/roteiro-geral-de-etapas.md)
 - [ADRs](docs/adrs/)
 
@@ -41,6 +42,8 @@ Mudanças relevantes devem seguir o fluxo:
 ```text
 Issue -> Branch -> Commit -> Pull Request -> Merge -> Validação
 ```
+
+Milestones, épicos e subissues da V1 seguem o [fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md).
 
 Para documentação, use commits no formato:
 

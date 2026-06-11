@@ -17,6 +17,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 7. [Requisitos da V1](requisitos/requisitos-v1.md)
 8. [Fluxo principal da V1](fluxos/fluxo-principal.md)
 9. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
+10. [Fluxo de trabalho no GitHub](processos/fluxo-de-trabalho-github.md)
 
 ## Pastas
 
@@ -27,6 +28,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | `docs/requisitos/` | Requisitos funcionais e não funcionais da V1. |
 | `docs/fluxos/` | Sequências de uso do produto. |
 | `docs/contratos/` | Formatos, comandos, entradas, saídas, bloqueios e falhas esperadas. |
+| `docs/processos/` | Fluxo de trabalho, Project, milestones, épicos e Pull Requests. |
 | `docs/adrs/` | Decisões aceitas, com contexto e consequências. |
 | `docs/rfcs/` | Propostas ainda não aceitas como decisão. |
 | [`prototipos/`](prototipos/) | Provas técnicas, protótipos e validações experimentais. |
@@ -46,6 +48,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Requisitos | `docs/requisitos/` |
 | Fluxos de uso | `docs/fluxos/` |
 | Contratos | `docs/contratos/` |
+| Fluxo de trabalho no GitHub | `docs/processos/fluxo-de-trabalho-github.md` |
 | Decisões aceitas | `docs/adrs/` |
 | Propostas em discussão | `docs/rfcs/` |
 | Protótipos e provas técnicas | [`prototipos/`](prototipos/) |

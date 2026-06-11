@@ -24,6 +24,7 @@ docs/
 |-- arquitetura/
 |-- contratos/
 |-- fluxos/
+|-- processos/
 |-- produto/
 |-- prototipos/
 |-- requisitos/
@@ -38,6 +39,7 @@ docs/
 - Use `docs/requisitos/` para o que o sistema deve fazer.
 - Use `docs/fluxos/` para sequências de uso.
 - Use `docs/contratos/` para formatos, comandos, entradas, saídas e bloqueios.
+- Use `docs/processos/` para fluxo de trabalho, Project, milestones e épicos.
 - Use `docs/adrs/` para decisões aceitas.
 - Use `docs/rfcs/` para propostas ainda abertas.
 - Use `prototipos/` para validações e experimentos.

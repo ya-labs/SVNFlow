@@ -28,6 +28,7 @@ Não leia todos os documentos por padrão.
 | `docs/requisitos/` | O que o sistema deve fazer. | Requisitos funcionais e não funcionais. | Mudança de capacidade esperada. | `RF-`, `requisito`, `validar` |
 | `docs/fluxos/` | Sequências de uso. | Jornada da pessoa usuária. | Mudança na ordem ou comportamento de uso. | `fluxo`, `preview`, `aplicar`, `commit` |
 | `docs/contratos/` | Formatos e operações. | Pacote, patch, `pr.md`, comandos, entradas e saídas. | Mudança de formato, bloqueio, falha ou validação. | `.svnflow`, `patch.diff`, `pr.md`, `manifest` |
+| `docs/processos/` | Processo de trabalho. | Issue, branch, PR, Project, milestones, épicos e subissues. | Mudança de fluxo operacional do repositório. | `Project`, `milestone`, `epic`, `subissue`, `Pull Request` |
 | `docs/adrs/` | Decisões aceitas. | Confirmar decisão já tomada. | Nova decisão aceita ou substituição de decisão. | `ADR`, `decisão`, `consequências` |
 | `docs/rfcs/` | Propostas abertas. | Ideias ainda não decididas. | Nova proposta em discussão. | `RFC`, `proposta`, `discussão` |
 | `prototipos/` | Provas e experimentos. | Evidência técnica ou validação experimental. | Nova prova, resultado ou limite observado. | `prova técnica`, `ambiente fictício`, `validação` |
@@ -40,6 +41,7 @@ Não leia todos os documentos por padrão.
 - Ao alterar produto, revise requisitos, arquitetura e ADRs relacionadas.
 - Ao alterar fluxo, revise requisitos e contratos relacionados.
 - Ao alterar contrato, revise arquitetura, fluxo e protótipos relacionados.
+- Ao alterar fluxo de trabalho no GitHub, revise `AGENTS.md`, `README.md`, `docs/README.md` e o guia humano apenas se a regra afetar navegação ou execução recorrente.
 - Ao aceitar uma decisão, registre como ADR.
 - Ao discutir ideia ainda não aceita, use RFC.
 - Ao alterar etapa macro da V1, revise o roteiro geral.
@@ -81,3 +83,4 @@ Discordar com critério faz parte do papel da IA neste projeto.
 | SVN | `rg -n "SVN|svn status|svn update|commit SVN" docs` |
 | Decisões | `rg -n "ADR|decisão|consequências" docs/adrs` |
 | Requisitos | `rg -n "RF-|requisito|deve" docs/requisitos` |
+| Processo GitHub | `rg -n "Project|milestone|epic|subissue|Pull Request|branch" docs/processos AGENTS.md README.md` |
