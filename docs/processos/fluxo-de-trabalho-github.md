@@ -235,6 +235,26 @@ O épico deve ser fechado apenas quando:
 - a Definition of Done estiver atendida;
 - não houver bugs bloqueantes conhecidos para aquela capacidade macro.
 
+## Gatilho para branch de desenvolvimento e release
+
+Nem todo estágio do projeto exige branch de desenvolvimento dedicada.
+
+Enquanto o repositório estiver majoritariamente em documentação, decisões e preparação de base, o fluxo pode seguir com branch por issue e Pull Request direto para a branch principal.
+
+Adote branch `dev` quando houver início real de implementação com risco de integração contínua entre tarefas.
+
+Regra prática: iniciar `dev` quando pelo menos 2 dos 3 sinais abaixo estiverem presentes:
+
+- já existem issues de implementação ativa (além de documentação);
+- há trabalho paralelo em mais de uma issue com potencial de conflito;
+- existe necessidade de proteger a branch principal para manter apenas conteúdo pronto para release.
+
+Quando esses sinais não estiverem presentes, manter fluxo simples evita burocracia precoce.
+
+A branch de release deve ser usada apenas quando existir versão candidata consolidada para publicação.
+
+Para a v1 do SVNFlow, a release `1.0.0` deve começar quando a V1 estiver pronta para uso conforme critérios de pronto e validações da etapa de release.
+
 ## O que não registrar em Markdown
 
 Não registre em Markdown:
