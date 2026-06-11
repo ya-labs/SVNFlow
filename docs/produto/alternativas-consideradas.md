@@ -1,4 +1,4 @@
-# Matriz de Alternativas do SVNFlow
+# Alternativas Consideradas do SVNFlow
 
 ## Objetivo
 

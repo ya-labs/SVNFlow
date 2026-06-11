@@ -1,10 +1,10 @@
-# Mapa do Problema do SVNFlow
+# Problema do SVNFlow
 
 ## Objetivo
 
 Este documento registra o problema que o SVNFlow busca resolver: apoiar, por meio de um aplicativo desktop local, o fluxo de preparação e publicação de alterações quando o Git é usado como ambiente de organização do trabalho e o SVN permanece como destino oficial.
 
-O objetivo desta etapa é compreender o cenário, os riscos, as necessidades e os limites do produto antes de definir arquitetura, stack ou implementação.
+O objetivo deste documento é registrar o cenário, os riscos, as necessidades e os limites do produto antes de definir arquitetura, stack ou implementação.
 
 ## Contexto
 

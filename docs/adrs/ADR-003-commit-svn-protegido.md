@@ -1,4 +1,4 @@
-# Decisão 0003: Commit SVN protegido
+# ADR-003: Commit SVN protegido
 
 ## Status
 

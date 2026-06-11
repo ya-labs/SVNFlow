@@ -1,4 +1,4 @@
-# Decisão 0002: Contrato inicial do pacote `.svnflow`
+# ADR-002: Contrato inicial do pacote `.svnflow`
 
 ## Status
 

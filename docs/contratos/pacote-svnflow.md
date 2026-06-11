@@ -1,4 +1,4 @@
-# Pacote `.svnflow`
+# Contrato do Pacote `.svnflow`
 
 ## Objetivo
 

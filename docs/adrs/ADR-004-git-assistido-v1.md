@@ -1,4 +1,4 @@
-# Decisão 0004: Git assistido na v1 sem substituir fluxo de GitHub
+# ADR-004: Git assistido na v1 sem substituir fluxo de GitHub
 
 ## Status
 
