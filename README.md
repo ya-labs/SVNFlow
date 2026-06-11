@@ -4,12 +4,6 @@ SVNFlow é um estudo de produto para um aplicativo desktop local que apoia fluxo
 
 O projeto busca tornar esse processo mais visual, seguro e repetível, com foco em prévia, validação e confirmação antes de qualquer operação sensível no checkout SVN.
 
-## Estado atual
-
-Consulte o [STATUS.md](STATUS.md) para ver a fase atual resumida.
-
-O acompanhamento de trabalho, backlog, épicos, milestones e progresso deve ficar no GitHub.
-
 ## Documentação
 
 A documentação estável fica em [docs/](docs/README.md).
@@ -36,12 +30,6 @@ Não registre código corporativo real, nomes de empresas, clientes, projetos in
 O SVNFlow deve operar localmente e não deve enviar código para servidores externos sem decisão explícita e documentada.
 
 ## Fluxo de trabalho
-
-Mudanças relevantes devem seguir o fluxo:
-
-```text
-Issue -> Branch -> Commit -> Pull Request -> Merge -> Validação
-```
 
 Milestones, épicos e subissues da V1 seguem o [fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md).
 

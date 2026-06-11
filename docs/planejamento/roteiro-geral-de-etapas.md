@@ -14,7 +14,7 @@ Ele é estático e não deve representar progresso, backlog, checklist, subtaref
 4. Aplicação SVN
 5. Commit SVN
 6. Pacotes SVNFlow
-7. Testes
+7. Estabilização
 8. Release
 
 ## Descrição das etapas
@@ -27,7 +27,7 @@ Ele é estático e não deve representar progresso, backlog, checklist, subtaref
 | Aplicação SVN | Aplicar alterações no checkout SVN de forma controlada e validada. |
 | Commit SVN | Proteger a publicação oficial com confirmação explícita. |
 | Pacotes SVNFlow | Exportar, importar e validar pacotes `.svnflow`. |
-| Testes | Validar o fluxo em ambiente fictício e cobrir falhas esperadas. |
+| Estabilização | Corrigir bugs, melhorar UX, mensagens e casos de borda. |
 | Release | Preparar entrega experimental com limitações conhecidas. |
 
 ## Regra de manutenção

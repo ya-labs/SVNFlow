@@ -42,7 +42,7 @@ docs/
 - Use `docs/processos/` para fluxo de trabalho, Project, milestones e épicos.
 - Use `docs/adrs/` para decisões aceitas.
 - Use `docs/rfcs/` para propostas ainda abertas.
-- Use `prototipos/` para validações e experimentos.
+- Use `docs/prototipos/` para validações e experimentos.
 
 ## Segurança e privacidade
 

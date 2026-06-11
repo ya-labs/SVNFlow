@@ -42,6 +42,5 @@ Os marcos da V1 devem ser acompanhados no GitHub, não em Markdown:
 - `V1 - M4 Aplicação SVN`
 - `V1 - M5 Commit SVN`
 - `V1 - M6 Pacotes`
-- `V1 - M7 Testes`
+- `V1 - M7 Estabilização`
 - `V1 - M8 Release`
-

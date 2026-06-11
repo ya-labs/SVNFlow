@@ -21,8 +21,7 @@ Não leia todos os documentos por padrão.
 
 | Área | Função | Quando consultar | Quando atualizar | Palavras-chave |
 | --- | --- | --- | --- | --- |
-| `README.md` | Entrada pública do projeto. | Visão geral e links principais. | Mudança de posicionamento ou leitura inicial. | `SVNFlow`, `documentação`, `status` |
-| `STATUS.md` | Estado resumido atual. | Fase atual e próximo objetivo. | Mudança de fase macro. | `fase atual`, `próximo objetivo` |
+| `README.md` | Entrada pública do projeto. | Visão geral e links principais. | Mudança de posicionamento ou leitura inicial. | `SVNFlow`, `documentação` |
 | `docs/produto/` | Conhecimento de produto. | Visão, problema, público, definição da V1 e alternativas. | Mudança de escopo, público ou definição. | `V1`, `problema`, `alternativas`, `público` |
 | `docs/arquitetura/` | Arquitetura conceitual. | Módulos, responsabilidades e comunicação. | Mudança de desenho conceitual. | `módulo`, `responsabilidade`, `pacote` |
 | `docs/requisitos/` | O que o sistema deve fazer. | Requisitos funcionais e não funcionais. | Mudança de capacidade esperada. | `RF-`, `requisito`, `validar` |
@@ -31,7 +30,7 @@ Não leia todos os documentos por padrão.
 | `docs/processos/` | Processo de trabalho. | Issue, branch, PR, Project, milestones, épicos e subissues. | Mudança de fluxo operacional do repositório. | `Project`, `milestone`, `epic`, `subissue`, `Pull Request` |
 | `docs/adrs/` | Decisões aceitas. | Confirmar decisão já tomada. | Nova decisão aceita ou substituição de decisão. | `ADR`, `decisão`, `consequências` |
 | `docs/rfcs/` | Propostas abertas. | Ideias ainda não decididas. | Nova proposta em discussão. | `RFC`, `proposta`, `discussão` |
-| `prototipos/` | Provas e experimentos. | Evidência técnica ou validação experimental. | Nova prova, resultado ou limite observado. | `prova técnica`, `ambiente fictício`, `validação` |
+| `docs/prototipos/` | Provas e experimentos. | Evidência técnica ou validação experimental. | Nova prova, resultado ou limite observado. | `prova técnica`, `ambiente fictício`, `validação` |
 | `docs/planejamento/` | Roteiro macro estático. | Etapas macro da V1. | Apenas quando etapa macro mudar. | `Ambiente`, `Workspace`, `Release` |
 
 ## Manual de atualização
@@ -51,7 +50,6 @@ Não leia todos os documentos por padrão.
 
 - Markdown guarda conhecimento estável.
 - GitHub guarda trabalho executável.
-- `STATUS.md` deve ser curto e não pode virar checklist.
 - O roteiro geral deve ser estático e não pode virar roadmap operacional.
 - Fluxos descrevem sequência de uso, não requisitos.
 - Requisitos descrevem capacidades, não passo a passo.
