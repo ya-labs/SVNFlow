@@ -140,12 +140,20 @@ Estados esperados:
 - erro: comando não encontrado;
 - bloqueio: caminho informado não existe ou não é repositório válido.
 
-Mensagem de bloqueio sugerida:
+Mensagens públicas sugeridas da M1 (falhas e bloqueios):
 
-```text
-Não foi possível continuar porque o checkout SVN informado não é válido.
-Selecione uma pasta versionada pelo SVN antes de aplicar alterações.
-```
+| Situação | Estado | Mensagem sugerida |
+| --- | --- | --- |
+| Git ausente | Erro | `Git não foi encontrado neste ambiente. Instale ou configure o Git antes de continuar.` |
+| SVN ausente | Erro | `SVN não foi encontrado neste ambiente. Instale ou configure o SVN antes de continuar.` |
+| Caminho Git inválido | Bloqueio | `O caminho informado não é um repositório Git válido. Selecione uma pasta versionada pelo Git.` |
+| Checkout SVN inválido | Bloqueio | `O caminho informado não é um checkout SVN válido. Selecione uma pasta versionada pelo SVN.` |
+
+Diretriz de linguagem:
+
+- manter texto curto, objetivo e orientado a próxima ação;
+- não usar termos internos, nomes corporativos ou caminhos reais;
+- diferenciar claramente erro de ferramenta ausente e bloqueio por caminho inválido.
 
 ### 3. Workspace Git
 
