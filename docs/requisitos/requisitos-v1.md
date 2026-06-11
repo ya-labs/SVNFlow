@@ -32,6 +32,7 @@ Requisitos dizem o que o sistema deve fazer. Fluxos descrevem a sequência esper
 - Usar mensagens claras para falhas de Git, SVN, pacote e patch.
 - Bloquear operações sensíveis em estado inseguro.
 - Manter exemplos e documentação sem conteúdo corporativo real.
+- Seguir o Design System oficial da YA LABS como base visual do protótipo e da aplicação.
 
 ## Fora da V1
 
@@ -39,4 +40,3 @@ Requisitos dizem o que o sistema deve fazer. Fluxos descrevem a sequência esper
 - Pull Request completo dentro do app.
 - Merge, rebase ou resolução automática avançada.
 - Dependência obrigatória de `git svn`.
-
