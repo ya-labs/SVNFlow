@@ -137,6 +137,47 @@ Ao criar ou classificar uma issue de tarefa:
 
 Issues já concluídas também podem ser vinculadas como subissues quando representarem trabalho real de uma capacidade da V1. Issues de governança, reorganização documental ampla ou manutenção de processo podem ficar fora dos épicos quando não representarem capacidade de produto.
 
+## Criação de Novas Issues
+
+O padrão textual das issues segue o YABook. Este documento define apenas como aplicar esse padrão dentro do SVNFlow.
+
+Antes de criar um novo lote de issues:
+
+1. Identifique a milestone atual da V1.
+2. Identifique o épico correspondente.
+3. Crie apenas issues suficientes para orientar o próximo bloco de trabalho.
+4. Evite criar backlog para o projeto inteiro.
+5. Não reclassifique issues antigas apenas para aplicar um padrão novo.
+
+Issues de tarefa da V1 devem ter:
+
+- Project `ya labs development`;
+- milestone da fase correspondente;
+- vínculo como subissue do épico relacionado;
+- labels coerentes com o tipo de trabalho;
+- corpo objetivo seguindo o padrão do YABook;
+- critérios de aceite verificáveis;
+- fora de escopo explícito quando houver risco de expansão.
+
+Ao preparar um lote novo:
+
+- priorize a milestone atual;
+- deixe issues de milestones futuras no backlog apenas quando ajudarem a preservar contexto;
+- coloque em `Pronto para dev` somente a próxima issue realmente acionável;
+- mantenha as demais em `Backlog`;
+- não use Markdown para listar o backlog criado.
+
+Exemplo de aplicação:
+
+```text
+Milestone: V1 - M1 Ambiente
+Épico: Preparação do Ambiente
+Issue: Validar disponibilidade do Git local
+Labels: feature, backend
+Project: ya labs development
+Status inicial: Backlog ou Pronto para dev
+```
+
 ## Labels
 
 Labels indicam o tipo ou a natureza do trabalho. Elas não substituem milestone, épico ou subissue.
