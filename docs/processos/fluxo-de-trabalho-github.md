@@ -42,6 +42,28 @@ As milestones oficiais da V1 são:
 
 Testes acontecem dentro de todas as milestones. A milestone `V1 - M7 Estabilização` existe para ajustes finais, bugs, UX, mensagens e casos de borda, não para concentrar todos os testes do projeto.
 
+## Planejamento Horizontal e Execução Vertical
+
+O SVNFlow pode documentar o produto de forma horizontal, mas deve executar a V1 de forma vertical por milestone.
+
+Documentar horizontalmente significa registrar visão, requisitos, arquitetura, fluxos, contratos, ADRs e provas técnicas de diferentes partes do produto quando isso ajuda a entender o conjunto.
+
+Executar verticalmente significa priorizar trabalho implementável seguindo a ordem das milestones da V1:
+
+```text
+M1 Ambiente -> M2 Workspace -> M3 Preview -> M4 Aplicação SVN -> M5 Commit SVN -> M6 Pacotes -> M7 Estabilização -> M8 Release
+```
+
+Na prática:
+
+- documentação geral pode antecipar conceitos de milestones futuras;
+- issues executáveis devem priorizar a milestone atual;
+- issues de milestone futura podem existir no backlog, mas não devem ser puxadas para execução antes da base necessária;
+- documentação técnica deve acompanhar a capacidade que ela apoia;
+- governança documental ampla pode ficar sem milestone da V1 quando não representar capacidade de produto.
+
+Essa regra evita que a documentação vire bloqueio para começar e evita que a execução pule dependências importantes.
+
 ## Épicos
 
 Épicos são issues normais do GitHub com label `epic`.
@@ -114,6 +136,33 @@ Ao criar ou classificar uma issue de tarefa:
 5. Mova a tarefa pelo fluxo normal do Project.
 
 Issues já concluídas também podem ser vinculadas como subissues quando representarem trabalho real de uma capacidade da V1. Issues de governança, reorganização documental ampla ou manutenção de processo podem ficar fora dos épicos quando não representarem capacidade de produto.
+
+## Labels
+
+Labels indicam o tipo ou a natureza do trabalho. Elas não substituem milestone, épico ou subissue.
+
+Use labels para filtrar e organizar issues no Project.
+
+Labels iniciais do SVNFlow:
+
+| Label | Uso |
+| --- | --- |
+| `epic` | Issues que representam capacidades macro da V1. |
+| `feature` | Entrega funcional nova ou incremento de comportamento. |
+| `bug` | Correção de comportamento incorreto. |
+| `docs` | Documentação estável, guias, contratos, ADRs ou ajustes textuais. |
+| `frontend` | Interface, telas, componentes e experiência visual. |
+| `backend` | Regras internas, comandos, integração local, leitura de arquivos e execução de operações. |
+| `architecture` | Decisões ou desenho estrutural do produto. |
+| `prototype` | Provas técnicas, experimentos e validações antes da implementação final. |
+| `process` | Fluxo de trabalho, organização de Project, milestones, épicos e governança do repositório. |
+
+Regra prática:
+
+- épicos devem ter a label `epic` e podem ter uma label de área quando ajudar;
+- tarefas devem ter pelo menos uma label de tipo, como `feature`, `bug` ou `docs`;
+- issues de documentação ligadas a uma capacidade da V1 devem usar a milestone e o épico correspondentes;
+- issues de governança documental ou processo podem usar `docs` e `process`, sem milestone da V1 quando não entregarem capacidade de produto.
 
 ## Project
 
