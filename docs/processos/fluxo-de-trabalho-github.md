@@ -154,7 +154,8 @@ Issues de tarefa da V1 devem ter:
 - Project `ya labs development`;
 - milestone da fase correspondente;
 - vínculo como subissue do épico relacionado;
-- labels coerentes com o tipo de trabalho;
+- uma label de tipo;
+- uma ou mais labels de área quando aplicável;
 - corpo objetivo seguindo o padrão do YABook;
 - critérios de aceite verificáveis;
 - fora de escopo explícito quando houver risco de expansão.
@@ -180,30 +181,35 @@ Status inicial: Backlog ou Pronto para dev
 
 ## Labels
 
-Labels indicam o tipo ou a natureza do trabalho. Elas não substituem milestone, épico ou subissue.
+Labels classificam a issue por tipo e área, seguindo o padrão do YABook.
+
+Elas não substituem milestone, épico ou subissue.
 
 Use labels para filtrar e organizar issues no Project.
 
 Labels iniciais do SVNFlow:
 
-| Label | Uso |
-| --- | --- |
-| `epic` | Issues que representam capacidades macro da V1. |
-| `feature` | Entrega funcional nova ou incremento de comportamento. |
-| `bug` | Correção de comportamento incorreto. |
-| `docs` | Documentação estável, guias, contratos, ADRs ou ajustes textuais. |
-| `frontend` | Interface, telas, componentes e experiência visual. |
-| `backend` | Regras internas, comandos, integração local, leitura de arquivos e execução de operações. |
-| `architecture` | Decisões ou desenho estrutural do produto. |
-| `prototype` | Provas técnicas, experimentos e validações antes da implementação final. |
-| `process` | Fluxo de trabalho, organização de Project, milestones, épicos e governança do repositório. |
+| Label | Classe | Uso |
+| --- | --- | --- |
+| `epic` | Tipo especial | Issues que representam capacidades macro da V1. |
+| `feature` | Tipo | Entrega funcional nova ou incremento de comportamento. |
+| `bug` | Tipo | Correção de comportamento incorreto. |
+| `docs` | Tipo | Documentação estável, guias, contratos, ADRs ou ajustes textuais. |
+| `frontend` | Área | Interface, telas, componentes e experiência visual. |
+| `backend` | Área | Regras internas, comandos, integração local, leitura de arquivos e execução de operações. |
+| `architecture` | Área | Decisões ou desenho estrutural do produto. |
+| `prototype` | Área | Provas técnicas, experimentos e validações antes da implementação final. |
+| `process` | Área | Fluxo de trabalho, organização de Project, milestones, épicos e governança do repositório. |
 
 Regra prática:
 
 - épicos devem ter a label `epic` e podem ter uma label de área quando ajudar;
-- tarefas devem ter pelo menos uma label de tipo, como `feature`, `bug` ou `docs`;
-- issues de documentação ligadas a uma capacidade da V1 devem usar a milestone e o épico correspondentes;
-- issues de governança documental ou processo podem usar `docs` e `process`, sem milestone da V1 quando não entregarem capacidade de produto.
+- tarefas comuns devem ter exatamente um tipo principal, como `feature`, `bug` ou `docs`;
+- tarefas podem ter uma ou mais áreas, como `backend`, `frontend`, `architecture`, `prototype` ou `process`;
+- documentação de arquitetura deve usar `docs` + `architecture`;
+- documentação de protótipo ou prova técnica deve usar `docs` + `prototype` e, quando fizer sentido, `frontend` ou `backend`;
+- implementação de comportamento deve usar `feature` + a área afetada;
+- governança documental ou processo deve usar `docs` + `process`, sem milestone da V1 quando não entregar capacidade de produto.
 
 ## Project
 
