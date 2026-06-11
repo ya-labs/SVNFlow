@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { validateGitAvailability, GitValidationResult } from '../git';
+import { validateGitAvailability, validateGitRepository, GitValidationResult } from '../git';
 
 jest.mock('child_process');
 
@@ -102,6 +102,104 @@ describe('validateGitAvailability', () => {
       expect(result).toHaveProperty('available');
       expect(result).toHaveProperty('message');
       expect(typeof result.available).toBe('boolean');
+      expect(typeof result.message).toBe('string');
+    });
+  });
+});
+
+describe('validateGitRepository', () => {
+  const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('when repository is valid', () => {
+    it('should return valid=true with path', () => {
+      mockExecSync.mockReturnValue('.git');
+
+      const result = validateGitRepository('/home/user/my-repo');
+
+      expect(result.valid).toBe(true);
+      expect(result.path).toBe('/home/user/my-repo');
+      expect(result.message).toContain('Repositório Git válido');
+      expect(result.error).toBeUndefined();
+    });
+  });
+
+  describe('when path does not exist', () => {
+    it('should return valid=false with ENOENT error', () => {
+      const error = new Error('No such file or directory');
+      (error as any).code = 'ENOENT';
+      mockExecSync.mockImplementation(() => {
+        throw error;
+      });
+
+      const result = validateGitRepository('/nonexistent/path');
+
+      expect(result.valid).toBe(false);
+      expect(result.path).toBe('/nonexistent/path');
+      expect(result.error).toBe('ENOENT');
+      expect(result.message).toContain('não existe');
+    });
+  });
+
+  describe('when folder is not a Git repository', () => {
+    it('should return valid=false when rev-parse fails', () => {
+      const error = new Error('Not a git repository');
+      mockExecSync.mockImplementation(() => {
+        throw error;
+      });
+
+      const result = validateGitRepository('/tmp');
+
+      expect(result.valid).toBe(false);
+      expect(result.path).toBe('/tmp');
+      expect(result.error).toBe('Not a git repository');
+      expect(result.message).toContain('não é um repositório Git válido');
+    });
+  });
+
+  describe('when Git command times out', () => {
+    it('should return valid=false with ETIMEDOUT error', () => {
+      const error = new Error('Timeout');
+      (error as any).code = 'ETIMEDOUT';
+      mockExecSync.mockImplementation(() => {
+        throw error;
+      });
+
+      const result = validateGitRepository('/home/user/repo');
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('ETIMEDOUT');
+      expect(result.message).toContain('Timeout');
+    });
+  });
+
+  describe('when an unknown error occurs', () => {
+    it('should handle non-Error exceptions gracefully', () => {
+      mockExecSync.mockImplementation(() => {
+        throw 'unknown string error';
+      });
+
+      const result = validateGitRepository('/home/user/repo');
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('UNKNOWN_ERROR');
+      expect(result.message).toContain('desconhecido');
+    });
+  });
+
+  describe('return type structure', () => {
+    it('should always have valid, message, and path properties', () => {
+      mockExecSync.mockReturnValue('.git');
+
+      const result = validateGitRepository('/home/user/repo');
+
+      expect(result).toHaveProperty('valid');
+      expect(result).toHaveProperty('message');
+      expect(result).toHaveProperty('path');
+      expect(typeof result.valid).toBe('boolean');
       expect(typeof result.message).toBe('string');
     });
   });
