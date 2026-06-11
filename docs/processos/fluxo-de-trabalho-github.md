@@ -201,6 +201,13 @@ Labels iniciais do SVNFlow:
 | `prototype` | Área | Provas técnicas, experimentos e validações antes da implementação final. |
 | `process` | Área | Fluxo de trabalho, organização de Project, milestones, épicos e governança do repositório. |
 
+Prefixos curtos para o tipo em mensagem de commit (`area/tipo: descricao`):
+
+| Tipo textual | Prefixo curto |
+| --- | --- |
+| `feature` | `feat` |
+| `process` | `proc` |
+
 Regra prática:
 
 - épicos devem ter a label `epic` e podem ter uma label de área quando ajudar;
