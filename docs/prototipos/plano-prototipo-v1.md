@@ -21,6 +21,16 @@ A interface deve priorizar:
 - confirmação antes de operação sensível;
 - mensagens que indiquem o próximo ajuste necessário.
 
+## Diretriz Visual
+
+O protótipo navegável deve usar o Design System oficial da YA LABS, documentado no YABook, como referência visual.
+
+O objetivo é manter consistência com o ecossistema YA LABS sem transformar este plano em especificação visual final.
+
+- YABook: `yalabs-design-system.md`.
+
+O protótipo não precisa definir layout final, componentes definitivos ou tokens visuais próprios.
+
 ## Escopo
 
 O protótipo deve representar a navegação entre:
