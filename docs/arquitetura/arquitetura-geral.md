@@ -4,6 +4,8 @@
 
 Este documento descreve a arquitetura conceitual do SVNFlow sem definir stack, framework ou implementação final.
 
+Para a M1 - Ambiente, a stack mínima aceita está registrada na [ADR-005](../adrs/ADR-005-stack-minima-desktop-m1.md).
+
 ## Visão geral
 
 O SVNFlow deve ser um aplicativo desktop local que coordena operações entre:
