@@ -27,8 +27,6 @@ O protótipo navegável deve usar o Design System oficial da YA LABS, documentad
 
 O objetivo é manter consistência com o ecossistema YA LABS sem transformar este plano em especificação visual final.
 
-- YABook: `yalabs-design-system.md`.
-
 O protótipo não precisa definir layout final, componentes definitivos ou tokens visuais próprios.
 
 ## Escopo
