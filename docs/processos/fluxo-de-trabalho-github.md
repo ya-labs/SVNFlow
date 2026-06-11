@@ -249,12 +249,16 @@ Regra prática: iniciar `dev` quando pelo menos 2 dos 3 sinais abaixo estiverem 
 
 Mudanças pequenas e leves de processo, nomenclatura, organização do repositório e fluxo de trabalho podem ser aplicadas diretamente na `main` sem PR de processo separada.
 
-Use a issue fixa [#86 - Ajustes contínuos de processo e organização](https://github.com/ya-labs/SVNFlow/issues/86) para registrar cada ajuste com um comentário contendo:
+Registre cada ajuste em [docs/processos/ajustes-operacionais.md](ajustes-operacionais.md) com:
 
+- data;
+- commit relacionado;
+- tipo (ex.: `docs/proc`);
 - o que mudou;
 - por quê mudou;
-- impacto no fluxo (se houver);
-- commit relacionado (ex.: `abc123`).
+- impacto no fluxo (se houver).
+
+Use a issue fixa [#86 - Ajustes contínuos de processo e organização](https://github.com/ya-labs/SVNFlow/issues/86) como ponto de visibilidade no GitHub, mas o registro oficial versionado fica no arquivo acima.
 
 Critério para "ajuste pequeno" (pode ir na main direto):
 - Mudança de nomenclatura ou padrão.
