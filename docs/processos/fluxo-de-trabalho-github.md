@@ -245,6 +245,29 @@ Quando houver pedido de explicação para facilitar aprendizado e navegação do
 
 Esse registro deve ser enxuto, focado em contexto e entendimento rápido. Não abrir issue apenas para esse tipo de explicação.
 
+## Ajustes contínuos de processo
+
+Mudanças pequenas e leves de processo, nomenclatura, organização do repositório e fluxo de trabalho podem ser aplicadas diretamente na `main` sem PR de processo separada.
+
+Use a issue fixa [#86 - Ajustes contínuos de processo e organização](https://github.com/ya-labs/SVNFlow/issues/86) para registrar cada ajuste com um comentário contendo:
+
+- o que mudou;
+- por quê mudou;
+- impacto no fluxo (se houver);
+- commit relacionado (ex.: `abc123`).
+
+Critério para "ajuste pequeno" (pode ir na main direto):
+- Mudança de nomenclatura ou padrão.
+- Ajuste de regra leve de fluxo.
+- Atualização de guia ou documentação de processo.
+- Alteração de organização do repositório.
+
+Critério para "não entra em ajuste" (precisa issue + branch + PR):
+- Mudança de comportamento funcional do produto.
+- Alteração de contrato técnico.
+- Mudança de arquitetura.
+- Trabalho que impacta múltiplas etapas.
+
 O épico deve ser fechado apenas quando:
 
 - suas subissues necessárias estiverem concluídas;
