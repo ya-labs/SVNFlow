@@ -168,12 +168,20 @@ Ao preparar um lote novo:
 - mantenha as demais em `Backlog`;
 - não use Markdown para listar o backlog criado.
 
+Padrão de branch (YABook):
+
+```text
+Formato: area/tipoNumero-descricao
+Exemplo: backend/feat72-validar-disponibilidade-git
+```
+
 Exemplo de aplicação:
 
 ```text
 Milestone: V1 - M1 Ambiente
 Épico: Preparação do Ambiente
-Issue: Validar disponibilidade do Git local
+Issue: #72 Validar disponibilidade do Git local
+Branch: backend/feat72-validar-disponibilidade-git
 Labels: feature, backend
 Project: ya labs development
 Status inicial: Backlog ou Pronto para dev
