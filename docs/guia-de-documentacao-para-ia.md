@@ -31,6 +31,7 @@ Não leia todos os documentos por padrão.
 | `docs/adrs/` | Decisões aceitas. | Confirmar decisão já tomada. | Nova decisão aceita ou substituição de decisão. | `ADR`, `decisão`, `consequências` |
 | `docs/rfcs/` | Propostas abertas. | Ideias ainda não decididas. | Nova proposta em discussão. | `RFC`, `proposta`, `discussão` |
 | `docs/prototipos/` | Provas e experimentos. | Evidência técnica ou validação experimental. | Nova prova, resultado ou limite observado. | `prova técnica`, `ambiente fictício`, `validação` |
+| `docs/release/` | Critérios de pronto e entrega experimental. | Critérios de aceite final, riscos aceitos e limites de release. | Mudança nos critérios de pronto ou no recorte de entrega experimental. | `pronto`, `release`, `entrega experimental`, `riscos aceitos` |
 | `docs/planejamento/` | Roteiro macro estático. | Etapas macro da V1. | Apenas quando etapa macro mudar. | `Ambiente`, `Workspace`, `Release` |
 
 ## Manual de atualização

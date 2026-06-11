@@ -27,6 +27,7 @@ docs/
 |-- processos/
 |-- produto/
 |-- prototipos/
+|-- release/
 |-- requisitos/
 |-- rfcs/
 |-- guia-da-documentacao.md
@@ -43,6 +44,7 @@ docs/
 - Use `docs/adrs/` para decisões aceitas.
 - Use `docs/rfcs/` para propostas ainda abertas.
 - Use `docs/prototipos/` para validações e experimentos.
+- Use `docs/release/` para critérios de pronto, entrega experimental e limites de release.
 
 ## Segurança e privacidade
 

@@ -31,6 +31,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | `docs/adrs/` | Decisões aceitas, com contexto e consequências. |
 | `docs/rfcs/` | Propostas ainda não aceitas como decisão. |
 | [`docs/prototipos/`](prototipos/) | Provas técnicas, protótipos e validações experimentais. |
+| `docs/release/` | Critérios de pronto, entrega experimental e limites de release. |
 | `docs/planejamento/` | Roteiro macro estático da V1. |
 
 ## Onde atualizar cada tipo de informação
@@ -51,6 +52,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Decisões aceitas | `docs/adrs/` |
 | Propostas em discussão | `docs/rfcs/` |
 | Protótipos e provas técnicas | [`docs/prototipos/`](prototipos/) |
+| Critérios de pronto e release | `docs/release/` |
 | Roteiro macro | `docs/planejamento/roteiro-geral-de-etapas.md` |
 
 ## Regras de segurança
