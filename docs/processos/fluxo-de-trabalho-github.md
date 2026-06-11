@@ -245,6 +245,29 @@ Adote branch `dev` quando houver início real de implementação com risco de in
 
 Regra prática: iniciar `dev` quando pelo menos 2 dos 3 sinais abaixo estiverem presentes:
 
+## Ajustes contínuos de processo
+
+Mudanças pequenas e leves de processo, nomenclatura, organização do repositório e fluxo de trabalho podem ser aplicadas diretamente na `main` sem PR de processo separada.
+
+Use a issue fixa [#86 - Ajustes contínuos de processo e organização](https://github.com/ya-labs/SVNFlow/issues/86) para registrar cada ajuste com um comentário contendo:
+
+- o que mudou;
+- por quê mudou;
+- impacto no fluxo (se houver);
+- commit relacionado (ex.: `abc123`).
+
+Critério para "ajuste pequeno" (pode ir na main direto):
+- Mudança de nomenclatura ou padrão.
+- Ajuste de regra leve de fluxo.
+- Atualização de guia ou documentação de processo.
+- Alteração de organização do repositório.
+
+Critério para "não entra em ajuste" (precisa issue + branch + PR):
+- Mudança de comportamento funcional do produto.
+- Alteração de contrato técnico.
+- Mudança de arquitetura.
+- Trabalho que impacta múltiplas etapas.
+
 - já existem issues de implementação ativa (além de documentação);
 - há trabalho paralelo em mais de uma issue com potencial de conflito;
 - existe necessidade de proteger a branch principal para manter apenas conteúdo pronto para release.
