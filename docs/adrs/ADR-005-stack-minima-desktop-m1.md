@@ -27,6 +27,34 @@ Execução de comandos locais (Git/SVN):
 - aplicar timeout e tratamento de erro por operação sensível;
 - expor ao renderer apenas APIs necessárias via preload seguro.
 
+## Restrições de ambiente corporativo
+
+Esta decisão considera uso em ambiente corporativo com possíveis bloqueios de software.
+
+Premissas para Linux Mint Cinnamon em cenário empresarial:
+
+- compatibilidade técnica com base Ubuntu/Debian não elimina bloqueios de política;
+- pode haver restrição de instalação, execução de binários, atualização e rede;
+- a operação deve depender do mínimo possível de privilégios administrativos.
+
+Riscos operacionais a observar:
+
+- bloqueio de execução de Electron/Node por política de segurança;
+- bloqueio de processos filhos (`git`, `svn`) por EDR/antivírus corporativo;
+- restrição de acesso a repositórios externos para download de dependências;
+- limitação de atualização automática da aplicação em estações gerenciadas.
+
+## Critérios de liberdade operacional mínima
+
+Para manter viabilidade em ambiente corporativo, a implementação da M1 deve perseguir estes critérios:
+
+- funcionar em modo local sem dependência obrigatória de serviços externos;
+- suportar execução sem privilégio de administrador sempre que possível;
+- não exigir auto-update para operação básica;
+- realizar pré-validação de ambiente (Git, SVN, permissões e paths) antes do fluxo principal;
+- manter logs e mensagens objetivas para facilitar homologação e suporte interno;
+- prever fallback operacional por CLI para etapas críticas quando a interface desktop estiver bloqueada.
+
 ## Fora de escopo desta decisão
 
 Ficam fora desta ADR:
@@ -49,4 +77,5 @@ Riscos e limites:
 
 - a stack de interface pode ser revisada em decisão futura;
 - escolhas de arquitetura ampla continuam abertas para etapas posteriores;
-- a M1 não deve usar esta ADR para justificar aumento de escopo fora do ambiente.
+- a M1 não deve usar esta ADR para justificar aumento de escopo fora do ambiente;
+- a viabilidade em ambiente corporativo depende de homologação das políticas locais da organização.
