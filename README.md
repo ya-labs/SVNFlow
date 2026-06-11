@@ -1,96 +1,52 @@
 # SVNFlow
 
-SVNFlow é um estudo de produto para um aplicativo desktop local que apoia fluxos de trabalho em que o Git é usado para organizar e preparar alterações, enquanto o SVN permanece como destino oficial de publicação.
+SVNFlow é um estudo de produto para um aplicativo desktop local que apoia fluxos em que Git organiza alterações de desenvolvimento e SVN permanece como destino oficial de publicação.
 
-O projeto busca tornar esse processo mais visual, seguro e repetível, com foco em prévia, validação e confirmação antes de qualquer alteração sensível no checkout SVN.
+O projeto busca tornar esse processo mais visual, seguro e repetível, com foco em prévia, validação e confirmação antes de qualquer operação sensível no checkout SVN.
 
-## Visão geral
+## Estado atual
 
-O SVNFlow não pretende substituir o SVN, substituir o Git ou competir diretamente com `git svn`.
+Consulte o [STATUS.md](STATUS.md) para ver a fase atual resumida.
 
-A proposta inicial é estudar uma camada visual e guiada para operações como:
+O acompanhamento de trabalho, backlog, épicos, milestones e progresso deve ficar no GitHub.
 
-- verificar se ambientes Git e SVN estão limpos;
-- pré-visualizar arquivos que seriam levados ao SVN;
-- aplicar alterações em um checkout SVN de forma controlada;
-- consultar `svn status`;
-- atualizar a base local a partir do SVN;
-- sugerir mensagem de commit;
-- executar um fluxo assistido até antes do commit SVN;
-- proteger o commit SVN com validação explícita.
+## Documentação
 
-## Estado do projeto
+A documentação estável fica em [docs/](docs/README.md).
 
-Este repositório está em fase inicial de documentação e descoberta, com uma decisão inicial de escopo para a v1.
+Leitura recomendada:
 
-A v1 do SVNFlow deve priorizar um fluxo rápido e local combinando:
-
-- comandos `git` + `svn` para validação e aplicação controlada;
-- fluxo manual assistido para reduzir automação prematura;
-- colaboração por pacote `.svnflow` para transportar uma alteração revisável entre pessoas.
-- tela de exportação no modelo de mini PR local, com branch de origem detectada automaticamente e campos estruturados;
-- geração de um `pr.md` padronizado dentro do pacote `.svnflow`;
-- transporte técnico da alteração por `patch.diff`;
-- histórico local simples para pacotes exportados e importados;
-- botão **Atualizar Base pelo SVN** para receber alterações já publicadas no repositório oficial.
-
-Ainda não há decisão final sobre stack, arquitetura, comandos internos, empacotamento desktop ou uso direto de `git svn`.
+- [Visão do produto](docs/produto/visao.md)
+- [Problema](docs/produto/problema.md)
+- [Público-alvo](docs/produto/publico-alvo.md)
+- [Definição da V1](docs/produto/definicao-v1.md)
+- [Arquitetura geral](docs/arquitetura/arquitetura-geral.md)
+- [Requisitos da V1](docs/requisitos/requisitos-v1.md)
+- [Fluxo principal da V1](docs/fluxos/fluxo-principal.md)
+- [Fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md)
+- [Roteiro geral de etapas](docs/planejamento/roteiro-geral-de-etapas.md)
+- [ADRs](docs/adrs/)
 
 ## Segurança e privacidade
 
 Este é um repositório público da YA LABS.
 
-Por isso, a documentação e qualquer implementação futura devem respeitar estas regras:
+Não registre código corporativo real, nomes de empresas, clientes, projetos internos, URLs privadas, caminhos locais reais, credenciais ou trechos sensíveis.
 
-- não armazenar código corporativo real;
-- não registrar nomes de empresas, clientes ou projetos internos;
-- não publicar URLs privadas, caminhos locais ou credenciais;
-- não incluir trechos reais de código sensível;
-- manter exemplos genéricos e seguros.
-
-O SVNFlow deve operar localmente e não deve enviar código para servidores externos sem uma decisão explícita e documentada.
-
-## Documentação
-
-A documentação do projeto fica em:
-
-```text
-docs/
-```
-
-Leitura inicial recomendada:
-
-- [Mapa do problema](docs/planejamento/00-inicial/mapa-do-problema.md)
-- [Decisão de escopo da v1](docs/decisoes/0001-escopo-v1.md)
-- [Decisão: Git assistido na v1](docs/decisoes/0004-git-assistido-v1.md)
-- [Contrato inicial do pacote `.svnflow`](docs/decisoes/0002-contrato-inicial-pacote-svnflow.md)
-- [Roteiro geral de etapas](docs/planejamento/99-geral/roteiro-geral-de-etapas.md)
-- [Mapa 01 - Visão Funcional da v1](docs/planejamento/01-v1/01-visao-funcional-v1.md)
-- [Mapa 03 - Provas Técnicas da v1](docs/planejamento/01-v1/03-provas-tecnicas-v1.md)
-- [Pacote `.svnflow`](docs/fluxos/pacote-svnflow.md)
-- [Exportação de alteração](docs/fluxos/exportacao-alteracao.md)
-- [Atualização da base local a partir do SVN](docs/fluxos/atualizacao-base-local-svn.md)
+O SVNFlow deve operar localmente e não deve enviar código para servidores externos sem decisão explícita e documentada.
 
 ## Fluxo de trabalho
 
-Este projeto segue os padrões da YA LABS documentados no YABook.
+Mudanças relevantes devem seguir o fluxo:
 
-Referência oficial:
+```text
+Issue -> Branch -> Commit -> Pull Request -> Merge -> Validação
+```
 
-- [YABook - Handbook de Padrões Internos da YA LABS](https://github.com/ya-labs/YABook)
+Milestones, épicos e subissues da V1 seguem o [fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md).
 
-No contexto do SVNFlow, o YABook é a fonte para padrões de:
+Para documentação, use commits no formato:
 
-- fluxo de trabalho com GitHub Issues, Projects, branches, commits e Pull Requests;
-- uso de IA em desenvolvimento e documentação;
-- organização e manutenção de documentação técnica;
-- estrutura inicial de repositórios e templates.
-
-Separação de responsabilidades:
-
-- YABook define padrão organizacional;
-- SVNFlow mantém documentação específica do produto.
-
-## Próximas etapas
-
-As próximas etapas da v1 estão organizadas no [Roteiro geral de etapas](docs/planejamento/99-geral/roteiro-geral-de-etapas.md).
+```text
+docs: descrição curta
+```

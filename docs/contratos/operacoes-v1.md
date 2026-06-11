@@ -414,6 +414,8 @@ Falha ao registrar histórico não deve transformar uma operação bem-sucedida 
 
 O histórico local não deve armazenar conteúdo completo de código, patch ou arquivos sensíveis como fonte principal. Ele deve guardar metadados e referência local ao pacote.
 
+O modelo mínimo do registro está definido em [Histórico Local](historico-local.md).
+
 ## Estados Bloqueantes Gerais
 
 O SVNFlow deve impedir avanço seguro quando detectar:

@@ -102,8 +102,10 @@ Ao alterar documentação:
 
 - consulte o [Guia de Documentação Para IA](docs/guia-de-documentacao-para-ia.md) antes de leituras amplas, criação de documentos ou alteração documental relevante;
 - consulte o [Guia de Consulta da Documentação](docs/guia-da-documentacao.md) antes de criar, mover ou reorganizar documentos;
+- consulte o [Fluxo de Trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md) quando a tarefa envolver issue, branch, Pull Request, Project, milestone, épico ou subissue;
 - use o guia da IA para localizar fontes, preservar premissas e identificar documentos relacionados;
 - use o guia de consulta para escolher a pasta correta e decidir se algum índice realmente precisa ser atualizado;
+- mantenha trabalho, backlog, milestones, épicos e progresso operacional no GitHub, não em Markdown;
 - use Markdown limpo;
 - escreva em português com acentos;
 - mantenha o texto objetivo e fácil de consultar;
@@ -112,9 +114,9 @@ Ao alterar documentação:
 
 Atualize índices e guias apenas quando isso melhorar a navegação ou preservar uma regra durável. Evite transformar toda alteração documental em atualização automática de `README.md`, `docs/guia-da-documentacao.md` e `docs/guia-de-documentacao-para-ia.md`.
 
-Mapas e documentos de produto não devem acompanhar issue atual, próxima issue, Pull Request ou status do GitHub Project. Issues e Pull Requests devem apontar para os mapas/documentos relacionados, não o contrário.
+Documentos de produto, arquitetura, requisitos, fluxos, contratos, ADRs, RFCs e protótipos não devem acompanhar issue atual, próxima issue, Pull Request ou status do GitHub Project. Issues e Pull Requests devem apontar para os documentos relacionados, não o contrário.
 
-Mapas concluídos devem permanecer estáticos. Somente o mapa em andamento pode indicar status das próprias etapas, sem números de issue ou referência operacional do GitHub.
+O roteiro geral deve permanecer estático e conter apenas etapas macro da V1. `STATUS.md` deve ser curto e não pode virar checklist.
 
 ## Commit sugerido
 
