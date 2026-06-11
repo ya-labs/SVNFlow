@@ -116,7 +116,7 @@ Atualize índices e guias apenas quando isso melhorar a navegação ou preservar
 
 Documentos de produto, arquitetura, requisitos, fluxos, contratos, ADRs, RFCs e protótipos não devem acompanhar issue atual, próxima issue, Pull Request ou status do GitHub Project. Issues e Pull Requests devem apontar para os documentos relacionados, não o contrário.
 
-O roteiro geral deve permanecer estático e conter apenas etapas macro da V1. `STATUS.md` deve ser curto e não pode virar checklist.
+O roteiro geral deve permanecer estático e conter apenas etapas macro da V1. Não crie arquivo de status em Markdown para acompanhar andamento operacional.
 
 ## Commit sugerido
 

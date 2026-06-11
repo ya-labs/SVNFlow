@@ -9,15 +9,14 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 ## Leitura rápida recomendada
 
 1. [README principal](../README.md)
-2. [Status atual](../STATUS.md)
-3. [Visão do produto](produto/visao.md)
-4. [Problema](produto/problema.md)
-5. [Definição da V1](produto/definicao-v1.md)
-6. [Arquitetura geral](arquitetura/arquitetura-geral.md)
-7. [Requisitos da V1](requisitos/requisitos-v1.md)
-8. [Fluxo principal da V1](fluxos/fluxo-principal.md)
-9. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
-10. [Fluxo de trabalho no GitHub](processos/fluxo-de-trabalho-github.md)
+2. [Visão do produto](produto/visao.md)
+3. [Problema](produto/problema.md)
+4. [Definição da V1](produto/definicao-v1.md)
+5. [Arquitetura geral](arquitetura/arquitetura-geral.md)
+6. [Requisitos da V1](requisitos/requisitos-v1.md)
+7. [Fluxo principal da V1](fluxos/fluxo-principal.md)
+8. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
+9. [Fluxo de trabalho no GitHub](processos/fluxo-de-trabalho-github.md)
 
 ## Pastas
 
@@ -31,7 +30,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | `docs/processos/` | Fluxo de trabalho, Project, milestones, épicos e Pull Requests. |
 | `docs/adrs/` | Decisões aceitas, com contexto e consequências. |
 | `docs/rfcs/` | Propostas ainda não aceitas como decisão. |
-| [`prototipos/`](prototipos/) | Provas técnicas, protótipos e validações experimentais. |
+| [`docs/prototipos/`](prototipos/) | Provas técnicas, protótipos e validações experimentais. |
 | `docs/planejamento/` | Roteiro macro estático da V1. |
 
 ## Onde atualizar cada tipo de informação
@@ -39,7 +38,6 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Tipo de informação | Onde atualizar |
 | --- | --- |
 | Visão geral pública | `README.md` |
-| Fase atual resumida | `STATUS.md` |
 | Regras para IA | `AGENTS.md` |
 | Índice geral | `docs/README.md` |
 | Consulta e manutenção documental pela IA | `docs/guia-de-documentacao-para-ia.md` |
@@ -52,7 +50,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Fluxo de trabalho no GitHub | `docs/processos/fluxo-de-trabalho-github.md` |
 | Decisões aceitas | `docs/adrs/` |
 | Propostas em discussão | `docs/rfcs/` |
-| Protótipos e provas técnicas | [`prototipos/`](prototipos/) |
+| Protótipos e provas técnicas | [`docs/prototipos/`](prototipos/) |
 | Roteiro macro | `docs/planejamento/roteiro-geral-de-etapas.md` |
 
 ## Regras de segurança
