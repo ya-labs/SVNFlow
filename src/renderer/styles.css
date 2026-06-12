@@ -334,3 +334,48 @@ h1 {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.commit-form {
+  display: grid;
+  gap: 10px;
+}
+
+.form-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 166, 166, 0.35);
+  background: rgba(8, 16, 25, 0.85);
+  color: var(--text-primary);
+  font: inherit;
+  padding: 10px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(0, 166, 166, 0.75);
+  box-shadow: 0 0 0 2px rgba(0, 166, 166, 0.18);
+}
+
+.feedback {
+  min-height: 18px;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.feedback.valid {
+  color: rgba(93, 214, 149, 0.9);
+}
+
+.feedback.invalid {
+  color: rgba(250, 104, 104, 0.95);
+}
+
+.commit-context {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+}
