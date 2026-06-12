@@ -1,5 +1,6 @@
 import { validateEnvironmentState, type EnvironmentStateInput } from './environment';
 import { selectSavedEnvironment, type SavedEnvironment, type SelectSavedEnvironmentInput } from './saved-environments';
+import { revalidateEnvironment, type RevalidationBlocker } from './revalidate-environment';
 
 export interface InitialFlowWorkspaceSummary {
   branch?: string;
@@ -22,6 +23,7 @@ export interface InitialFlowLoadedEnvironment {
   needsRevalidation: boolean;
   safeForSensitiveOperations: boolean;
   message: string;
+  blockers?: RevalidationBlocker[];
 }
 
 export function checkInitialFlowGate(input: EnvironmentStateInput): InitialFlowGateResult {
@@ -48,15 +50,21 @@ export function checkInitialFlowGate(input: EnvironmentStateInput): InitialFlowG
   };
 }
 
+export interface LoadInitialFlowOptions {
+  revalidationMaxAgeMinutes?: number;
+  baseBranch?: string;
+  performRevalidation?: boolean;
+}
+
 export function loadInitialFlowFromSavedEnvironment(
   environmentId: string,
   environments: SavedEnvironment[],
-  options?: Omit<SelectSavedEnvironmentInput, 'environmentId' | 'environments'>
+  options?: LoadInitialFlowOptions
 ): InitialFlowLoadedEnvironment {
   const selection = selectSavedEnvironment({
     environments,
     environmentId,
-    now: options?.now,
+    now: undefined,
     revalidationMaxAgeMinutes: options?.revalidationMaxAgeMinutes
   });
 
@@ -72,13 +80,33 @@ export function loadInitialFlowFromSavedEnvironment(
     };
   }
 
+  // Se performRevalidation é false, retorna sem fazer validação real
+  if (options?.performRevalidation === false) {
+    return {
+      gitRepositoryPath: selection.selectedEnvironment.gitWorkspacePath,
+      svnCheckoutPath: selection.selectedEnvironment.svnCheckoutPath,
+      selectedEnvironmentId: selection.selectedEnvironment.id,
+      selectedEnvironmentName: selection.selectedEnvironment.name,
+      needsRevalidation: selection.needsRevalidation,
+      safeForSensitiveOperations: selection.safeForSensitiveOperations,
+      message: selection.message
+    };
+  }
+
+  // Executa revalidação em tempo real
+  const revalidation = revalidateEnvironment({
+    environment: selection.selectedEnvironment,
+    baseBranch: options?.baseBranch
+  });
+
   return {
     gitRepositoryPath: selection.selectedEnvironment.gitWorkspacePath,
     svnCheckoutPath: selection.selectedEnvironment.svnCheckoutPath,
     selectedEnvironmentId: selection.selectedEnvironment.id,
     selectedEnvironmentName: selection.selectedEnvironment.name,
-    needsRevalidation: selection.needsRevalidation,
-    safeForSensitiveOperations: selection.safeForSensitiveOperations,
-    message: selection.message
+    needsRevalidation: !revalidation.canAdvance,
+    safeForSensitiveOperations: revalidation.safeForSensitiveOperations,
+    message: revalidation.message,
+    blockers: revalidation.blockers
   };
 }
