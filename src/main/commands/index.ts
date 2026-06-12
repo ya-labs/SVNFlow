@@ -1,6 +1,23 @@
 export { validateGitAvailability, validateGitRepository, type GitValidationResult, type GitRepositoryValidationResult } from './git';
 export { validateSvnAvailability, validateSvnCheckout, type SvnValidationResult, type SvnCheckoutValidationResult } from './svn';
 export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
-export { checkInitialFlowGate, type InitialFlowGateResult, type InitialFlowWorkspaceSummary } from './initial-flow';
+export {
+	checkInitialFlowGate,
+	loadInitialFlowFromSavedEnvironment,
+	type InitialFlowGateResult,
+	type InitialFlowWorkspaceSummary,
+	type InitialFlowLoadedEnvironment
+} from './initial-flow';
 export { buildPreviewContext, type PreviewContextInput, type PreviewContextResult, type PreviewEnvironmentContext, type PreviewWorkspaceContext, type SelectedEnvironment } from './preview';
 export { listGitChangedFiles, readGitWorkspaceState, validateGitComparisonBase, type GitChangedFile, type GitChangedFilesResult, type GitChangedFileStatus, type GitComparisonBaseValidationResult, type GitWorkspaceStateInput, type GitWorkspaceStateResult, type GitWorkspaceStateStatus } from './workspace';
+export {
+	listSavedEnvironments,
+	selectSavedEnvironment,
+	type SavedEnvironment,
+	type SavedEnvironmentListItem,
+	type SavedEnvironmentValidationStatus,
+	type ListSavedEnvironmentsInput,
+	type ListSavedEnvironmentsResult,
+	type SelectSavedEnvironmentInput,
+	type SelectSavedEnvironmentResult
+} from './saved-environments';

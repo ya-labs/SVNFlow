@@ -1,12 +1,8 @@
 import { validateEnvironmentState, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
 import type { GitChangedFile } from './workspace';
+import type { SelectedEnvironment } from './saved-environments';
 
-export interface SelectedEnvironment {
-  id: string;
-  name: string;
-  gitWorkspacePath: string;
-  svnCheckoutPath: string;
-}
+export type { SelectedEnvironment } from './saved-environments';
 
 export interface PreviewEnvironmentContext extends SelectedEnvironment {
   svnCheckoutRoot?: string;
