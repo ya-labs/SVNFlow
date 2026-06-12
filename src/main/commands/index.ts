@@ -20,6 +20,12 @@ export {
 	type ApplyPatchInput,
 	type ApplyPatchResult
 } from './patch-applier';
+export {
+	readPostApplyStatus,
+	type PostApplyReviewStatus,
+	type PostApplyStatusResult,
+	type ReadPostApplyStatusInput
+} from './post-apply-status';
 export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
 export {
 	checkInitialFlowGate,
