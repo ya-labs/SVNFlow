@@ -1,4 +1,4 @@
-import { buildPreviewContext, type PreviewAlert, type PreviewBlocker, type PreviewContextInput, type PreviewContextResult } from './preview';
+import { buildPreviewContext, type PreviewAlert, type PreviewBlocker, type PreviewContextInput, type PreviewContextResult } from './preview.js';
 
 export interface PreviewMiniPrLocalDraft {
   title: string;

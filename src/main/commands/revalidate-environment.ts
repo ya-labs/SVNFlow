@@ -1,5 +1,5 @@
-import { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateStatus } from './environment';
-import type { SavedEnvironment } from './saved-environments';
+import { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateStatus } from './environment.js';
+import type { SavedEnvironment } from './saved-environments.js';
 
 export interface RevalidationBlocker {
   code: string;

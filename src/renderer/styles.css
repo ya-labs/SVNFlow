@@ -173,6 +173,109 @@ h1 {
   color: var(--text-primary);
 }
 
+.stage-body {
+  margin-top: 16px;
+}
+
+.environment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.environment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  text-align: left;
+  padding: 11px 12px;
+}
+
+.environment-item[data-selected='true'] {
+  border-color: rgba(0, 166, 166, 0.6);
+  background: rgba(0, 166, 166, 0.16);
+}
+
+.environment-name {
+  display: block;
+  font-weight: 600;
+}
+
+.environment-meta {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.status-badge {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status-badge[data-kind='ready'] {
+  border-color: rgba(89, 227, 153, 0.5);
+  background: rgba(89, 227, 153, 0.15);
+}
+
+.status-badge[data-kind='attention'] {
+  border-color: rgba(249, 185, 73, 0.5);
+  background: rgba(249, 185, 73, 0.16);
+}
+
+.status-badge[data-kind='blocked'] {
+  border-color: rgba(142, 155, 173, 0.45);
+  background: rgba(142, 155, 173, 0.2);
+}
+
+.status-badge[data-kind='error'] {
+  border-color: rgba(250, 104, 104, 0.5);
+  background: rgba(250, 104, 104, 0.18);
+}
+
+.status-badge[data-kind='pending'] {
+  border-color: rgba(151, 166, 255, 0.45);
+  background: rgba(151, 166, 255, 0.16);
+}
+
+.stage-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-button {
+  border-radius: 10px;
+  border: 1px solid rgba(0, 166, 166, 0.45);
+  background: rgba(0, 166, 166, 0.18);
+  color: var(--text-primary);
+  padding: 9px 13px;
+  font-weight: 600;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty-state {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 @media (max-width: 880px) {
   .app-shell {
     padding: 14px;

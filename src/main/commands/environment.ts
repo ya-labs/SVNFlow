@@ -3,14 +3,14 @@ import {
   validateGitRepository,
   type GitRepositoryValidationResult,
   type GitValidationResult
-} from './git';
+} from './git.js';
 import {
   validateSvnAvailability,
   validateSvnCheckout,
   type SvnCheckoutValidationResult,
   type SvnValidationResult
-} from './svn';
-import { readGitWorkspaceState, type GitWorkspaceStateResult } from './workspace';
+} from './svn.js';
+import { readGitWorkspaceState, type GitWorkspaceStateResult } from './workspace.js';
 
 export type EnvironmentStateStatus = 'ready' | 'blocked' | 'error';
 

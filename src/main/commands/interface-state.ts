@@ -1,7 +1,7 @@
-import type { SelectedEnvironment } from './saved-environments';
-import type { PreviewScreenState } from './preview-screen';
-import type { PostApplyStatusResult } from './post-apply-status';
-import { getYaLabsVisualProfile, getVisualMessageStyle } from './ya-labs-visual';
+import type { SelectedEnvironment } from './saved-environments.js';
+import type { PreviewScreenState } from './preview-screen.js';
+import type { PostApplyStatusResult } from './post-apply-status.js';
+import { getYaLabsVisualProfile, getVisualMessageStyle } from './ya-labs-visual.js';
 
 export type InterfaceOperationStatus = 'idle' | 'ready' | 'blocked' | 'error' | 'success';
 

@@ -1,7 +1,7 @@
-import { readSvnStatus, type SvnCheckoutState } from './svn-status';
-import { validatePatchFit, type ValidatePatchResult } from './patch-validator';
-import { applyPatch, type ApplyPatchResult } from './patch-applier';
-import { getYaLabsVisualProfile, getVisualMessageStyle } from './ya-labs-visual';
+import { readSvnStatus, type SvnCheckoutState } from './svn-status.js';
+import { validatePatchFit, type ValidatePatchResult } from './patch-validator.js';
+import { applyPatch, type ApplyPatchResult } from './patch-applier.js';
+import { getYaLabsVisualProfile, getVisualMessageStyle } from './ya-labs-visual.js';
 
 export interface SvnApplyConfirmationInput {
   environmentName: string;

@@ -2,10 +2,10 @@ import { execSync } from 'node:child_process';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-import { validateGitRepository } from './git';
-import { saveSavedEnvironment, type SaveSavedEnvironmentInput, type SavedEnvironmentStorageErrorCode } from './saved-environment-store';
-import type { SavedEnvironment } from './saved-environments';
-import { validateSvnCheckout } from './svn';
+import { validateGitRepository } from './git.js';
+import { saveSavedEnvironment, type SaveSavedEnvironmentInput, type SavedEnvironmentStorageErrorCode } from './saved-environment-store.js';
+import type { SavedEnvironment } from './saved-environments.js';
+import { validateSvnCheckout } from './svn.js';
 
 export type RegisterSavedEnvironmentErrorCode =
   | 'INVALID_NAME'

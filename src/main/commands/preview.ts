@@ -1,8 +1,8 @@
-import { validateEnvironmentState, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
-import type { GitChangedFile, GitChangedFileStatus } from './workspace';
-import type { SelectedEnvironment } from './saved-environments';
+import { validateEnvironmentState, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment.js';
+import type { GitChangedFile, GitChangedFileStatus } from './workspace.js';
+import type { SelectedEnvironment } from './saved-environments.js';
 
-export type { SelectedEnvironment } from './saved-environments';
+export type { SelectedEnvironment } from './saved-environments.js';
 
 export interface PreviewEnvironmentContext extends SelectedEnvironment {
   svnCheckoutRoot?: string;

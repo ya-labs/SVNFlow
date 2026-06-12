@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { SavedEnvironment, SavedEnvironmentValidationStatus } from './saved-environments';
+import type { SavedEnvironment, SavedEnvironmentValidationStatus } from './saved-environments.js';
 
 export type SavedEnvironmentStorageErrorCode =
 	| 'INVALID_ENVIRONMENT'
