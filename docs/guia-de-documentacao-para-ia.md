@@ -26,6 +26,7 @@ Não leia todos os documentos por padrão.
 | `docs/arquitetura/` | Arquitetura conceitual. | Módulos, responsabilidades e comunicação. | Mudança de desenho conceitual. | `módulo`, `responsabilidade`, `pacote` |
 | `docs/requisitos/` | O que o sistema deve fazer. | Requisitos funcionais e não funcionais. | Mudança de capacidade esperada. | `RF-`, `requisito`, `validar` |
 | `docs/fluxos/` | Sequências de uso. | Jornada da pessoa usuária. | Mudança na ordem ou comportamento de uso. | `fluxo`, `preview`, `aplicar`, `commit` |
+| `docs/interface/` | Diretrizes de interface visual. | Saber se uma entrega é contrato de UI, interface renderizada ou integração visual. | Mudança em critérios de entrega frontend, navegação visual ou diretriz de renderização. | `interface`, `renderizada`, `frontend`, `shell`, `tela` |
 | `docs/contratos/` | Formatos e operações. | Pacote, patch, `pr.md`, comandos, entradas, saídas, ambientes salvos e histórico local. | Mudança de formato, bloqueio, falha, validação ou modelo local. | `.svnflow`, `patch.diff`, `pr.md`, `manifest`, `ambiente`, `histórico` |
 | `docs/processos/` | Processo de trabalho. | Issue, branch, PR, Project, milestones, épicos e subissues. | Mudança de fluxo operacional do repositório. | `Project`, `milestone`, `epic`, `subissue`, `Pull Request` |
 | `docs/processos/uso-economico-da-ia.md` | Processo para reduzir gasto de contexto ao trabalhar com IA. | Definir modo econômico, modo automático, issue preparada ou leitura mínima. | Mudança no acordo de colaboração entre pessoa usuária e IA. | `modo econômico`, `modo automático`, `issue preparada`, `contexto` |
@@ -88,3 +89,4 @@ Discordar com critério faz parte do papel da IA neste projeto.
 | Processo GitHub | `rg -n "Project|milestone|epic|subissue|Pull Request|branch" docs/processos AGENTS.md README.md` |
 | Uso econômico da IA | `rg -n "modo econômico|modo automático|issue preparada|contexto" docs/processos docs/guia-de-documentacao-para-ia.md` |
 | Histórico local | `rg -n "histórico local|evento_aplicacao|gerado|importado|aplicado|falhou" docs/contratos docs/prototipos` |
+| Interface visual | `rg -n "interface|renderizada|frontend|shell|tela|navegação" docs/interface docs/prototipos docs/requisitos` |

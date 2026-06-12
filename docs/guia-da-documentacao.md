@@ -28,6 +28,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | `docs/arquitetura/` | Arquitetura conceitual, módulos e responsabilidades. |
 | `docs/requisitos/` | Requisitos funcionais e não funcionais da V1. |
 | `docs/fluxos/` | Sequências de uso do produto. |
+| `docs/interface/` | Diretrizes de interface visual, renderização e critérios de entrega frontend. |
 | `docs/contratos/` | Formatos, comandos, entradas, saídas, bloqueios e falhas esperadas. |
 | `docs/processos/` | Fluxo de trabalho, Project, milestones, épicos e Pull Requests. |
 | `docs/adrs/` | Decisões aceitas, com contexto e consequências. |
@@ -50,6 +51,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Arquitetura conceitual | `docs/arquitetura/` |
 | Requisitos | `docs/requisitos/` |
 | Fluxos de uso | `docs/fluxos/` |
+| Interface visual | `docs/interface/` |
 | Contratos | `docs/contratos/` |
 | Ambientes salvos | `docs/contratos/ambientes-salvos.md` |
 | Histórico local | `docs/contratos/historico-local.md` |

@@ -26,6 +26,7 @@ docs/
 |-- arquitetura/
 |-- contratos/
 |-- fluxos/
+|-- interface/
 |-- processos/
 |-- produto/
 |-- prototipos/
@@ -42,6 +43,7 @@ docs/
 - Use `docs/produto/` para conhecimento de produto.
 - Use `docs/requisitos/` para o que o sistema deve fazer.
 - Use `docs/fluxos/` para sequências de uso.
+- Use `docs/interface/` para diretrizes de interface visual, renderização e critérios de entrega frontend.
 - Use `docs/contratos/` para formatos, comandos, entradas, saídas, bloqueios e modelos locais como ambientes salvos.
 - Use `docs/processos/` para fluxo de trabalho, Project, milestones e épicos.
 - Use `docs/adrs/` para decisões aceitas.
