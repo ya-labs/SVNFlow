@@ -6,6 +6,7 @@ declare global {
       getEnvironmentScreenState?: (environmentId?: string) => Promise<EnvironmentScreenState>;
       revalidateEnvironment?: (environmentId?: string) => Promise<EnvironmentScreenState>;
       getPreviewScreenState?: (environmentId?: string) => Promise<PreviewScreenState>;
+      getCommitScreenState?: (environmentId?: string) => Promise<CommitScreenState>;
     };
   }
 }
@@ -59,6 +60,23 @@ interface PreviewScreenState {
   canApplyInSvn: boolean;
 }
 
+interface CommitScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    svnCheckoutPath: string;
+  };
+  commitValidation?: {
+    hasChanges: boolean;
+    affectedFilesCount: number;
+    blockers: Array<{ code: string; message: string }>;
+    canCommit: boolean;
+  };
+  canExecuteCommit: boolean;
+}
+
 type StageKey = 'environment' | 'workspace' | 'preview' | 'apply' | 'commit' | 'packages' | 'history';
 
 type StageMode = 'available' | 'placeholder' | 'blocked';
@@ -103,9 +121,9 @@ const STAGES: StageDefinition[] = [
   {
     key: 'commit',
     label: 'Commit SVN',
-    mode: 'blocked',
+    mode: 'available',
     description: 'Commit protegido permanece indisponível até confirmação da aplicação no checkout SVN.',
-    helper: 'Bloqueado para evitar operações indevidas.'
+    helper: 'Validações e execução protegida de commit SVN.'
   },
   {
     key: 'packages',
@@ -357,6 +375,109 @@ function renderPreviewStage(preview: PreviewScreenState): void {
   `;
 }
 
+function renderCommitStage(commit: CommitScreenState): void {
+  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
+  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
+  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
+
+  setStatusMessage(commit.message);
+
+  if (environmentStatus) {
+    environmentStatus.textContent = commit.status === 'ready' ? 'Pronto' : 'Bloqueado';
+  }
+
+  if (advanceGuard) {
+    advanceGuard.textContent = commit.canExecuteCommit
+      ? 'Commit validado e pronto para execução'
+      : 'Commit bloqueado por validações pendentes';
+  }
+
+  if (!stageBody) {
+    return;
+  }
+
+  const blockers = commit.commitValidation?.blockers
+    ?.map((item) => `<li>${escapeHtml(item.message)}</li>`)
+    .join('') ?? '';
+
+  if (commit.status === 'blocked' || !commit.canExecuteCommit) {
+    stageBody.innerHTML = `
+      <p class="empty-state">${commit.message}</p>
+      ${blockers ? `<p class="card-label">Bloqueios</p><ul class="preview-list">${blockers}</ul>` : ''}
+    `;
+    return;
+  }
+
+  const affectedFilesInfo = commit.commitValidation
+    ? `<p class="context-line">Arquivos afetados: <strong>${commit.commitValidation.affectedFilesCount}</strong></p>`
+    : '';
+
+  stageBody.innerHTML = `
+    <div class="commit-form">
+      <p class="card-label">Mensagem de Commit SVN Protegido</p>
+      <textarea id="commit-title" class="form-input" placeholder="Título descritivo (mínimo 10 caracteres)" maxlength="72" rows="2"></textarea>
+      <div id="title-feedback" class="feedback"></div>
+      <textarea id="commit-description" class="form-input" placeholder="Descrição opcional (até 500 caracteres)" maxlength="500" rows="4"></textarea>
+      <div id="description-feedback" class="feedback"></div>
+      <div class="commit-context">
+        ${affectedFilesInfo}
+      </div>
+      ${blockers ? `<p class="card-label">Validação</p><ul class="preview-list">${blockers}</ul>` : ''}
+      <button id="execute-commit" class="action-button" disabled>Executar Commit SVN</button>
+    </div>
+  `;
+
+  const titleInput = stageBody.querySelector<HTMLTextAreaElement>('#commit-title');
+  const descriptionInput = stageBody.querySelector<HTMLTextAreaElement>('#commit-description');
+  const executeButton = stageBody.querySelector<HTMLButtonElement>('#execute-commit');
+
+  if (titleInput) {
+    titleInput.addEventListener('input', () => {
+      const feedback = stageBody.querySelector<HTMLElement>('#title-feedback');
+      if (feedback) {
+        const titleLength = titleInput.value.length;
+        if (titleLength < 10) {
+          feedback.textContent = 'Título deve ter no mínimo 10 caracteres.';
+          feedback.className = 'feedback invalid';
+        } else if (!/^[A-Z]/.test(titleInput.value)) {
+          feedback.textContent = 'Título deve começar com letra maiúscula.';
+          feedback.className = 'feedback invalid';
+        } else {
+          feedback.textContent = 'Título válido para commit.';
+          feedback.className = 'feedback valid';
+        }
+      }
+      updateExecuteButtonState();
+    });
+  }
+
+  if (descriptionInput) {
+    descriptionInput.addEventListener('input', () => {
+      const feedback = stageBody.querySelector<HTMLElement>('#description-feedback');
+      if (feedback) {
+        const desc = descriptionInput.value.trim();
+        if (desc.length > 0 && desc.length < 20) {
+          feedback.textContent = 'Descrição opcional: mínimo de 20 caracteres quando preenchida.';
+          feedback.className = 'feedback invalid';
+        } else {
+          feedback.textContent = '';
+          feedback.className = 'feedback';
+        }
+      }
+      updateExecuteButtonState();
+    });
+  }
+
+  function updateExecuteButtonState() {
+    if (!executeButton) return;
+    const title = titleInput?.value ?? '';
+    const desc = descriptionInput?.value?.trim() ?? '';
+    const titleValid = title.length >= 10 && /^[A-Z]/.test(title);
+    const descriptionValid = desc.length === 0 || desc.length >= 20;
+    executeButton.disabled = !titleValid || !descriptionValid || !commit.canExecuteCommit;
+  }
+}
+
 async function updateMainContent(stage: StageDefinition): Promise<void> {
   const stageTitle = document.querySelector<HTMLElement>('[data-role="stage-title"]');
   const stageDescription = document.querySelector<HTMLElement>('[data-role="stage-description"]');
@@ -398,6 +519,19 @@ async function updateMainContent(stage: StageDefinition): Promise<void> {
     setStatusMessage('Carregando dados de preview...');
     const preview = await window.svnflowDesktop.getPreviewScreenState(selectedEnvironmentId);
     renderPreviewStage(preview);
+    return;
+  }
+
+  if (stage.key === 'commit') {
+    if (!window.svnflowDesktop?.getCommitScreenState) {
+      stageBody.innerHTML = '<p class="empty-state">Integração de commit indisponível no preload.</p>';
+      setStatusMessage('Falha ao carregar integração de commit.');
+      return;
+    }
+
+    setStatusMessage('Carregando dados de commit...');
+    const commit = await window.svnflowDesktop.getCommitScreenState(selectedEnvironmentId);
+    renderCommitStage(commit);
     return;
   }
 

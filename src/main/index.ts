@@ -16,6 +16,7 @@ import {
 } from './commands/saved-environments.js';
 import { revalidateEnvironment } from './commands/revalidate-environment.js';
 import { buildPreviewScreenState } from './commands/preview-screen.js';
+import { validateCommitPreConditions, type ValidateCommitResult } from './commands/commit-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,6 +74,23 @@ interface PreviewScreenState {
   canApplyInSvn: boolean;
 }
 
+interface CommitScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    svnCheckoutPath: string;
+  };
+  commitValidation?: {
+    hasChanges: boolean;
+    affectedFilesCount: number;
+    blockers: Array<{ code: string; message: string }>;
+    canCommit: boolean;
+  };
+  canExecuteCommit: boolean;
+}
+
 async function resolveSelectedEnvironmentById(environmentId?: string): Promise<SelectedEnvironment | undefined> {
   const storagePath = resolveSavedEnvironmentStoragePath();
   const storage = await readSavedEnvironments({ storagePath });
@@ -105,6 +123,42 @@ async function buildPreviewRendererState(environmentId?: string): Promise<Previe
     blockers: preview.blockers,
     alerts: preview.alerts,
     canApplyInSvn: preview.actions.canApplyInSvn.canAdvance
+  };
+}
+
+async function buildCommitScreenState(selectedEnvironmentId?: string): Promise<CommitScreenState> {
+  const selected = await resolveSelectedEnvironmentById(selectedEnvironmentId);
+
+  if (!selected) {
+    return {
+      status: 'blocked',
+      title: 'Commit SVN Protegido',
+      message: 'Nenhum ambiente selecionado. Selecione um ambiente para iniciar.',
+      canExecuteCommit: false
+    };
+  }
+
+  const validationResult = validateCommitPreConditions({
+    checkoutPath: selected.svnCheckoutPath
+  });
+
+  const canExecuteCommit = validationResult.status === 'ready' && validationResult.canCommit;
+
+  return {
+    status: validationResult.status === 'ready' ? 'ready' : 'blocked',
+    title: 'Commit SVN Protegido',
+    message: validationResult.message,
+    environment: {
+      environmentName: selected.name,
+      svnCheckoutPath: selected.svnCheckoutPath
+    },
+    commitValidation: {
+      hasChanges: validationResult.hasChanges,
+      affectedFilesCount: validationResult.affectedFilesCount,
+      blockers: validationResult.blockers,
+      canCommit: validationResult.canCommit
+    },
+    canExecuteCommit
   };
 }
 
@@ -243,6 +297,10 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('preview:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildPreviewRendererState(payload?.environmentId)
+  );
+
+  ipcMain.handle('commit:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
+    buildCommitScreenState(payload?.environmentId)
   );
 }
 
