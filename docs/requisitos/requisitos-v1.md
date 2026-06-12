@@ -26,6 +26,7 @@ Requisitos dizem o que o sistema deve fazer. Fluxos descrevem a sequência esper
 | RF-014 | O sistema deve registrar histórico local simples de pacotes. |
 | RF-015 | O sistema deve conduzir a jornada solo como fluxo padrão da V1. |
 | RF-016 | O sistema deve deixar claro quando uma operação altera arquivos locais e quando publica no SVN. |
+| RF-017 | O sistema deve permitir salvar e selecionar ambientes locais com workspace Git e checkout SVN. |
 
 ## Requisitos não funcionais
 
@@ -52,3 +53,5 @@ Critérios mínimos:
 - Pull Request completo dentro do app.
 - Merge, rebase ou resolução automática avançada.
 - Dependência obrigatória de `git svn`.
+- Navegação remota em servidores SVN.
+- Gerenciamento de credenciais SVN.

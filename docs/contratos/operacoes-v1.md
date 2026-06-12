@@ -34,6 +34,7 @@ Operações de escrita no checkout SVN e operações sensíveis devem ser proteg
 | Operação | Tipo | Proteção | Resultado esperado |
 | --- | --- | --- | --- |
 | Detectar branch Git | Leitura | Sem confirmação | Identificar branch de origem |
+| Salvar ambiente local | Escrita local controlada | Confirmação simples | Registrar combinação local de workspace Git e checkout SVN |
 | Gerar `patch.diff` | Escrita local controlada | Confirmação simples | Criar patch revisável |
 | Validar pacote `.svnflow` | Leitura | Sem confirmação | Confirmar pacote importável |
 | Validar checkout SVN | Leitura | Sem confirmação | Confirmar destino adequado |
@@ -42,6 +43,49 @@ Operações de escrita no checkout SVN e operações sensíveis devem ser proteg
 | Executar `svn update` | Operação sensível | Confirmação explícita | Atualizar checkout SVN pela base oficial |
 | Commit SVN protegido | Operação sensível | Confirmação reforçada | Publicar alteração no SVN |
 | Registrar histórico local | Escrita local controlada | Sem confirmação própria | Registrar evento local do app |
+
+## Contrato: Salvar Ambiente Local
+
+### Objetivo
+
+Registrar uma combinação local reutilizável de workspace Git e checkout SVN.
+
+### Entrada
+
+- Nome amigável do ambiente.
+- Caminho local do workspace Git.
+- Caminho local do checkout SVN.
+
+### Saída esperada
+
+- Ambiente salvo localmente.
+- Metadados mínimos detectados, quando disponíveis.
+- Resultado da validação inicial.
+- Indicação clara de que a configuração pode ser revalidada depois.
+
+### Confirmação exigida
+
+Confirmação simples antes de salvar.
+
+### Falhas esperadas
+
+- Nome vazio ou duplicado.
+- Caminho Git inválido.
+- Checkout SVN inválido.
+- Falha ao detectar metadados com `svn info`.
+- Falha de permissão para gravar configuração local.
+
+### Bloqueios
+
+O ambiente não deve ser salvo como válido quando:
+
+- o workspace Git não puder ser validado;
+- o checkout SVN não puder ser validado;
+- o app não conseguir determinar o estado mínimo com segurança.
+
+O app pode permitir salvar um rascunho de ambiente incompleto somente se ele ficar visualmente marcado como pendente de validação.
+
+O contrato detalhado de dados fica em [ambientes-salvos.md](ambientes-salvos.md).
 
 ## Contrato: Detectar Branch Git
 

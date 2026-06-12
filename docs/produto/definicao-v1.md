@@ -12,6 +12,7 @@ O modo de uso principal da V1 é o trabalho solo. A colaboração por pacote `.s
 
 - Detectar um repositório Git local.
 - Detectar um checkout SVN local.
+- Salvar e selecionar ambientes locais com workspace Git e checkout SVN.
 - Validar estados mínimos de Git e SVN antes de operações sensíveis.
 - Selecionar ou detectar a branch Git de origem.
 - Definir uma base de comparação para gerar alterações.
@@ -33,6 +34,8 @@ O modo de uso principal da V1 é o trabalho solo. A colaboração por pacote `.s
 - Automatizar merge, rebase ou resolução avançada de conflitos.
 - Usar `git svn` como dependência obrigatória.
 - Enviar código para servidor externo.
+- Navegar servidores SVN remotos ou criar checkout SVN a partir de URL.
+- Gerenciar credenciais de SVN.
 - Resolver todos os casos avançados de binários, renomeações e conflitos.
 
 ## Marcos conceituais

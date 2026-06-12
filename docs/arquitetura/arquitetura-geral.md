@@ -12,6 +12,7 @@ O SVNFlow deve ser um aplicativo desktop local que coordena operações entre:
 
 - um workspace Git usado para organizar alterações;
 - um checkout SVN usado como destino oficial de publicação;
+- ambientes salvos usados para selecionar combinações locais de workspace Git e checkout SVN;
 - pacotes `.svnflow` usados para transportar alterações revisáveis;
 - histórico local simples usado apenas como apoio da aplicação.
 
@@ -19,7 +20,7 @@ O SVNFlow deve ser um aplicativo desktop local que coordena operações entre:
 
 | Módulo | Responsabilidade |
 | --- | --- |
-| Ambiente | Detectar Git, SVN, caminhos locais e estados mínimos. |
+| Ambiente | Detectar Git, SVN, caminhos locais, ambientes salvos e estados mínimos. |
 | Workspace Git | Ler branch, base de comparação, arquivos alterados e gerar `patch.diff`. |
 | Preview | Mostrar arquivos afetados, metadados e resumo antes de aplicar mudanças. |
 | Pacotes SVNFlow | Exportar, importar e validar arquivos `.svnflow`. |
@@ -45,6 +46,10 @@ A v1 deve evitar armazenamento complexo.
 
 O histórico local pode guardar metadados e referências para pacotes locais, sem duplicar conteúdo sensível e sem virar auditoria oficial.
 
+Ambientes salvos podem guardar apenas configuração local e metadados de validação, como nome amigável, caminho do workspace Git, caminho do checkout SVN, URL SVN detectada e última validação.
+
+O contrato detalhado fica em [ambientes-salvos.md](../contratos/ambientes-salvos.md).
+
 ## Formato do pacote
 
 O pacote `.svnflow` é um ZIP renomeado contendo, no mínimo:
@@ -55,4 +60,3 @@ O pacote `.svnflow` é um ZIP renomeado contendo, no mínimo:
 - pasta `files/` reservada para cenários futuros.
 
 O contrato detalhado fica em [pacote-svnflow.md](../contratos/pacote-svnflow.md).
-

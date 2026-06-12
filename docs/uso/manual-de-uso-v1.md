@@ -34,8 +34,7 @@ Esta é a jornada principal da V1.
 
 ```text
 Validar ambiente
-  -> selecionar workspace Git
-  -> selecionar checkout SVN
+  -> selecionar ou cadastrar ambiente salvo
   -> escolher branch e base
   -> gerar preview
   -> revisar arquivos afetados
@@ -49,8 +48,11 @@ Validar ambiente
 
 A pessoa seleciona ou confirma:
 
+- ambiente salvo, quando existir;
 - workspace Git local;
 - checkout SVN local.
+
+Um ambiente salvo é um atalho local com apelido amigável, workspace Git e checkout SVN já conhecidos pelo app.
 
 O app deve mostrar:
 
@@ -58,7 +60,22 @@ O app deve mostrar:
 - se SVN está disponível;
 - se o workspace Git é válido;
 - se o checkout SVN é válido;
+- URL e revisão SVN detectadas, quando disponíveis;
 - quais bloqueios impedem o avanço.
+
+### 1.1. Cadastrar Ambiente Salvo
+
+Quando ainda não existir um ambiente salvo, a pessoa deve poder cadastrar um novo ambiente selecionando pastas locais.
+
+O app deve solicitar:
+
+- nome amigável do ambiente;
+- pasta do workspace Git;
+- pasta do checkout SVN.
+
+Depois da seleção, o app deve validar os caminhos e detectar metadados do SVN com leitura local, como `svn info`.
+
+O app não deve exigir que a pessoa informe manualmente o nome técnico do repositório SVN remoto. A escolha deve acontecer pela pasta local do checkout e por um apelido compreensível.
 
 ### 2. Preparar Workspace Git
 
@@ -236,6 +253,7 @@ A V1 não pretende:
 
 O modo solo deve ser considerado claro quando a pessoa usuária entende:
 
+- qual ambiente salvo está em uso, quando houver;
 - onde está o workspace Git;
 - onde está o checkout SVN;
 - qual branch está sendo usada;
@@ -244,4 +262,3 @@ O modo solo deve ser considerado claro quando a pessoa usuária entende:
 - quando arquivos locais serão modificados;
 - quando uma publicação SVN acontecerá;
 - o que fazer quando o app bloquear uma etapa.
-

@@ -42,7 +42,7 @@ docs/
 - Use `docs/produto/` para conhecimento de produto.
 - Use `docs/requisitos/` para o que o sistema deve fazer.
 - Use `docs/fluxos/` para sequências de uso.
-- Use `docs/contratos/` para formatos, comandos, entradas, saídas e bloqueios.
+- Use `docs/contratos/` para formatos, comandos, entradas, saídas, bloqueios e modelos locais como ambientes salvos.
 - Use `docs/processos/` para fluxo de trabalho, Project, milestones e épicos.
 - Use `docs/adrs/` para decisões aceitas.
 - Use `docs/rfcs/` para propostas ainda abertas.

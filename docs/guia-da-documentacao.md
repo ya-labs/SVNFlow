@@ -51,6 +51,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Requisitos | `docs/requisitos/` |
 | Fluxos de uso | `docs/fluxos/` |
 | Contratos | `docs/contratos/` |
+| Ambientes salvos | `docs/contratos/ambientes-salvos.md` |
 | Histórico local | `docs/contratos/historico-local.md` |
 | Fluxo de trabalho no GitHub | `docs/processos/fluxo-de-trabalho-github.md` |
 | Decisões aceitas | `docs/adrs/` |

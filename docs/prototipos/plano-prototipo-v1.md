@@ -124,10 +124,12 @@ Estados esperados:
 
 Objetivo:
 
-Validar se Git, SVN e caminhos locais estão disponíveis.
+Permitir escolher ou cadastrar um ambiente local e validar se Git, SVN e caminhos locais estão disponíveis.
 
 Informações exibidas:
 
+- ambientes salvos;
+- ambiente atualmente selecionado;
 - status do Git;
 - status do SVN;
 - caminho do workspace Git;
@@ -137,6 +139,7 @@ Informações exibidas:
 Estados esperados:
 
 - sucesso: Git e SVN disponíveis;
+- sucesso: ambiente salvo revalidado;
 - erro: comando não encontrado;
 - bloqueio: caminho informado não existe ou não é repositório válido.
 
@@ -154,6 +157,7 @@ Diretriz de linguagem:
 - manter texto curto, objetivo e orientado a próxima ação;
 - não usar termos internos, nomes corporativos ou caminhos reais;
 - diferenciar claramente erro de ferramenta ausente e bloqueio por caminho inválido.
+- apresentar ambientes salvos por nome amigável, sem exigir conhecimento da URL remota do SVN.
 
 ### 3. Workspace Git
 

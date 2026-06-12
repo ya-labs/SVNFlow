@@ -30,8 +30,7 @@ A mesma pessoa prepara a alteração no Git local, revisa o impacto, aplica no c
 
 ```text
 Validar ambiente
-  -> selecionar workspace Git
-  -> selecionar checkout SVN
+  -> selecionar ou cadastrar ambiente salvo
   -> escolher branch e base
   -> gerar preview
   -> revisar arquivos afetados
@@ -60,7 +59,11 @@ Exportar pacote .svnflow
 
 ## 1. Preparar ambiente
 
-O app deve validar se Git e SVN estão disponíveis e se os caminhos informados fazem sentido.
+O app deve validar se Git e SVN estão disponíveis e se os caminhos selecionados fazem sentido.
+
+A pessoa pode escolher um ambiente salvo ou cadastrar um novo ambiente informando workspace Git local e checkout SVN local.
+
+Ambientes salvos funcionam como atalhos locais. Mesmo quando um ambiente já existe, o app deve revalidar o estado atual antes de operações sensíveis.
 
 Falhas de ambiente devem bloquear o avanço e indicar o próximo ajuste necessário.
 

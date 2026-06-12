@@ -20,6 +20,7 @@ A V1 estará pronta quando entregar um fluxo local, visual e seguro para prepara
 | Ambiente | Detectar SVN disponível localmente. | Sim |
 | Ambiente | Validar caminho de repositório Git. | Sim |
 | Ambiente | Validar caminho de checkout SVN. | Sim |
+| Ambiente | Salvar e selecionar ambientes locais. | Sim |
 | Workspace Git | Detectar branch de origem. | Sim |
 | Workspace Git | Permitir ou detectar base de comparação. | Sim |
 | Workspace Git | Bloquear estados inseguros, como `detached HEAD`. | Sim |
@@ -45,6 +46,7 @@ A V1 deve permitir:
 
 - configurar ou selecionar workspace Git local;
 - configurar ou selecionar checkout SVN local;
+- salvar e selecionar um ambiente local com workspace Git e checkout SVN;
 - validar os dois ambientes antes de operações sensíveis;
 - gerar preview revisável de uma alteração Git;
 - preencher ou renderizar uma mini PR local;
@@ -84,6 +86,7 @@ Antes de considerar a V1 pronta, devem existir documentos estáveis para:
 - fluxo principal;
 - arquitetura conceitual;
 - contratos operacionais;
+- contrato de ambientes salvos;
 - contrato do pacote `.svnflow`;
 - contrato do `patch.diff`;
 - contrato do `pr.md`;
@@ -118,6 +121,7 @@ Falhas mínimas a observar:
 - SVN indisponível;
 - caminho Git inválido;
 - checkout SVN inválido;
+- ambiente salvo inválido ou desatualizado;
 - checkout SVN sujo;
 - pacote inválido;
 - pacote sem arquivo obrigatório;

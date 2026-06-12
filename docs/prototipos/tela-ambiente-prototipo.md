@@ -6,6 +6,8 @@ Definir o comportamento da tela ou área de Ambiente no protótipo navegável da
 
 Esta tela é o ponto de entrada do SVNFlow. Ela valida o estado mínimo do ambiente antes de qualquer operação e orienta a pessoa usuária sobre o que ajustar quando o ambiente estiver incompleto.
 
+Na V1, a tela também deve permitir escolher um ambiente salvo ou cadastrar um novo ambiente local.
+
 Este documento não define layout final, componentes definitivos ou tokens visuais próprios.
 
 ## Relação com a M1
@@ -68,10 +70,25 @@ Os estados possíveis do ambiente são:
 
 A tela recebe:
 
+- ambiente salvo selecionado, quando existir;
 - caminho do repositório Git (configurado pelo usuário ou detectado);
 - caminho do checkout SVN (configurado pelo usuário ou detectado).
 
 Esses caminhos são passados como `EnvironmentStateInput` para `validateEnvironmentState()`.
+
+## Ambientes Salvos
+
+A tela deve listar ambientes salvos localmente com:
+
+- nome amigável;
+- caminho do workspace Git;
+- caminho do checkout SVN;
+- URL SVN detectada, quando disponível;
+- status da última validação.
+
+Ao selecionar um ambiente salvo, o app deve revalidar os caminhos antes de permitir avanço.
+
+Ao cadastrar um novo ambiente, a pessoa usuária deve selecionar pastas locais. O app deve detectar dados do checkout por leitura local, como `svn info`, sem exigir que a pessoa informe manualmente o nome técnico do repositório SVN remoto.
 
 ## Mensagens da M1
 
@@ -101,5 +118,6 @@ A tela não precisa definir componentes, tokens de cor ou tipografia definitivos
 - Layout final ou especificação visual definitiva.
 - Escolha de biblioteca de componentes ou framework de UI.
 - Implementação da tela no app desktop.
-- Fluxo de configuração persistente de caminhos.
-- Suporte a múltiplos workspaces simultâneos.
+- Suporte a múltiplos workspaces simultâneos no mesmo fluxo ativo.
+- Navegação remota em servidores SVN.
+- Sincronização de ambientes salvos entre máquinas.
