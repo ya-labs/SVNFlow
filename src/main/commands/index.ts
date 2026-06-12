@@ -8,6 +8,12 @@ export {
 	type SvnCheckoutState,
 	type ReadSvnStatusInput
 } from './svn-status';
+export {
+	validatePatchFit,
+	type PatchValidationStatus,
+	type ValidatePatchInput,
+	type ValidatePatchResult
+} from './patch-validator';
 export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
 export {
 	checkInitialFlowGate,
