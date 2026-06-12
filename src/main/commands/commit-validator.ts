@@ -17,6 +17,7 @@ export interface ValidateCommitResult {
   message: string;
   blockers: CommitBlocker[];
   hasChanges: boolean;
+  affectedFilesCount: number;
   errorCode?: string;
 }
 
@@ -84,6 +85,7 @@ export function validateCommitPreConditions(input: ValidateCommitInput): Validat
           }
         ],
         hasChanges: false,
+        affectedFilesCount: 0,
         errorCode: 'NO_CHANGES_TO_COMMIT'
       };
     }
@@ -95,6 +97,7 @@ export function validateCommitPreConditions(input: ValidateCommitInput): Validat
         message: 'O checkout SVN não está pronto para commit.',
         blockers,
         hasChanges,
+        affectedFilesCount: versionedChanges.length,
         errorCode: 'PRECONDITIONS_NOT_MET'
       };
     }
@@ -104,7 +107,8 @@ export function validateCommitPreConditions(input: ValidateCommitInput): Validat
       canCommit: true,
       message: `Pronto para commit. ${versionedChanges.length} arquivo(s) alterado(s).`,
       blockers: [],
-      hasChanges: true
+      hasChanges: true,
+      affectedFilesCount: versionedChanges.length
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -119,6 +123,7 @@ export function validateCommitPreConditions(input: ValidateCommitInput): Validat
           }
         ],
         hasChanges: false,
+        affectedFilesCount: 0,
         errorCode: 'VALIDATION_FAILED'
       };
     }
@@ -134,6 +139,7 @@ export function validateCommitPreConditions(input: ValidateCommitInput): Validat
         }
       ],
       hasChanges: false,
+      affectedFilesCount: 0,
       errorCode: 'UNKNOWN_ERROR'
     };
   }
