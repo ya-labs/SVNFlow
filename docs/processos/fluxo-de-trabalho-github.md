@@ -270,12 +270,11 @@ Esse registro deve ser enxuto, focado em contexto e entendimento rápido. Não a
 
 Mudanças pequenas e leves de processo, nomenclatura, organização do repositório e fluxo de trabalho podem ser aplicadas diretamente na `main` sem PR de processo separada.
 
-Use a issue fixa [#86 - Ajustes contínuos de processo e organização](https://github.com/ya-labs/SVNFlow/issues/86) para registrar cada ajuste com um comentário contendo:
+Registre em [docs/processos/ajustes-operacionais.md](ajustes-operacionais.md) apenas ajustes que mudem regra recorrente de processo, governança, nomenclatura ou organização do trabalho.
 
-- o que mudou;
-- por quê mudou;
-- impacto no fluxo (se houver);
-- commit relacionado (ex.: `abc123`).
+Não é necessário registrar toda alteração pequena no arquivo. Quando a mudança já estiver clara no próprio documento alterado e no commit, o commit pode ser rastreabilidade suficiente.
+
+Use a issue fixa [#86 - Ajustes contínuos de processo e organização](https://github.com/ya-labs/SVNFlow/issues/86) apenas quando o ajuste precisar de visibilidade no GitHub. O comentário na issue não é obrigatório para todo ajuste.
 
 Critério para "ajuste pequeno" (pode ir na main direto):
 - Mudança de nomenclatura ou padrão.
@@ -304,33 +303,6 @@ Enquanto o repositório estiver majoritariamente em documentação, decisões e 
 Adote branch `dev` quando houver início real de implementação com risco de integração contínua entre tarefas.
 
 Regra prática: iniciar `dev` quando pelo menos 2 dos 3 sinais abaixo estiverem presentes:
-
-## Ajustes contínuos de processo
-
-Mudanças pequenas e leves de processo, nomenclatura, organização do repositório e fluxo de trabalho podem ser aplicadas diretamente na `main` sem PR de processo separada.
-
-Registre cada ajuste em [docs/processos/ajustes-operacionais.md](ajustes-operacionais.md) com:
-
-- data;
-- commit relacionado;
-- tipo (ex.: `docs/proc`);
-- o que mudou;
-- por quê mudou;
-- impacto no fluxo (se houver).
-
-Use a issue fixa [#86 - Ajustes contínuos de processo e organização](https://github.com/ya-labs/SVNFlow/issues/86) como ponto de visibilidade no GitHub, mas o registro oficial versionado fica no arquivo acima.
-
-Critério para "ajuste pequeno" (pode ir na main direto):
-- Mudança de nomenclatura ou padrão.
-- Ajuste de regra leve de fluxo.
-- Atualização de guia ou documentação de processo.
-- Alteração de organização do repositório.
-
-Critério para "não entra em ajuste" (precisa issue + branch + PR):
-- Mudança de comportamento funcional do produto.
-- Alteração de contrato técnico.
-- Mudança de arquitetura.
-- Trabalho que impacta múltiplas etapas.
 
 - já existem issues de implementação ativa (além de documentação);
 - há trabalho paralelo em mais de uma issue com potencial de conflito;
