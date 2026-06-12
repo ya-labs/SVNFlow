@@ -15,6 +15,7 @@ Markdown deve guardar conhecimento do produto. Trabalho, backlog, progresso, ép
 - [Fluxo principal da V1](fluxos/fluxo-principal.md)
 - [Guia de consulta da documentação](guia-da-documentacao.md)
 - [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
+- [Uso econômico da IA](processos/uso-economico-da-ia.md)
 
 ## Estrutura atual
 

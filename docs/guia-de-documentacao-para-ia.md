@@ -28,6 +28,7 @@ Não leia todos os documentos por padrão.
 | `docs/fluxos/` | Sequências de uso. | Jornada da pessoa usuária. | Mudança na ordem ou comportamento de uso. | `fluxo`, `preview`, `aplicar`, `commit` |
 | `docs/contratos/` | Formatos e operações. | Pacote, patch, `pr.md`, comandos, entradas, saídas e histórico local. | Mudança de formato, bloqueio, falha, validação ou modelo local. | `.svnflow`, `patch.diff`, `pr.md`, `manifest`, `histórico` |
 | `docs/processos/` | Processo de trabalho. | Issue, branch, PR, Project, milestones, épicos e subissues. | Mudança de fluxo operacional do repositório. | `Project`, `milestone`, `epic`, `subissue`, `Pull Request` |
+| `docs/processos/uso-economico-da-ia.md` | Processo para reduzir gasto de contexto ao trabalhar com IA. | Definir modo econômico, modo automático, issue preparada ou leitura mínima. | Mudança no acordo de colaboração entre pessoa usuária e IA. | `modo econômico`, `modo automático`, `issue preparada`, `contexto` |
 | `docs/adrs/` | Decisões aceitas. | Confirmar decisão já tomada. | Nova decisão aceita ou substituição de decisão. | `ADR`, `decisão`, `consequências` |
 | `docs/rfcs/` | Propostas abertas. | Ideias ainda não decididas. | Nova proposta em discussão. | `RFC`, `proposta`, `discussão` |
 | `docs/prototipos/` | Provas e experimentos. | Evidência técnica ou validação experimental. | Nova prova, resultado ou limite observado. | `prova técnica`, `ambiente fictício`, `validação` |
@@ -83,4 +84,5 @@ Discordar com critério faz parte do papel da IA neste projeto.
 | Decisões | `rg -n "ADR|decisão|consequências" docs/adrs` |
 | Requisitos | `rg -n "RF-|requisito|deve" docs/requisitos` |
 | Processo GitHub | `rg -n "Project|milestone|epic|subissue|Pull Request|branch" docs/processos AGENTS.md README.md` |
+| Uso econômico da IA | `rg -n "modo econômico|modo automático|issue preparada|contexto" docs/processos docs/guia-de-documentacao-para-ia.md` |
 | Histórico local | `rg -n "histórico local|evento_aplicacao|gerado|importado|aplicado|falhou" docs/contratos docs/prototipos` |

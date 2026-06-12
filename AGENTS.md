@@ -96,6 +96,8 @@ Antes de executar uma alteração relevante, valide:
 
 Se não houver issue ou se a branch estiver incompatível, avise antes de editar ou registre a exceção autorizada.
 
+Quando a tarefa pedir economia de contexto, implementação por issue preparada ou redução de leituras amplas, consulte o [Uso Econômico da IA](docs/processos/uso-economico-da-ia.md).
+
 ## Documentação
 
 Ao alterar documentação:

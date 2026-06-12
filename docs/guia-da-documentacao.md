@@ -17,6 +17,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 7. [Fluxo principal da V1](fluxos/fluxo-principal.md)
 8. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
 9. [Fluxo de trabalho no GitHub](processos/fluxo-de-trabalho-github.md)
+10. [Uso econômico da IA](processos/uso-economico-da-ia.md)
 
 ## Pastas
 
@@ -42,6 +43,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Regras para IA | `AGENTS.md` |
 | Índice geral | `docs/README.md` |
 | Consulta e manutenção documental pela IA | `docs/guia-de-documentacao-para-ia.md` |
+| Colaboração econômica com IA | `docs/processos/uso-economico-da-ia.md` |
 | Produto e definição da V1 | `docs/produto/` |
 | Arquitetura conceitual | `docs/arquitetura/` |
 | Requisitos | `docs/requisitos/` |
