@@ -10,7 +10,20 @@ describe('checkInitialFlowGate', () => {
     mockValidateEnvironmentState.mockReturnValue({
       status: 'ready',
       message: 'Ambiente pronto para leitura e revisão.',
-      git: {} as never,
+      git: {
+        workspace: {
+          branch: 'feature/workspace',
+          baseBranch: 'main',
+          hasChanges: true,
+          changedFiles: [
+            {
+              path: 'src/app.ts',
+              status: 'modified',
+              rawStatus: 'M'
+            }
+          ]
+        }
+      } as never,
       svn: {} as never
     });
 
@@ -21,13 +34,25 @@ describe('checkInitialFlowGate', () => {
 
     expect(result.canAdvance).toBe(true);
     expect(result.message).toBe('Ambiente pronto para leitura e revisão.');
+    expect(result.workspace).toEqual({
+      branch: 'feature/workspace',
+      baseBranch: 'main',
+      hasChanges: true,
+      changedFilesCount: 1
+    });
   });
 
   it('bloqueia avanço quando ambiente está bloqueado', () => {
     mockValidateEnvironmentState.mockReturnValue({
       status: 'blocked',
       message: 'Git não encontrado. Instale o Git e reinicie o SVNFlow.',
-      git: {} as never,
+      git: {
+        workspace: {
+          baseBranch: 'main',
+          hasChanges: false,
+          changedFiles: []
+        }
+      } as never,
       svn: {} as never
     });
 
@@ -44,7 +69,13 @@ describe('checkInitialFlowGate', () => {
     mockValidateEnvironmentState.mockReturnValue({
       status: 'error',
       message: 'O caminho informado não é um repositório Git válido.',
-      git: {} as never,
+      git: {
+        workspace: {
+          baseBranch: 'main',
+          hasChanges: false,
+          changedFiles: []
+        }
+      } as never,
       svn: {} as never
     });
 
@@ -61,7 +92,14 @@ describe('checkInitialFlowGate', () => {
     mockValidateEnvironmentState.mockReturnValue({
       status: 'blocked',
       message: 'SVN não encontrado. Instale o SVN e reinicie o SVNFlow.',
-      git: {} as never,
+      git: {
+        workspace: {
+          branch: 'feature/workspace',
+          baseBranch: 'main',
+          hasChanges: false,
+          changedFiles: []
+        }
+      } as never,
       svn: {} as never
     });
 
