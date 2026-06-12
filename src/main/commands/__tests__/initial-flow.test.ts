@@ -1,9 +1,12 @@
 import { checkInitialFlowGate, loadInitialFlowFromSavedEnvironment } from '../initial-flow';
 import { validateEnvironmentState } from '../environment';
+import { revalidateEnvironment } from '../revalidate-environment';
 
 jest.mock('../environment');
+jest.mock('../revalidate-environment');
 
 const mockValidateEnvironmentState = validateEnvironmentState as jest.MockedFunction<typeof validateEnvironmentState>;
+const mockRevalidateEnvironment = revalidateEnvironment as jest.MockedFunction<typeof revalidateEnvironment>;
 
 describe('checkInitialFlowGate', () => {
   it('permite avanço quando ambiente está pronto', () => {
@@ -124,7 +127,7 @@ describe('loadInitialFlowFromSavedEnvironment', () => {
         lastValidationStatus: 'ready',
         lastValidatedAt: '2026-06-12T10:00:00.000Z'
       }
-    ]);
+    ], { performRevalidation: false });
 
     expect(result).toEqual({
       gitRepositoryPath: '/repo/git',
@@ -149,5 +152,94 @@ describe('loadInitialFlowFromSavedEnvironment', () => {
       safeForSensitiveOperations: false,
       message: 'Ambiente salvo não encontrado.'
     });
+  });
+
+  it('executa revalidação em tempo real quando performRevalidation é true', () => {
+    mockRevalidateEnvironment.mockReturnValue({
+      canAdvance: true,
+      safeForSensitiveOperations: true,
+      message: 'Ambiente Projeto Válido validado com sucesso.',
+      blockers: [],
+      environment: {
+        id: 'env-2',
+        name: 'Projeto Válido',
+        gitWorkspacePath: process.cwd(),
+        svnCheckoutPath: process.cwd(),
+        currentValidationStatus: 'ready',
+        isValid: true,
+        safeForSensitiveOperations: true,
+        blockers: [],
+        message: 'Ambiente Projeto Válido validado com sucesso.'
+      }
+    });
+
+    const result = loadInitialFlowFromSavedEnvironment('env-2', [
+      {
+        id: 'env-2',
+        name: 'Projeto Válido',
+        gitWorkspacePath: process.cwd(),
+        svnCheckoutPath: process.cwd(),
+        lastValidationStatus: 'blocked'
+      }
+    ], { performRevalidation: true });
+
+    expect(result.selectedEnvironmentId).toBe('env-2');
+    expect(result.selectedEnvironmentName).toBe('Projeto Válido');
+    expect(result.safeForSensitiveOperations).toBe(true);
+    expect(result.needsRevalidation).toBe(false);
+    expect(result.blockers).toBeDefined();
+    expect(mockRevalidateEnvironment).toHaveBeenCalledWith({
+      environment: {
+        id: 'env-2',
+        name: 'Projeto Válido',
+        gitWorkspacePath: process.cwd(),
+        svnCheckoutPath: process.cwd()
+      },
+      baseBranch: undefined
+    });
+  });
+
+  it('bloqueia avanço quando caminho Git é inválido na revalidação', () => {
+    mockRevalidateEnvironment.mockReturnValue({
+      canAdvance: false,
+      safeForSensitiveOperations: false,
+      message: 'O caminho informado não é um repositório Git válido.',
+      blockers: [{ code: 'GIT_REPOSITORY_INVALID', message: 'O caminho do workspace Git não é um repositório válido.' }]
+    });
+
+    const result = loadInitialFlowFromSavedEnvironment('env-3', [
+      {
+        id: 'env-3',
+        name: 'Git Inválido',
+        gitWorkspacePath: '/nonexistent/git/path',
+        svnCheckoutPath: process.cwd()
+      }
+    ], { performRevalidation: true });
+
+    expect(result.safeForSensitiveOperations).toBe(false);
+    expect(result.needsRevalidation).toBe(true);
+    expect(result.blockers?.length).toBeGreaterThan(0);
+  });
+
+  it('bloqueia avanço quando caminho SVN é inválido na revalidação', () => {
+    mockRevalidateEnvironment.mockReturnValue({
+      canAdvance: false,
+      safeForSensitiveOperations: false,
+      message: 'O caminho informado não é um checkout SVN válido.',
+      blockers: [{ code: 'SVN_CHECKOUT_INVALID', message: 'O caminho do checkout SVN não é um checkout válido.' }]
+    });
+
+    const result = loadInitialFlowFromSavedEnvironment('env-4', [
+      {
+        id: 'env-4',
+        name: 'SVN Inválido',
+        gitWorkspacePath: process.cwd(),
+        svnCheckoutPath: '/nonexistent/svn/path'
+      }
+    ], { performRevalidation: true });
+
+    expect(result.safeForSensitiveOperations).toBe(false);
+    expect(result.needsRevalidation).toBe(true);
+    expect(result.blockers?.length).toBeGreaterThan(0);
   });
 });

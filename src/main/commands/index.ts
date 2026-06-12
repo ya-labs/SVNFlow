@@ -21,3 +21,10 @@ export {
 	type SelectSavedEnvironmentInput,
 	type SelectSavedEnvironmentResult
 } from './saved-environments';
+export {
+	revalidateEnvironment,
+	type RevalidatedEnvironment,
+	type RevalidationBlocker,
+	type RevalidateEnvironmentInput,
+	type RevalidateEnvironmentResult
+} from './revalidate-environment';
