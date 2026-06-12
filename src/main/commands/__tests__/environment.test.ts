@@ -32,7 +32,7 @@ describe('validateEnvironmentState', () => {
         return 'main';
       }
 
-      if (command.includes('status --porcelain')) {
+      if (command.includes('diff --name-status')) {
         return '';
       }
 
@@ -59,6 +59,7 @@ describe('validateEnvironmentState', () => {
     expect(result.git.workspace.status).toBe('ready');
     expect(result.git.workspace.branch).toBe('feature/estado-ambiente');
     expect(result.git.workspace.hasChanges).toBe(false);
+    expect(result.git.workspace.changedFiles).toEqual([]);
     expect(result.svn.availability.status).toBe('ready');
     expect(result.svn.checkout.status).toBe('ready');
   });
@@ -121,7 +122,7 @@ describe('validateEnvironmentState', () => {
         return 'main';
       }
 
-      if (command.includes('status --porcelain')) {
+      if (command.includes('diff --name-status')) {
         return '';
       }
 
@@ -167,7 +168,7 @@ describe('validateEnvironmentState', () => {
         return 'main';
       }
 
-      if (command.includes('status --porcelain')) {
+      if (command.includes('diff --name-status')) {
         throw new Error('Permission denied');
       }
 
@@ -185,6 +186,6 @@ describe('validateEnvironmentState', () => {
 
     expect(result.status).toBe('error');
     expect(result.git.workspace.status).toBe('error');
-    expect(result.git.workspace.message).toContain('Falha ao validar workspace Git');
+    expect(result.git.workspace.message).toContain('Falha ao listar arquivos alterados');
   });
 });

@@ -20,7 +20,7 @@ describe('readGitWorkspaceState', () => {
         return 'main';
       }
 
-      if (command.includes('status --porcelain')) {
+      if (command.includes('diff --name-status')) {
         return '';
       }
 
@@ -36,6 +36,7 @@ describe('readGitWorkspaceState', () => {
     expect(result.baseBranch).toBe('main');
     expect(result.detachedHead).toBe(false);
     expect(result.hasChanges).toBe(false);
+    expect(result.changedFiles).toEqual([]);
   });
 
   it('retorna base informada quando uma base customizada é usada', () => {
@@ -48,8 +49,8 @@ describe('readGitWorkspaceState', () => {
         return 'develop';
       }
 
-      if (command.includes('status --porcelain')) {
-        return ' M src/app.ts';
+      if (command.includes('diff --name-status')) {
+        return 'M\tsrc/app.ts';
       }
 
       throw new Error(`Unexpected command: ${command}`);
@@ -63,6 +64,14 @@ describe('readGitWorkspaceState', () => {
     expect(result.status).toBe('ready');
     expect(result.baseBranch).toBe('develop');
     expect(result.hasChanges).toBe(true);
+    expect(result.changedFiles).toEqual([
+      {
+        path: 'src/app.ts',
+        previousPath: undefined,
+        status: 'modified',
+        rawStatus: 'M'
+      }
+    ]);
   });
 
   it('bloqueia quando o repositório está em detached HEAD', () => {
@@ -94,7 +103,7 @@ describe('readGitWorkspaceState', () => {
         return 'main';
       }
 
-      if (command.includes('status --porcelain')) {
+      if (command.includes('diff --name-status')) {
         throw new Error('Permission denied');
       }
 
@@ -107,7 +116,7 @@ describe('readGitWorkspaceState', () => {
 
     expect(result.status).toBe('error');
     expect(result.error).toBe('Permission denied');
-    expect(result.message).toContain('Falha ao validar workspace Git');
+    expect(result.message).toContain('Falha ao listar arquivos alterados');
   });
 
   it('bloqueia a leitura do workspace quando a base de comparação não existe', () => {

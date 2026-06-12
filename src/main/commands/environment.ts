@@ -86,6 +86,7 @@ export function validateEnvironmentState(input: EnvironmentStateInput): Environm
         baseBranch,
         detachedHead: false,
         hasChanges: false,
+        changedFiles: [],
         error: gitAvailabilityStatus !== 'ready' ? gitAvailability.error : gitRepository.error
       } satisfies GitWorkspaceStateResult;
 

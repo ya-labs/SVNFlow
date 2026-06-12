@@ -10,6 +10,7 @@ export interface GitWorkspaceStateResult {
   baseBranch: string;
   detachedHead: boolean;
   hasChanges: boolean;
+  changedFiles: GitChangedFile[];
   error?: string;
 }
 
@@ -243,6 +244,7 @@ export function readGitWorkspaceState(input: GitWorkspaceStateInput): GitWorkspa
         baseBranch,
         detachedHead: true,
         hasChanges: false,
+        changedFiles: [],
         error: 'DETACHED_HEAD'
       };
     }
@@ -261,15 +263,29 @@ export function readGitWorkspaceState(input: GitWorkspaceStateInput): GitWorkspa
         baseBranch,
         detachedHead: false,
         hasChanges: false,
+        changedFiles: [],
         error: baseValidation.error
       };
     }
 
-    const statusOutput = execSync(`git -C "${input.gitRepositoryPath}" status --porcelain`, {
-      encoding: 'utf-8',
-      timeout: 5000,
-      stdio: ['pipe', 'pipe', 'pipe']
-    }).trim();
+    const changedFiles = listGitChangedFiles({
+      gitRepositoryPath: input.gitRepositoryPath,
+      baseBranch
+    });
+
+    if (changedFiles.status !== 'ready') {
+      return {
+        status: changedFiles.status,
+        message: changedFiles.message,
+        path: input.gitRepositoryPath,
+        branch,
+        baseBranch,
+        detachedHead: false,
+        hasChanges: false,
+        changedFiles: [],
+        error: changedFiles.error
+      };
+    }
 
     return {
       status: 'ready',
@@ -278,7 +294,8 @@ export function readGitWorkspaceState(input: GitWorkspaceStateInput): GitWorkspa
       branch,
       baseBranch,
       detachedHead: false,
-      hasChanges: statusOutput.length > 0
+      hasChanges: changedFiles.files.length > 0,
+      changedFiles: changedFiles.files
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -290,6 +307,7 @@ export function readGitWorkspaceState(input: GitWorkspaceStateInput): GitWorkspa
           baseBranch,
           detachedHead: false,
           hasChanges: false,
+          changedFiles: [],
           error: 'ETIMEDOUT'
         };
       }
@@ -301,6 +319,7 @@ export function readGitWorkspaceState(input: GitWorkspaceStateInput): GitWorkspa
         baseBranch,
         detachedHead: false,
         hasChanges: false,
+        changedFiles: [],
         error: error.message
       };
     }
@@ -312,6 +331,7 @@ export function readGitWorkspaceState(input: GitWorkspaceStateInput): GitWorkspa
       baseBranch,
       detachedHead: false,
       hasChanges: false,
+      changedFiles: [],
       error: 'UNKNOWN_ERROR'
     };
   }
