@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { readGitWorkspaceState, validateGitComparisonBase } from '../workspace';
+import { listGitChangedFiles, readGitWorkspaceState, validateGitComparisonBase } from '../workspace';
 
 jest.mock('child_process');
 
@@ -222,5 +222,153 @@ describe('validateGitComparisonBase', () => {
     expect(result.valid).toBe(false);
     expect(result.error).toBe('Permission denied');
     expect(result.message).toContain('Falha ao validar base');
+  });
+});
+
+describe('listGitChangedFiles', () => {
+  const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('lista arquivos adicionados, modificados e removidos em relação à base', () => {
+    mockExecSync.mockImplementation((command: string) => {
+      if (command.includes('rev-parse --verify')) {
+        return 'main';
+      }
+
+      if (command.includes('diff --name-status')) {
+        return [
+          'A\tsrc/new-file.ts',
+          'M\tsrc/existing-file.ts',
+          'D\tsrc/removed-file.ts'
+        ].join('\n');
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    const result = listGitChangedFiles({
+      gitRepositoryPath: '/repo/git',
+      baseBranch: 'main'
+    });
+
+    expect(result.status).toBe('ready');
+    expect(result.files).toEqual([
+      {
+        path: 'src/new-file.ts',
+        previousPath: undefined,
+        status: 'added',
+        rawStatus: 'A'
+      },
+      {
+        path: 'src/existing-file.ts',
+        previousPath: undefined,
+        status: 'modified',
+        rawStatus: 'M'
+      },
+      {
+        path: 'src/removed-file.ts',
+        previousPath: undefined,
+        status: 'deleted',
+        rawStatus: 'D'
+      }
+    ]);
+  });
+
+  it('informa renomeações mantendo caminho anterior', () => {
+    mockExecSync.mockImplementation((command: string) => {
+      if (command.includes('rev-parse --verify')) {
+        return 'main';
+      }
+
+      if (command.includes('diff --name-status')) {
+        return 'R100\tsrc/old-name.ts\tsrc/new-name.ts';
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    const result = listGitChangedFiles({
+      gitRepositoryPath: '/repo/git'
+    });
+
+    expect(result.status).toBe('ready');
+    expect(result.files).toEqual([
+      {
+        path: 'src/new-name.ts',
+        previousPath: 'src/old-name.ts',
+        status: 'renamed',
+        rawStatus: 'R100'
+      }
+    ]);
+  });
+
+  it('retorna lista vazia quando não houver alterações relevantes', () => {
+    mockExecSync.mockImplementation((command: string) => {
+      if (command.includes('rev-parse --verify')) {
+        return 'main';
+      }
+
+      if (command.includes('diff --name-status')) {
+        return '';
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    const result = listGitChangedFiles({
+      gitRepositoryPath: '/repo/git'
+    });
+
+    expect(result.status).toBe('ready');
+    expect(result.files).toEqual([]);
+    expect(result.message).toContain('Nenhum arquivo');
+  });
+
+  it('bloqueia quando a base de comparação não existe', () => {
+    const error = new Error('fatal: Needed a single revision');
+    (error as Error & { status: number }).status = 128;
+
+    mockExecSync.mockImplementation((command: string) => {
+      if (command.includes('rev-parse --verify')) {
+        throw error;
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    const result = listGitChangedFiles({
+      gitRepositoryPath: '/repo/git',
+      baseBranch: 'release/inexistente'
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.files).toEqual([]);
+    expect(result.error).toBe('BASE_NOT_FOUND');
+  });
+
+  it('trata erro de comando Git sem quebrar a aplicação', () => {
+    mockExecSync.mockImplementation((command: string) => {
+      if (command.includes('rev-parse --verify')) {
+        return 'main';
+      }
+
+      if (command.includes('diff --name-status')) {
+        throw new Error('Permission denied');
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    const result = listGitChangedFiles({
+      gitRepositoryPath: '/repo/git'
+    });
+
+    expect(result.status).toBe('error');
+    expect(result.files).toEqual([]);
+    expect(result.error).toBe('Permission denied');
+    expect(result.message).toContain('Falha ao listar arquivos');
   });
 });
