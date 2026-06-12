@@ -205,6 +205,7 @@ Labels iniciais do SVNFlow:
 | `docs` | Tipo | Documentação estável, guias, contratos, ADRs ou ajustes textuais. |
 | `frontend` | Área | Interface, telas, componentes e experiência visual. |
 | `backend` | Área | Regras internas, comandos, integração local, leitura de arquivos e execução de operações. |
+| `full-stack` | Área | Entrega que envolve interface e regras internas na mesma issue. |
 | `architecture` | Área | Decisões ou desenho estrutural do produto. |
 | `prototype` | Área | Provas técnicas, experimentos e validações antes da implementação final. |
 | `process` | Área | Fluxo de trabalho, organização de Project, milestones, épicos e governança do repositório. |
@@ -220,7 +221,8 @@ Regra prática:
 
 - épicos devem ter a label `epic` e podem ter uma label de área quando ajudar;
 - tarefas comuns devem ter exatamente um tipo principal, como `feature`, `bug` ou `docs`;
-- tarefas podem ter uma ou mais áreas, como `backend`, `frontend`, `architecture`, `prototype` ou `process`;
+- tarefas podem ter uma ou mais áreas, como `backend`, `frontend`, `full-stack`, `architecture`, `prototype` ou `process`;
+- tarefas que exigem mudanças de interface e regras internas na mesma issue devem usar `full-stack`, sem acumular `frontend` + `backend`;
 - documentação de arquitetura deve usar `docs` + `architecture`;
 - documentação de protótipo ou prova técnica deve usar `docs` + `prototype` e, quando fizer sentido, `frontend` ou `backend`;
 - implementação de comportamento deve usar `feature` + a área afetada;
