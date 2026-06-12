@@ -6,6 +6,8 @@ Este documento define o que precisa existir para o SVNFlow ser considerado V1.
 
 A V1 deve entregar um fluxo local, útil e seguro para preparar alterações com Git, revisar o impacto e aplicar no SVN com confirmação.
 
+O modo de uso principal da V1 é o trabalho solo. A colaboração por pacote `.svnflow` deve existir como camada adicional, sem transformar o produto em plataforma colaborativa completa.
+
 ## A V1 será considerada pronta quando permitir
 
 - Detectar um repositório Git local.
@@ -22,6 +24,7 @@ A V1 deve entregar um fluxo local, útil e seguro para preparar alterações com
 - Exibir `svn status` após aplicação.
 - Tratar commit SVN como operação protegida.
 - Registrar histórico local simples de pacotes exportados e importados.
+- Conduzir a jornada solo com clareza suficiente para preparar, revisar, aplicar e publicar alterações com segurança.
 
 ## Fora da V1
 

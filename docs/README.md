@@ -13,6 +13,7 @@ Markdown deve guardar conhecimento do produto. Trabalho, backlog, progresso, ép
 - [Arquitetura geral](arquitetura/arquitetura-geral.md)
 - [Requisitos da V1](requisitos/requisitos-v1.md)
 - [Fluxo principal da V1](fluxos/fluxo-principal.md)
+- [Manual de uso da V1](uso/manual-de-uso-v1.md)
 - [Guia de consulta da documentação](guia-da-documentacao.md)
 - [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
 - [Uso econômico da IA](processos/uso-economico-da-ia.md)
@@ -31,6 +32,7 @@ docs/
 |-- release/
 |-- requisitos/
 |-- rfcs/
+|-- uso/
 |-- guia-da-documentacao.md
 `-- guia-de-documentacao-para-ia.md
 ```
@@ -46,6 +48,7 @@ docs/
 - Use `docs/rfcs/` para propostas ainda abertas.
 - Use `docs/prototipos/` para validações e experimentos.
 - Use `docs/release/` para critérios de pronto, entrega experimental e limites de release.
+- Use `docs/uso/` para manuais de uso e trilhas da pessoa usuária.
 
 ## Segurança e privacidade
 

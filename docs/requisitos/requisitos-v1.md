@@ -24,6 +24,8 @@ Requisitos dizem o que o sistema deve fazer. Fluxos descrevem a sequência esper
 | RF-012 | O sistema deve exibir `svn status` após aplicação. |
 | RF-013 | O sistema deve tratar commit SVN como operação protegida. |
 | RF-014 | O sistema deve registrar histórico local simples de pacotes. |
+| RF-015 | O sistema deve conduzir a jornada solo como fluxo padrão da V1. |
+| RF-016 | O sistema deve deixar claro quando uma operação altera arquivos locais e quando publica no SVN. |
 
 ## Requisitos não funcionais
 
@@ -33,6 +35,16 @@ Requisitos dizem o que o sistema deve fazer. Fluxos descrevem a sequência esper
 - Bloquear operações sensíveis em estado inseguro.
 - Manter exemplos e documentação sem conteúdo corporativo real.
 - Seguir o Design System oficial da YA LABS como base visual do protótipo e da aplicação.
+
+## Escopo do Trabalho Solo
+
+O trabalho solo faz parte do escopo principal da V1.
+
+Critérios mínimos:
+
+- a jornada solo deve ser clara do início ao fim;
+- validações e bloqueios devem ser suficientes para uso individual seguro;
+- o fluxo deve fechar com preview, aplicação no checkout SVN, `svn status`, commit protegido e histórico local.
 
 ## Fora da V1
 

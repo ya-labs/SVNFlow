@@ -15,8 +15,9 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 5. [Arquitetura geral](arquitetura/arquitetura-geral.md)
 6. [Requisitos da V1](requisitos/requisitos-v1.md)
 7. [Fluxo principal da V1](fluxos/fluxo-principal.md)
-8. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
-9. [Fluxo de trabalho no GitHub](processos/fluxo-de-trabalho-github.md)
+8. [Manual de uso da V1](uso/manual-de-uso-v1.md)
+9. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
+10. [Fluxo de trabalho no GitHub](processos/fluxo-de-trabalho-github.md)
 10. [Uso econômico da IA](processos/uso-economico-da-ia.md)
 
 ## Pastas
@@ -33,6 +34,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | `docs/rfcs/` | Propostas ainda não aceitas como decisão. |
 | [`docs/prototipos/`](prototipos/) | Provas técnicas, protótipos e validações experimentais. |
 | `docs/release/` | Critérios de pronto, entrega experimental e limites de release. |
+| `docs/uso/` | Manuais de uso e trilhas da pessoa usuária. |
 | `docs/planejamento/` | Roteiro macro estático da V1. |
 
 ## Onde atualizar cada tipo de informação
@@ -55,6 +57,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Propostas em discussão | `docs/rfcs/` |
 | Protótipos e provas técnicas | [`docs/prototipos/`](prototipos/) |
 | Critérios de pronto e release | `docs/release/` |
+| Manuais de uso | `docs/uso/` |
 | Roteiro macro | `docs/planejamento/roteiro-geral-de-etapas.md` |
 
 ## Regras de segurança

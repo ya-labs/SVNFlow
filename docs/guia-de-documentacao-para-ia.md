@@ -33,6 +33,7 @@ Não leia todos os documentos por padrão.
 | `docs/rfcs/` | Propostas abertas. | Ideias ainda não decididas. | Nova proposta em discussão. | `RFC`, `proposta`, `discussão` |
 | `docs/prototipos/` | Provas e experimentos. | Evidência técnica ou validação experimental. | Nova prova, resultado ou limite observado. | `prova técnica`, `ambiente fictício`, `validação` |
 | `docs/release/` | Critérios de pronto e entrega experimental. | Critérios de aceite final, riscos aceitos e limites de release. | Mudança nos critérios de pronto ou no recorte de entrega experimental. | `pronto`, `release`, `entrega experimental`, `riscos aceitos` |
+| `docs/uso/` | Manuais de uso. | Quando precisar entender como a pessoa usuária deve operar o SVNFlow. | Mudança nas trilhas de uso, modo solo ou colaboração por pacote. | `manual`, `uso`, `solo`, `colaboração`, `.svnflow` |
 | `docs/planejamento/` | Roteiro macro estático. | Etapas macro da V1. | Apenas quando etapa macro mudar. | `Ambiente`, `Workspace`, `Release` |
 
 ## Manual de atualização
@@ -41,6 +42,7 @@ Não leia todos os documentos por padrão.
 - Ao mover ou renomear documento, atualize links em `README.md`, `docs/README.md`, `docs/guia-da-documentacao.md`, neste guia e documentos relacionados.
 - Ao alterar produto, revise requisitos, arquitetura e ADRs relacionadas.
 - Ao alterar fluxo, revise requisitos e contratos relacionados.
+- Ao alterar manual de uso, revise fluxos, requisitos e definição da V1 relacionados.
 - Ao alterar contrato, revise arquitetura, fluxo e protótipos relacionados.
 - Ao alterar fluxo de trabalho no GitHub, revise `AGENTS.md`, `README.md`, `docs/README.md` e o guia humano apenas se a regra afetar navegação ou execução recorrente.
 - Ao aceitar uma decisão, registre como ADR.

@@ -6,7 +6,7 @@ Este documento descreve a jornada principal de uso do SVNFlow na V1.
 
 Fluxos explicam a sequência de uso. Requisitos e contratos ficam em documentos próprios.
 
-## Jornada principal
+## Jornada Principal
 
 ```text
 Preparar ambiente
@@ -20,6 +20,42 @@ Preparar ambiente
   -> aplicar patch no checkout SVN
   -> consultar svn status
   -> revisar e executar commit SVN protegido
+```
+
+## Fluxo Solo
+
+O fluxo solo é o caminho principal da V1.
+
+A mesma pessoa prepara a alteração no Git local, revisa o impacto, aplica no checkout SVN e segue para commit protegido quando adequado.
+
+```text
+Validar ambiente
+  -> selecionar workspace Git
+  -> selecionar checkout SVN
+  -> escolher branch e base
+  -> gerar preview
+  -> revisar arquivos afetados
+  -> aplicar no checkout SVN
+  -> consultar svn status
+  -> revisar commit SVN protegido
+  -> consultar histórico local
+```
+
+## Fluxo Colaborativo
+
+O fluxo colaborativo usa pacote `.svnflow` como meio local de transporte e revisão.
+
+Ele não substitui GitHub, não cria servidor próprio e não transforma o SVNFlow em plataforma de Pull Request.
+
+```text
+Exportar pacote .svnflow
+  -> compartilhar pacote por canal permitido
+  -> importar pacote .svnflow
+  -> revisar pr.md
+  -> validar patch e checkout SVN
+  -> aplicar no checkout SVN
+  -> consultar svn status
+  -> seguir para commit SVN protegido quando adequado
 ```
 
 ## 1. Preparar ambiente
@@ -67,4 +103,3 @@ Antes do commit, o app deve mostrar estado, resumo e confirmação explícita.
 O histórico local registra metadados simples de pacotes exportados e importados.
 
 Ele não é auditoria oficial e não deve substituir GitHub, SVN ou registros da organização.
-
