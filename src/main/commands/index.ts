@@ -26,6 +26,14 @@ export {
 	type PostApplyStatusResult,
 	type ReadPostApplyStatusInput
 } from './post-apply-status';
+export {
+	buildSvnApplyConfirmationScreen,
+	executeSvnApply,
+	type SvnApplyConfirmationInput,
+	type SvnApplyConfirmationScreenState,
+	type ExecuteSvnApplyInput,
+	type ExecuteSvnApplyResult
+} from './svn-apply-screen';
 export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
 export {
 	checkInitialFlowGate,
