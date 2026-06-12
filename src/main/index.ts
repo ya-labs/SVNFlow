@@ -17,6 +17,7 @@ import {
 import { revalidateEnvironment } from './commands/revalidate-environment.js';
 import { buildPreviewScreenState } from './commands/preview-screen.js';
 import { validateCommitPreConditions, type ValidateCommitResult } from './commands/commit-validator.js';
+import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -301,6 +302,27 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('commit:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildCommitScreenState(payload?.environmentId)
+  );
+
+  ipcMain.handle(
+    'commit:execute',
+    async (_event, payload?: { environmentId?: string; title: string; description?: string }): Promise<ExecuteCommitResult> => {
+      const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+      if (!selected || !payload?.title) {
+        return {
+          status: 'failed',
+          message: 'Ambiente ou mensagem de commit não fornecidos.',
+          errorCode: 'INVALID_INPUT'
+        };
+      }
+
+      return executeCommit({
+        checkoutPath: selected.svnCheckoutPath,
+        title: payload.title,
+        description: payload.description
+      });
+    }
   );
 }
 
