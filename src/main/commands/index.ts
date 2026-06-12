@@ -35,6 +35,13 @@ export {
 	type UpdateSavedEnvironmentInput
 } from './saved-environment-store';
 export {
+	registerSavedEnvironmentFromLocalPaths,
+	type RegisterSavedEnvironmentErrorCode,
+	type RegisterSavedEnvironmentBlocker,
+	type RegisterSavedEnvironmentInput,
+	type RegisterSavedEnvironmentResult
+} from './register-saved-environment';
+export {
 	revalidateEnvironment,
 	type RevalidatedEnvironment,
 	type RevalidationBlocker,

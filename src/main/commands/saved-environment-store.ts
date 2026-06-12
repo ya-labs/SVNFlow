@@ -187,7 +187,7 @@ async function persistStorageFile(
 	const validationError = validateSavedEnvironmentList(environments);
 
 	if (validationError) {
-		return createFailure(storagePath, validationError, 'INVALID_ENVIRONMENT', environments);
+		return createFailure(storagePath, validationError, 'INVALID_ENVIRONMENT', []);
 	}
 
 	try {
