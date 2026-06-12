@@ -15,6 +15,13 @@ export {
 	type ValidatePatchResult
 } from './patch-validator.js';
 export {
+	validateCommitPreConditions,
+	type CommitPreValidationStatus,
+	type ValidateCommitInput,
+	type CommitBlocker,
+	type ValidateCommitResult
+} from './commit-validator.js';
+export {
 	applyPatch,
 	type ApplyPatchStatus,
 	type ApplyPatchInput,
