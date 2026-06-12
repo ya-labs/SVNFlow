@@ -7,8 +7,10 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "tsc -p tsconfig.build.json --watch"
+    "build": "tsc -p tsconfig.build.json && node ./scripts/copy-renderer-assets.mjs",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "app": "npm run build && electron .",
+    "app:dev": "npm run build && electron ."
   },
   "keywords": [
     "git",
@@ -21,6 +23,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
+    "electron": "^41.7.1",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.0.0"

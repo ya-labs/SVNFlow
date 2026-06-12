@@ -1,0 +1,69 @@
+:root {
+  --bg-a: #08131b;
+  --bg-b: #0f2a3a;
+  --panel: #122637;
+  --panel-border: #1f425c;
+  --text-primary: #f2f8ff;
+  --text-muted: #b8cde0;
+  --accent: #00a6a6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", "Noto Sans", sans-serif;
+  color: var(--text-primary);
+  background: radial-gradient(circle at 15% 20%, #12344a 0%, var(--bg-a) 45%, var(--bg-b) 100%);
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.hero-card {
+  width: min(680px, 100%);
+  background: linear-gradient(160deg, rgba(20, 42, 60, 0.95), rgba(9, 24, 36, 0.95));
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.35);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: 12px 0 22px;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 166, 166, 0.4);
+  background: rgba(0, 166, 166, 0.14);
+  color: #d5ffff;
+  padding: 8px 14px;
+  font-weight: 600;
+}
