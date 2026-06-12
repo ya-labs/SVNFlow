@@ -48,6 +48,8 @@ O histórico local pode guardar metadados e referências para pacotes locais, se
 
 Ambientes salvos podem guardar apenas configuração local e metadados de validação, como nome amigável, caminho do workspace Git, caminho do checkout SVN, URL SVN detectada e última validação.
 
+Na implementação local mínima da V1, esses ambientes ficam persistidos em um arquivo JSON local por máquina, fora do repositório do projeto.
+
 O contrato detalhado fica em [ambientes-salvos.md](../contratos/ambientes-salvos.md).
 
 ## Formato do pacote

@@ -22,6 +22,19 @@ export {
 	type SelectSavedEnvironmentResult
 } from './saved-environments';
 export {
+	resolveSavedEnvironmentStoragePath,
+	readSavedEnvironments,
+	saveSavedEnvironment,
+	updateSavedEnvironment,
+	writeSavedEnvironments,
+	type SavedEnvironmentStorageErrorCode,
+	type SavedEnvironmentStorageFile,
+	type SavedEnvironmentStorageOptions,
+	type SavedEnvironmentStorageResult,
+	type SaveSavedEnvironmentInput,
+	type UpdateSavedEnvironmentInput
+} from './saved-environment-store';
+export {
 	revalidateEnvironment,
 	type RevalidatedEnvironment,
 	type RevalidationBlocker,

@@ -37,6 +37,41 @@ Para cadastrar um ambiente, o app deve:
 
 O usuário deve escolher o ambiente pelo nome amigável, não por detalhes técnicos da URL SVN.
 
+## Persistência Local
+
+Na V1, os ambientes salvos são persistidos em um arquivo JSON local por máquina, fora do repositório.
+
+Padrão de armazenamento:
+
+- arquivo: `~/.svnflow/saved-environments.json`
+- formato: JSON simples com metadados de versão e lista de ambientes
+- atualização: regravação do arquivo local com o conjunto atual de ambientes
+- segurança: apenas campos mínimos de ambiente e metadados locais são gravados
+
+Estrutura lógica do arquivo:
+
+```json
+{
+	"version": 1,
+	"updatedAt": "2026-06-12T12:00:00.000Z",
+	"environments": [
+		{
+			"id": "ambiente-local",
+			"name": "Projeto Local",
+			"gitWorkspacePath": "/caminho/git",
+			"svnCheckoutPath": "/caminho/svn",
+			"svnUrl": "https://svn.exemplo.local/projeto",
+			"svnCheckoutRoot": "/caminho/svn",
+			"svnRevision": "1234",
+			"lastValidatedAt": "2026-06-12T12:00:00.000Z",
+			"lastValidationStatus": "ready"
+		}
+	]
+}
+```
+
+O arquivo não deve armazenar credenciais, conteúdo versionado, patches, pacotes `.svnflow` ou dados sensíveis extras.
+
 ## Fluxo de Seleção
 
 Ao abrir o app, a pessoa usuária deve poder escolher um ambiente salvo.

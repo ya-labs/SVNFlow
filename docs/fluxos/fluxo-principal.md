@@ -63,6 +63,8 @@ O app deve validar se Git e SVN estão disponíveis e se os caminhos selecionado
 
 A pessoa pode escolher um ambiente salvo ou cadastrar um novo ambiente informando workspace Git local e checkout SVN local.
 
+O ambiente salvo é persistido localmente em um arquivo JSON com os metadados mínimos necessários para seleção e revalidação.
+
 Ambientes salvos funcionam como atalhos locais. Mesmo quando um ambiente já existe, o app deve revalidar o estado atual antes de operações sensíveis.
 
 Falhas de ambiente devem bloquear o avanço e indicar o próximo ajuste necessário.
