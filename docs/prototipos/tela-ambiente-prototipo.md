@@ -88,6 +88,8 @@ A tela deve listar ambientes salvos localmente com:
 
 Ao selecionar um ambiente salvo, o app deve revalidar os caminhos antes de permitir avanço.
 
+Na implementação mínima, esses ambientes são lidos e gravados em um arquivo JSON local por máquina, fora do repositório, com o nome amigável e os caminhos necessários para seleção e validação.
+
 Ao cadastrar um novo ambiente, a pessoa usuária deve selecionar pastas locais. O app deve detectar dados do checkout por leitura local, como `svn info`, sem exigir que a pessoa informe manualmente o nome técnico do repositório SVN remoto.
 
 ## Mensagens da M1
