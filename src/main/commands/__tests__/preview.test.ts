@@ -34,6 +34,11 @@ describe('buildPreviewContext', () => {
               path: 'src/app.ts',
               status: 'modified',
               rawStatus: 'M'
+            },
+            {
+              path: 'src/novo.ts',
+              status: 'added',
+              rawStatus: 'A'
             }
           ]
         }
@@ -71,14 +76,37 @@ describe('buildPreviewContext', () => {
       branch: 'feature/preview',
       baseBranch: 'main',
       hasChanges: true,
-      changedFilesCount: 1,
+      changedFilesCount: 2,
       changedFiles: [
         {
           path: 'src/app.ts',
           status: 'modified',
           rawStatus: 'M'
+        },
+        {
+          path: 'src/novo.ts',
+          status: 'added',
+          rawStatus: 'A'
         }
       ]
+    });
+    expect(result.summary).toEqual({
+      branch: 'feature/preview',
+      baseBranch: 'main',
+      activeEnvironment: {
+        id: 'env-1',
+        name: 'Projeto local'
+      },
+      totalAffectedFiles: 2,
+      totalsByChangeType: {
+        added: 1,
+        modified: 1,
+        deleted: 0,
+        renamed: 0,
+        copied: 0,
+        unknown: 0
+      },
+      hasSufficientChanges: true
     });
   });
 
@@ -156,5 +184,73 @@ describe('buildPreviewContext', () => {
       svnCheckoutRoot: undefined
     });
     expect(result.blockers).toEqual(['SVN_CHECKOUT_INVALID']);
+    expect(result.summary).toEqual({
+      branch: 'feature/preview',
+      baseBranch: 'main',
+      activeEnvironment: {
+        id: 'env-3',
+        name: 'Ambiente quebrado'
+      },
+      totalAffectedFiles: 0,
+      totalsByChangeType: {
+        added: 0,
+        modified: 0,
+        deleted: 0,
+        renamed: 0,
+        copied: 0,
+        unknown: 0
+      },
+      hasSufficientChanges: false
+    });
+  });
+
+  it('diferencia cenário sem alterações e sinaliza insuficiência para seguir', () => {
+    mockValidateEnvironmentState.mockReturnValue({
+      status: 'ready',
+      message: 'Ambiente pronto para leitura e revisão.',
+      git: {
+        workspace: {
+          branch: 'feature/sem-alteracoes',
+          baseBranch: 'main',
+          hasChanges: false,
+          changedFiles: []
+        }
+      } as never,
+      svn: {
+        checkout: {
+          checkoutRoot: '/repo/svn'
+        }
+      } as never
+    });
+
+    const result = buildPreviewContext({
+      selectedEnvironment: {
+        id: 'env-4',
+        name: 'Ambiente limpo',
+        gitWorkspacePath: '/repo/git',
+        svnCheckoutPath: '/repo/svn'
+      }
+    });
+
+    expect(result.canPreview).toBe(true);
+    expect(result.message).toBe('Nenhuma alteração encontrada para o ambiente Ambiente limpo.');
+    expect(result.summary).toEqual({
+      branch: 'feature/sem-alteracoes',
+      baseBranch: 'main',
+      activeEnvironment: {
+        id: 'env-4',
+        name: 'Ambiente limpo'
+      },
+      totalAffectedFiles: 0,
+      totalsByChangeType: {
+        added: 0,
+        modified: 0,
+        deleted: 0,
+        renamed: 0,
+        copied: 0,
+        unknown: 0
+      },
+      hasSufficientChanges: false
+    });
   });
 });

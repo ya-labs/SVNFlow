@@ -8,7 +8,16 @@ export {
 	type InitialFlowWorkspaceSummary,
 	type InitialFlowLoadedEnvironment
 } from './initial-flow';
-export { buildPreviewContext, type PreviewContextInput, type PreviewContextResult, type PreviewEnvironmentContext, type PreviewWorkspaceContext, type SelectedEnvironment } from './preview';
+export {
+	buildPreviewContext,
+	type PreviewContextInput,
+	type PreviewContextResult,
+	type PreviewEnvironmentContext,
+	type PreviewWorkspaceContext,
+	type PreviewChangedFilesTotals,
+	type PreviewSummary,
+	type SelectedEnvironment
+} from './preview';
 export { listGitChangedFiles, readGitWorkspaceState, validateGitComparisonBase, type GitChangedFile, type GitChangedFilesResult, type GitChangedFileStatus, type GitComparisonBaseValidationResult, type GitWorkspaceStateInput, type GitWorkspaceStateResult, type GitWorkspaceStateStatus } from './workspace';
 export {
 	listSavedEnvironments,
