@@ -56,6 +56,14 @@ export {
 	type FlowNavigationState,
 	type BuildFlowNavigationInput
 } from './flow-navigation';
+export {
+	getYaLabsVisualProfile,
+	getVisualMessageStyle,
+	type VisualFeedbackKind,
+	type YaLabsThemeTokens,
+	type VisualMessageStyle,
+	type YaLabsVisualProfile
+} from './ya-labs-visual';
 export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
 export {
 	checkInitialFlowGate,

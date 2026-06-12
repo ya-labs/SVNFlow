@@ -40,6 +40,7 @@ describe('buildSvnApplyConfirmationScreen', () => {
     expect(result.environment.name).toBe('Projeto SVN');
     expect(result.environment.svnCheckoutPath).toBe('/repo/svn');
     expect(result.designSystemReference).toBe('YA_LABS');
+    expect(result.visualProfile.reference).toBe('YA_LABS');
   });
 
   it('indica que é operação de aplicação, não commit', () => {
@@ -55,6 +56,7 @@ describe('buildSvnApplyConfirmationScreen', () => {
     expect(result.status).toBe('ready');
     expect(result.canConfirm).toBe(true);
     expect(result.blockers).toHaveLength(0);
+    expect(result.messageStyles.confirmation.kind).toBe('success');
   });
 
   it('bloqueia quando checkout não foi validado', () => {
@@ -66,6 +68,7 @@ describe('buildSvnApplyConfirmationScreen', () => {
     expect(result.status).toBe('blocked');
     expect(result.canConfirm).toBe(false);
     expect(result.blockers.some((b) => b.code === 'CHECKOUT_NOT_VALIDATED')).toBe(true);
+    expect(result.messageStyles.blocker.kind).toBe('blocked');
   });
 
   it('bloqueia quando patch não foi pré-validado', () => {
@@ -109,6 +112,7 @@ describe('buildSvnApplyConfirmationScreen', () => {
 
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain('alterações locais inesperadas');
+    expect(result.messageStyles.warning.kind).toBe('warning');
   });
 
   it('lista arquivos que serão alterados a partir do estado do checkout', () => {

@@ -14,6 +14,8 @@ describe('buildMainInterfaceState', () => {
     expect(result.environment.status).toBe('ready');
     expect(result.environment.active?.name).toBe('Projeto principal');
     expect(result.environment.message).toContain('Ambiente ativo');
+    expect(result.visual.profile.reference).toBe('YA_LABS');
+    expect(result.visual.messageStyles.preview.kind).toBe('neutral');
   });
 
   it('reflete preview sem recalcular dados fora do estado recebido', () => {
@@ -58,6 +60,7 @@ describe('buildMainInterfaceState', () => {
     expect(result.preview.status).toBe('ready');
     expect(result.preview.summary?.totalAffectedFiles).toBe(3);
     expect(result.preview.summary?.alertsCount).toBe(1);
+    expect(result.visual.messageStyles.preview.kind).toBe('success');
   });
 
   it('exibe estado bloqueado de preview com mensagens compreensíveis', () => {
@@ -95,6 +98,7 @@ describe('buildMainInterfaceState', () => {
 
     expect(result.preview.status).toBe('blocked');
     expect(result.preview.blockers).toEqual(['Selecione um ambiente válido.']);
+    expect(result.visual.messageStyles.preview.kind).toBe('blocked');
   });
 
   it('exibe estado de sucesso da aplicação SVN quando pronto para revisão', () => {
@@ -117,6 +121,7 @@ describe('buildMainInterfaceState', () => {
     expect(result.svnApply.status).toBe('success');
     expect(result.svnApply.affectedFilesCount).toBe(1);
     expect(result.svnApply.hasConflicts).toBe(false);
+    expect(result.visual.messageStyles.svnApply.kind).toBe('success');
   });
 
   it('exibe estado de erro ou bloqueio da aplicação SVN de forma clara', () => {
@@ -154,5 +159,7 @@ describe('buildMainInterfaceState', () => {
 
     expect(blocked.svnApply.status).toBe('blocked');
     expect(error.svnApply.status).toBe('error');
+    expect(blocked.visual.messageStyles.svnApply.kind).toBe('blocked');
+    expect(error.visual.messageStyles.svnApply.kind).toBe('error');
   });
 });

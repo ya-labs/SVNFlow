@@ -1,3 +1,5 @@
+import { getYaLabsVisualProfile } from './ya-labs-visual';
+
 export type V1StageKey = 'environment' | 'preview' | 'apply' | 'commit' | 'packages';
 
 export interface ShellVisualNavItem {
@@ -28,6 +30,7 @@ export interface ShellVisualRegions {
 export interface ShellVisualState {
   status: 'ready';
   designSystemReference: 'YA_LABS';
+  visualProfile: ReturnType<typeof getYaLabsVisualProfile>;
   activeStage: V1StageKey;
   currentAreaLabel: string;
   regions: ShellVisualRegions;
@@ -67,6 +70,7 @@ export function buildShellVisualState(input?: BuildShellVisualStateInput): Shell
   return {
     status: 'ready',
     designSystemReference: 'YA_LABS',
+    visualProfile: getYaLabsVisualProfile(),
     activeStage,
     currentAreaLabel,
     regions: {

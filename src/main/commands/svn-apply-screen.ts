@@ -1,6 +1,7 @@
 import { readSvnStatus, type SvnCheckoutState } from './svn-status';
 import { validatePatchFit, type ValidatePatchResult } from './patch-validator';
 import { applyPatch, type ApplyPatchResult } from './patch-applier';
+import { getYaLabsVisualProfile, getVisualMessageStyle } from './ya-labs-visual';
 
 export interface SvnApplyConfirmationInput {
   environmentName: string;
@@ -17,6 +18,12 @@ export interface SvnApplyConfirmationScreenState {
   title: string;
   message: string;
   designSystemReference: 'YA_LABS';
+  visualProfile: ReturnType<typeof getYaLabsVisualProfile>;
+  messageStyles: {
+    confirmation: ReturnType<typeof getVisualMessageStyle>;
+    warning: ReturnType<typeof getVisualMessageStyle>;
+    blocker: ReturnType<typeof getVisualMessageStyle>;
+  };
   environment: {
     name: string;
     svnCheckoutPath: string;
@@ -83,6 +90,12 @@ export function buildSvnApplyConfirmationScreen(
       title: 'Aplicação no checkout SVN bloqueada',
       message: blockers[0].message,
       designSystemReference: 'YA_LABS',
+      visualProfile: getYaLabsVisualProfile(),
+      messageStyles: {
+        confirmation: getVisualMessageStyle('neutral'),
+        warning: getVisualMessageStyle('warning'),
+        blocker: getVisualMessageStyle('blocked')
+      },
       environment: {
         name: input.environmentName,
         svnCheckoutPath: input.svnCheckoutPath
@@ -102,6 +115,12 @@ export function buildSvnApplyConfirmationScreen(
     title: 'Confirmar aplicação no checkout SVN',
     message: 'Revise os arquivos que serão alterados. Esta operação modifica arquivos locais e não publica commit SVN.',
     designSystemReference: 'YA_LABS',
+    visualProfile: getYaLabsVisualProfile(),
+    messageStyles: {
+      confirmation: getVisualMessageStyle('success'),
+      warning: getVisualMessageStyle('warning'),
+      blocker: getVisualMessageStyle('blocked')
+    },
     environment: {
       name: input.environmentName,
       svnCheckoutPath: input.svnCheckoutPath

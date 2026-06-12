@@ -1,10 +1,18 @@
 import type { SelectedEnvironment } from './saved-environments';
 import type { PreviewScreenState } from './preview-screen';
 import type { PostApplyStatusResult } from './post-apply-status';
+import { getYaLabsVisualProfile, getVisualMessageStyle } from './ya-labs-visual';
 
 export type InterfaceOperationStatus = 'idle' | 'ready' | 'blocked' | 'error' | 'success';
 
 export interface MainInterfaceState {
+  visual: {
+    profile: ReturnType<typeof getYaLabsVisualProfile>;
+    messageStyles: {
+      preview: ReturnType<typeof getVisualMessageStyle>;
+      svnApply: ReturnType<typeof getVisualMessageStyle>;
+    };
+  };
   environment: {
     status: InterfaceOperationStatus;
     active?: {
@@ -125,9 +133,33 @@ function resolveSvnApplyState(postApplyStatus?: PostApplyStatusResult): MainInte
 }
 
 export function buildMainInterfaceState(input: BuildMainInterfaceStateInput): MainInterfaceState {
+  const preview = resolvePreviewState(input.previewState);
+  const svnApply = resolveSvnApplyState(input.postApplyStatus);
+
+  const previewKind = preview.status === 'blocked'
+    ? 'blocked'
+    : preview.status === 'ready'
+      ? 'success'
+      : 'neutral';
+
+  const svnApplyKind = svnApply.status === 'error'
+    ? 'error'
+    : svnApply.status === 'blocked'
+      ? 'blocked'
+      : svnApply.status === 'success'
+        ? 'success'
+        : 'neutral';
+
   return {
+    visual: {
+      profile: getYaLabsVisualProfile(),
+      messageStyles: {
+        preview: getVisualMessageStyle(previewKind),
+        svnApply: getVisualMessageStyle(svnApplyKind)
+      }
+    },
     environment: resolveEnvironmentState(input.selectedEnvironment),
-    preview: resolvePreviewState(input.previewState),
-    svnApply: resolveSvnApplyState(input.postApplyStatus)
+    preview,
+    svnApply
   };
 }

@@ -34,6 +34,8 @@ describe('buildShellVisualState', () => {
     const result = buildShellVisualState();
 
     expect(result.designSystemReference).toBe('YA_LABS');
+    expect(result.visualProfile.reference).toBe('YA_LABS');
+    expect(result.visualProfile.mode).toBe('operational-clarity');
   });
 
   it('habilita somente etapas até a etapa ativa', () => {
