@@ -6,6 +6,8 @@
   --text-primary: #f2f8ff;
   --text-muted: #b8cde0;
   --accent: #00a6a6;
+  --warning: #f9b949;
+  --blocked: #8e9bad;
 }
 
 * {
@@ -23,17 +25,105 @@ body {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  place-items: center;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
   padding: 24px;
 }
 
-.hero-card {
-  width: min(680px, 100%);
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(160deg, rgba(20, 42, 60, 0.92), rgba(9, 24, 36, 0.92));
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 18px 22px;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.2);
+}
+
+.layout-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(250px, 320px) 1fr;
+}
+
+.nav-panel,
+.content-card {
   background: linear-gradient(160deg, rgba(20, 42, 60, 0.95), rgba(9, 24, 36, 0.95));
   border: 1px solid var(--panel-border);
-  border-radius: 18px;
-  padding: 30px;
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.2);
+}
+
+.nav-panel {
+  padding: 18px;
+}
+
+.nav-panel h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.stage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.stage-button {
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.stage-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stage-button[data-state='active'] {
+  border-color: rgba(0, 166, 166, 0.6);
+  background: rgba(0, 166, 166, 0.2);
+}
+
+.stage-button[data-state='blocked'] {
+  border-color: rgba(142, 155, 173, 0.45);
+  background: rgba(142, 155, 173, 0.12);
+  color: #ced8e5;
+  cursor: not-allowed;
+}
+
+.stage-button small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.content-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.content-card {
+  padding: 18px 20px;
+}
+
+.card-label {
+  margin: 0;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
 }
 
 .eyebrow {
@@ -47,14 +137,19 @@ body {
 
 h1 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
   line-height: 1.1;
 }
 
+.content-card h2 {
+  margin: 8px 0 8px;
+  font-size: 1.45rem;
+}
+
 .subtitle {
-  margin: 12px 0 22px;
+  margin: 10px 0 0;
   color: var(--text-muted);
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 
 .status-pill {
@@ -66,4 +161,29 @@ h1 {
   color: #d5ffff;
   padding: 8px 14px;
   font-weight: 600;
+}
+
+.context-line {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+}
+
+.context-line strong,
+.context-line span {
+  color: var(--text-primary);
+}
+
+@media (max-width: 880px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .layout-grid {
+    grid-template-columns: 1fr;
+  }
 }
