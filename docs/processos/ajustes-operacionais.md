@@ -6,6 +6,14 @@ Cada ajuste é aplicado direto na `main` e registrado aqui com referência ao co
 
 ---
 
+## 2026-06-12
+
+**Commit:** `00c079b`
+**Tipo:** docs/prod
+**O que mudou:** Criado o manual de uso da V1 com trilhas de trabalho solo e colaboração por pacote `.svnflow`.
+**Por quê:** Deixar explícito que o modo solo é o fluxo principal da V1 e que a colaboração é uma camada adicional, sem virar plataforma colaborativa completa.
+**Impacto:** Escopo da V1, requisitos e fluxo principal passam a registrar a jornada solo, os bloqueios necessários para uso individual seguro e o fechamento com preview, aplicação, `svn status`, commit protegido e histórico local.
+
 ## 2026-06-11
 
 **Commit:** `77d1eae`  
