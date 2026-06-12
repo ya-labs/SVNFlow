@@ -65,6 +65,7 @@ export function loadInitialFlowFromSavedEnvironment(
     environments,
     environmentId,
     now: undefined,
+    now: options?.now,
     revalidationMaxAgeMinutes: options?.revalidationMaxAgeMinutes
   });
 
