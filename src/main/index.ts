@@ -250,8 +250,8 @@ function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 820,
-    minWidth: 980,
-    minHeight: 680,
+    minWidth: 760,
+    minHeight: 520,
     title: 'SVNFlow',
     autoHideMenuBar: true,
     webPreferences: {

@@ -14,20 +14,28 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   font-family: "Segoe UI", "Noto Sans", sans-serif;
   color: var(--text-primary);
   background: radial-gradient(circle at 15% 20%, #12344a 0%, var(--bg-a) 45%, var(--bg-b) 100%);
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 18px;
-  padding: 24px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(10px, 1.8vh, 18px);
+  padding: clamp(12px, 2vh, 24px);
+  overflow: hidden;
 }
 
 .topbar {
@@ -38,14 +46,15 @@ body {
   background: linear-gradient(160deg, rgba(20, 42, 60, 0.92), rgba(9, 24, 36, 0.92));
   border: 1px solid var(--panel-border);
   border-radius: 16px;
-  padding: 18px 22px;
+  padding: clamp(12px, 1.8vh, 18px) clamp(14px, 2vw, 22px);
   box-shadow: 0 18px 55px rgba(0, 0, 0, 0.2);
 }
 
 .layout-grid {
   display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(250px, 320px) 1fr;
+  min-height: 0;
+  gap: clamp(10px, 1.8vh, 18px);
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
 }
 
 .nav-panel,
@@ -57,6 +66,10 @@ body {
 }
 
 .nav-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
   padding: 18px;
 }
 
@@ -64,6 +77,12 @@ body {
   margin: 0 0 12px;
   font-size: 1rem;
   color: var(--text-muted);
+}
+
+.nav-panel nav {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .stage-list {
@@ -111,10 +130,16 @@ body {
 
 .content-panel {
   display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 14px;
 }
 
 .content-card {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   padding: 18px 20px;
 }
 
@@ -166,6 +191,7 @@ h1 {
 .context-line {
   margin: 10px 0 0;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
 .context-line strong,
@@ -175,6 +201,7 @@ h1 {
 
 .stage-body {
   margin-top: 16px;
+  min-height: 0;
 }
 
 .environment-list {
@@ -214,6 +241,7 @@ h1 {
   margin-top: 3px;
   color: var(--text-muted);
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .status-badge {
@@ -280,6 +308,7 @@ h1 {
   display: grid;
   gap: 6px;
   margin-bottom: 12px;
+  min-width: 0;
 }
 
 .preview-files,
@@ -302,19 +331,6 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 8px 10px;
-}
-
-@media (max-width: 880px) {
-  .app-shell {
-    padding: 14px;
-  }
-
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .layout-grid {
-    grid-template-columns: 1fr;
-  }
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

@@ -84,6 +84,23 @@ A V1 deve caminhar para uma aplicação desktop com:
 
 O shell visual deve permitir que a pessoa usuária entenda onde está no fluxo e qual será o próximo passo seguro.
 
+## Responsividade e Redimensionamento
+
+A janela do SVNFlow deve ser redimensionável em largura e altura.
+
+A altura mínima de referência da V1 é `520px`. A interface deve continuar utilizável próxima desse limite, sem depender de maximização da janela.
+
+O container principal deve ocupar a viewport inteira. A aplicação não deve usar scroll global da página como solução padrão para telas pequenas.
+
+Quando faltar espaço, o layout deve se adaptar por:
+
+- redução controlada de espaçamentos;
+- grids e containers que encolhem corretamente;
+- quebra ou tratamento visual de textos longos;
+- scroll apenas em regiões específicas e previsíveis.
+
+Na V1, a lista de etapas pode ter scroll vertical quando a altura da janela for pequena. Topo, área principal e contexto do ambiente devem continuar visíveis.
+
 ## Navegação Principal
 
 A navegação da V1 deve representar as principais etapas do SVNFlow:
