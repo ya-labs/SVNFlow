@@ -1,5 +1,21 @@
 import { buildPreviewContext, type PreviewAlert, type PreviewBlocker, type PreviewContextInput, type PreviewContextResult } from './preview';
 
+export interface PreviewMiniPrLocalDraft {
+  title: string;
+  context: string;
+  whatChanged: string;
+  notes: string;
+}
+
+export interface PreviewMiniPrLocalValidation {
+  isValid: boolean;
+  pendingRequiredFields: Array<'title' | 'context' | 'whatChanged'>;
+}
+
+export interface BuildPreviewScreenStateInput extends PreviewContextInput {
+  miniPrLocalDraft?: Partial<PreviewMiniPrLocalDraft>;
+}
+
 export interface PreviewScreenActionState {
   canAdvance: boolean;
   reason?: string;
@@ -39,7 +55,41 @@ export interface PreviewScreenState {
   workspace?: PreviewScreenWorkspaceSection;
   blockers: PreviewBlocker[];
   alerts: PreviewAlert[];
+  miniPrLocal: {
+    draft: PreviewMiniPrLocalDraft;
+    validation: PreviewMiniPrLocalValidation;
+  };
   actions: PreviewScreenActions;
+}
+
+function normalizeMiniPrLocalDraft(draft?: Partial<PreviewMiniPrLocalDraft>): PreviewMiniPrLocalDraft {
+  return {
+    title: draft?.title?.trim() ?? '',
+    context: draft?.context?.trim() ?? '',
+    whatChanged: draft?.whatChanged?.trim() ?? '',
+    notes: draft?.notes?.trim() ?? ''
+  };
+}
+
+function validateMiniPrLocalDraft(draft: PreviewMiniPrLocalDraft): PreviewMiniPrLocalValidation {
+  const pendingRequiredFields: Array<'title' | 'context' | 'whatChanged'> = [];
+
+  if (!draft.title) {
+    pendingRequiredFields.push('title');
+  }
+
+  if (!draft.context) {
+    pendingRequiredFields.push('context');
+  }
+
+  if (!draft.whatChanged) {
+    pendingRequiredFields.push('whatChanged');
+  }
+
+  return {
+    isValid: pendingRequiredFields.length === 0,
+    pendingRequiredFields
+  };
 }
 
 function normalizeBlockers(result: PreviewContextResult): PreviewBlocker[] {
@@ -79,10 +129,20 @@ function createReadyActions(): PreviewScreenActions {
   };
 }
 
-export function buildPreviewScreenState(input: PreviewContextInput): PreviewScreenState {
+export function buildPreviewScreenState(input: BuildPreviewScreenStateInput): PreviewScreenState {
   const preview = buildPreviewContext(input);
   const blockers = normalizeBlockers(preview);
   const alerts = preview.alerts ?? [];
+  const miniPrLocalDraft = normalizeMiniPrLocalDraft(input.miniPrLocalDraft);
+  const miniPrLocalValidation = validateMiniPrLocalDraft(miniPrLocalDraft);
+
+  if (!miniPrLocalValidation.isValid) {
+    blockers.push({
+      code: 'MINI_PR_REQUIRED_FIELDS',
+      message: 'Preencha título, contexto e o que mudou para continuar.',
+      affectedFiles: miniPrLocalValidation.pendingRequiredFields
+    });
+  }
 
   const environment = preview.environment
     ? {
@@ -120,6 +180,10 @@ export function buildPreviewScreenState(input: PreviewContextInput): PreviewScre
       workspace,
       blockers,
       alerts,
+      miniPrLocal: {
+        draft: miniPrLocalDraft,
+        validation: miniPrLocalValidation
+      },
       actions: createBlockedActions(reason)
     };
   }
@@ -133,6 +197,10 @@ export function buildPreviewScreenState(input: PreviewContextInput): PreviewScre
     workspace,
     blockers,
     alerts,
+    miniPrLocal: {
+      draft: miniPrLocalDraft,
+      validation: miniPrLocalValidation
+    },
     actions: createReadyActions()
   };
 }

@@ -79,6 +79,12 @@ describe('buildPreviewScreenState', () => {
         name: 'Projeto local',
         gitWorkspacePath: '/repo/git',
         svnCheckoutPath: '/repo/svn'
+      },
+      miniPrLocalDraft: {
+        title: 'Ajustes no modulo de preview',
+        context: 'Necessario revisar riscos antes da exportacao.',
+        whatChanged: 'Inclui classificacao e alertas no preview.',
+        notes: 'Sem impacto em aplicacao SVN.'
       }
     });
 
@@ -111,6 +117,18 @@ describe('buildPreviewScreenState', () => {
       },
       canApplyInSvn: {
         canAdvance: true
+      }
+    });
+    expect(result.miniPrLocal).toEqual({
+      draft: {
+        title: 'Ajustes no modulo de preview',
+        context: 'Necessario revisar riscos antes da exportacao.',
+        whatChanged: 'Inclui classificacao e alertas no preview.',
+        notes: 'Sem impacto em aplicacao SVN.'
+      },
+      validation: {
+        isValid: true,
+        pendingRequiredFields: []
       }
     });
   });
@@ -167,6 +185,12 @@ describe('buildPreviewScreenState', () => {
         name: 'Projeto local',
         gitWorkspacePath: '/repo/git',
         svnCheckoutPath: '/repo/svn'
+      },
+      miniPrLocalDraft: {
+        title: 'Sem alteracoes',
+        context: 'Fluxo sem mudancas detectadas.',
+        whatChanged: 'Nenhuma alteracao encontrada.',
+        notes: ''
       }
     });
 
@@ -190,7 +214,14 @@ describe('buildPreviewScreenState', () => {
       blockers: ['NO_SELECTED_ENVIRONMENT']
     });
 
-    const result = buildPreviewScreenState({});
+    const result = buildPreviewScreenState({
+      miniPrLocalDraft: {
+        title: 'Titulo valido',
+        context: 'Contexto valido',
+        whatChanged: 'Mudancas validas',
+        notes: ''
+      }
+    });
 
     expect(result.status).toBe('blocked');
     expect(result.blockers).toEqual([
@@ -201,5 +232,52 @@ describe('buildPreviewScreenState', () => {
     ]);
     expect(result.actions.canExportPackage.canAdvance).toBe(false);
     expect(result.actions.canApplyInSvn.canAdvance).toBe(false);
+  });
+
+  it('bloqueia quando campos obrigatorios da mini PR local estao vazios', () => {
+    mockBuildPreviewContext.mockReturnValue({
+      status: 'ready',
+      canPreview: true,
+      message: 'Preview pronto para o ambiente Projeto local.',
+      blockers: [],
+      alerts: [],
+      summary: {
+        branch: 'feature/x',
+        baseBranch: 'main',
+        activeEnvironment: {
+          id: 'env-3',
+          name: 'Projeto local'
+        },
+        totalAffectedFiles: 1,
+        totalsByChangeType: {
+          added: 0,
+          modified: 1,
+          deleted: 0,
+          renamed: 0,
+          copied: 0,
+          unknown: 0
+        },
+        hasSufficientChanges: true
+      }
+    });
+
+    const result = buildPreviewScreenState({
+      miniPrLocalDraft: {
+        title: '',
+        context: '  ',
+        whatChanged: '',
+        notes: 'nota opcional'
+      }
+    });
+
+    const miniPrBlocker = result.blockers.find((blocker) => blocker.code === 'MINI_PR_REQUIRED_FIELDS');
+    expect(miniPrBlocker).toBeDefined();
+    expect(miniPrBlocker?.affectedFiles).toEqual(['title', 'context', 'whatChanged']);
+    expect(result.miniPrLocal.validation).toEqual({
+      isValid: false,
+      pendingRequiredFields: ['title', 'context', 'whatChanged']
+    });
+    expect(result.status).toBe('blocked');
+    expect(result.actions.canExportPackage.canAdvance).toBe(false);
   });
 });
