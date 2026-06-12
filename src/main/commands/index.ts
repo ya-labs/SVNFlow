@@ -2,4 +2,5 @@ export { validateGitAvailability, validateGitRepository, type GitValidationResul
 export { validateSvnAvailability, validateSvnCheckout, type SvnValidationResult, type SvnCheckoutValidationResult } from './svn';
 export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
 export { checkInitialFlowGate, type InitialFlowGateResult, type InitialFlowWorkspaceSummary } from './initial-flow';
+export { buildPreviewContext, type PreviewContextInput, type PreviewContextResult, type PreviewEnvironmentContext, type PreviewWorkspaceContext, type SelectedEnvironment } from './preview';
 export { listGitChangedFiles, readGitWorkspaceState, validateGitComparisonBase, type GitChangedFile, type GitChangedFilesResult, type GitChangedFileStatus, type GitComparisonBaseValidationResult, type GitWorkspaceStateInput, type GitWorkspaceStateResult, type GitWorkspaceStateStatus } from './workspace';
