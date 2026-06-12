@@ -9,6 +9,12 @@ Cada ajuste é aplicado direto na `main` e registrado aqui com referência ao co
 ## 2026-06-12
 
 **Commit:** neste commit na `main`
+**Tipo:** docs/proc
+**O que mudou:** Documentada a regra de incluir `Entrega Visual Esperada` em issues de funcionalidade quando houver impacto visível na interface.
+**Por quê:** Garantir que funções novas possam ser testadas pelo app, sem separar artificialmente visual mínimo de comportamento funcional.
+**Impacto:** Issues de funcionalidade devem trazer o visual mínimo necessário para operar e validar o fluxo; refinamentos transversais continuam em issues visuais separadas.
+
+**Commit:** neste commit na `main`
 **Tipo:** fullstack/proc
 **O que mudou:** Ajustada a configuração da janela Electron para garantir a exposição das APIs de preload usadas nas telas Ambiente e Preview.
 **Por quê:** A interface exibia `Falha ao carregar integração de ambiente` e `Falha ao carregar integração de preview`, mesmo com build e testes passando.

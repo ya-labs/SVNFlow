@@ -160,6 +160,17 @@ Issues de tarefa da V1 devem ter:
 - critérios de aceite verificáveis;
 - fora de escopo explícito quando houver risco de expansão.
 
+Quando uma issue implementar funcionalidade com impacto visível no app, inclua uma seção `Entrega Visual Esperada` sempre que isso ajudar a testar a funcionalidade pela interface.
+
+Use essa seção para deixar claro:
+
+- qual tela, ação, botão, estado ou mensagem deve aparecer;
+- como a pessoa usuária testa a funcionalidade sem depender apenas de código interno;
+- quais estados mínimos precisam estar visíveis, como sucesso, bloqueio, erro ou vazio;
+- qual é o limite visual da issue.
+
+Ajustes visuais mínimos pertencem à própria issue da funcionalidade quando são necessários para usar ou validar o fluxo. Refinamentos transversais, polimento amplo, tema, reorganização geral de layout ou padronizações que afetam várias telas devem ficar em issues visuais separadas.
+
 Ao preparar um lote novo:
 
 - priorize a milestone atual;
