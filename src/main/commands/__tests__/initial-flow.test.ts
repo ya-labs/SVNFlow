@@ -1,4 +1,4 @@
-import { checkInitialFlowGate } from '../initial-flow';
+import { checkInitialFlowGate, loadInitialFlowFromSavedEnvironment } from '../initial-flow';
 import { validateEnvironmentState } from '../environment';
 
 jest.mock('../environment');
@@ -110,5 +110,44 @@ describe('checkInitialFlowGate', () => {
 
     expect(result.canAdvance).toBe(false);
     expect(result.message).toBe('SVN não encontrado. Instale o SVN e reinicie o SVNFlow.');
+  });
+});
+
+describe('loadInitialFlowFromSavedEnvironment', () => {
+  it('carrega caminhos Git e SVN no estado inicial do fluxo', () => {
+    const result = loadInitialFlowFromSavedEnvironment('env-1', [
+      {
+        id: 'env-1',
+        name: 'Projeto Local',
+        gitWorkspacePath: '/repo/git',
+        svnCheckoutPath: '/repo/svn',
+        lastValidationStatus: 'ready',
+        lastValidatedAt: '2026-06-12T10:00:00.000Z'
+      }
+    ]);
+
+    expect(result).toEqual({
+      gitRepositoryPath: '/repo/git',
+      svnCheckoutPath: '/repo/svn',
+      selectedEnvironmentId: 'env-1',
+      selectedEnvironmentName: 'Projeto Local',
+      needsRevalidation: true,
+      safeForSensitiveOperations: false,
+      message: 'Ambiente Projeto Local selecionado. Revalide antes de continuar.'
+    });
+  });
+
+  it('retorna estado vazio quando ambiente não existe', () => {
+    const result = loadInitialFlowFromSavedEnvironment('inexistente', []);
+
+    expect(result).toEqual({
+      gitRepositoryPath: '',
+      svnCheckoutPath: '',
+      selectedEnvironmentId: 'inexistente',
+      selectedEnvironmentName: '',
+      needsRevalidation: true,
+      safeForSensitiveOperations: false,
+      message: 'Ambiente salvo não encontrado.'
+    });
   });
 });
