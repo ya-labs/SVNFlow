@@ -47,18 +47,22 @@ Operações de escrita no checkout SVN e operações sensíveis devem ser proteg
 
 ### Objetivo
 
-Identificar a branch de origem da alteração que será exportada.
+Identificar o estado mínimo do workspace Git usado para preparar a alteração.
 
 ### Entrada
 
 - Caminho local do repositório Git.
 - Repositório Git válido.
+- Base de comparação informada ou base padrão `main`.
 
 ### Saída esperada
 
 - Nome da branch atual.
 - Indicação se o repositório está em branch nomeada ou em estado destacado.
-- Indicação se há alterações em relação à base de comparação configurada.
+- Base de comparação em uso.
+- Indicação se a base de comparação existe no repositório local.
+- Lista mínima de arquivos alterados em relação à base.
+- Indicação se há alterações detectadas.
 
 ### Confirmação exigida
 
@@ -71,14 +75,30 @@ Nenhuma. Esta é uma operação de leitura.
 - Branch não detectada.
 - Repositório em detached HEAD.
 - Base de comparação não configurada ou não encontrada.
+- Falha ao listar arquivos alterados.
+- Timeout de comando Git.
 
 ### Bloqueios
 
-O fluxo de exportação deve bloquear quando:
+O fluxo de workspace deve bloquear quando:
 
 - a branch de origem não for detectada;
 - o repositório estiver em detached HEAD;
 - a base de comparação necessária para gerar o patch não existir.
+
+Falhas inesperadas de comando Git devem interromper o avanço e ser tratadas como erro, não como bloqueio recuperável simples.
+
+### Mensagens e próximas ações
+
+| Situação | Classificação | Mensagem sugerida | Próxima ação esperada |
+| --- | --- | --- | --- |
+| Repositório em detached HEAD | Bloqueio recuperável | `O repositório Git está em detached HEAD. Faça checkout de uma branch antes de continuar.` | Selecionar ou criar uma branch nomeada. |
+| Base de comparação ausente | Bloqueio recuperável | `A base de comparação não foi encontrada no repositório Git local.` | Informar uma base existente ou atualizar o repositório local fora do SVNFlow. |
+| Falha ao listar arquivos alterados | Erro inesperado | `Não foi possível listar os arquivos alterados do workspace Git.` | Verificar permissões, integridade do repositório e tentar novamente. |
+| Timeout ao consultar workspace | Erro inesperado | `A validação do workspace Git excedeu o tempo limite.` | Verificar se o repositório está acessível e tentar novamente. |
+| Nenhuma alteração encontrada | Bloqueio recuperável para exportação | `Nenhuma alteração foi encontrada em relação à base de comparação.` | Fazer alterações na branch ou escolher outra base. |
+
+Bloqueio recuperável significa que a pessoa usuária pode ajustar o estado local e tentar novamente. Erro inesperado significa que o app não conseguiu determinar o estado com segurança.
 
 ## Contrato: Gerar `patch.diff`
 
