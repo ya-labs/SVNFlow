@@ -10,10 +10,12 @@ import {
 import {
   listSavedEnvironments,
   selectSavedEnvironment,
+  type SelectedEnvironment,
   type SavedEnvironmentListItem,
   type SavedEnvironmentValidationStatus
 } from './commands/saved-environments.js';
 import { revalidateEnvironment } from './commands/revalidate-environment.js';
+import { buildPreviewScreenState } from './commands/preview-screen.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +44,68 @@ interface EnvironmentScreenState {
   };
   emptyState: boolean;
   canAdvanceToSensitiveOperations: boolean;
+}
+
+interface PreviewScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    gitWorkspacePath: string;
+    svnCheckoutPath: string;
+    svnCheckoutRoot?: string;
+  };
+  workspace?: {
+    branch?: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+    files: Array<{
+      path: string;
+      previousPath?: string;
+      status: string;
+      description: string;
+      rawStatus: string;
+    }>;
+  };
+  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
+  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  canApplyInSvn: boolean;
+}
+
+async function resolveSelectedEnvironmentById(environmentId?: string): Promise<SelectedEnvironment | undefined> {
+  const storagePath = resolveSavedEnvironmentStoragePath();
+  const storage = await readSavedEnvironments({ storagePath });
+
+  if (!storage.ok || storage.environments.length === 0) {
+    return undefined;
+  }
+
+  const resolvedId = environmentId ?? storage.environments[0].id;
+  const selectedResult = selectSavedEnvironment({
+    environments: storage.environments,
+    environmentId: resolvedId
+  });
+
+  return selectedResult.selectedEnvironment;
+}
+
+async function buildPreviewRendererState(environmentId?: string): Promise<PreviewScreenState> {
+  const selectedEnvironment = await resolveSelectedEnvironmentById(environmentId);
+  const preview = buildPreviewScreenState({
+    selectedEnvironment
+  });
+
+  return {
+    status: preview.status,
+    title: preview.title,
+    message: preview.message,
+    environment: preview.environment,
+    workspace: preview.workspace,
+    blockers: preview.blockers,
+    alerts: preview.alerts,
+    canApplyInSvn: preview.actions.canApplyInSvn.canAdvance
+  };
 }
 
 function mapVisualStatus(item: SavedEnvironmentListItem): EnvironmentVisualStatus {
@@ -176,6 +240,10 @@ function registerIpcHandlers(): void {
 
     return buildEnvironmentScreenState(selected.id, revalidation.message);
   });
+
+  ipcMain.handle('preview:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
+    buildPreviewRendererState(payload?.environmentId)
+  );
 }
 
 function createMainWindow(): BrowserWindow {

@@ -5,6 +5,7 @@ declare global {
       shellStatus: string;
       getEnvironmentScreenState?: (environmentId?: string) => Promise<EnvironmentScreenState>;
       revalidateEnvironment?: (environmentId?: string) => Promise<EnvironmentScreenState>;
+      getPreviewScreenState?: (environmentId?: string) => Promise<PreviewScreenState>;
     };
   }
 }
@@ -29,6 +30,33 @@ interface EnvironmentScreenState {
   };
   emptyState: boolean;
   canAdvanceToSensitiveOperations: boolean;
+}
+
+interface PreviewScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    gitWorkspacePath: string;
+    svnCheckoutPath: string;
+    svnCheckoutRoot?: string;
+  };
+  workspace?: {
+    branch?: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+    files: Array<{
+      path: string;
+      previousPath?: string;
+      status: string;
+      description: string;
+      rawStatus: string;
+    }>;
+  };
+  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
+  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  canApplyInSvn: boolean;
 }
 
 type StageKey = 'environment' | 'workspace' | 'preview' | 'apply' | 'commit' | 'packages' | 'history';
@@ -61,9 +89,9 @@ const STAGES: StageDefinition[] = [
   {
     key: 'preview',
     label: 'Preview',
-    mode: 'blocked',
-    description: 'Preview bloqueado até o ambiente e o workspace estarem aptos para validação real.',
-    helper: 'Bloqueado por pré-condições de fluxo V1.'
+    mode: 'available',
+    description: 'Visualização das alterações Git antes de qualquer aplicação no checkout SVN.',
+    helper: 'Exibe arquivos afetados, riscos e bloqueios do preview.'
   },
   {
     key: 'apply',
@@ -97,6 +125,15 @@ const STAGES: StageDefinition[] = [
 
 let activeStage: StageKey = 'environment';
 let selectedEnvironmentId: string | undefined;
+
+function escapeHtml(value: string): string {
+  return value
+    .split('&').join('&amp;')
+    .split('<').join('&lt;')
+    .split('>').join('&gt;')
+    .split('"').join('&quot;')
+    .split("'").join('&#39;');
+}
 
 function getVisualStatusLabel(status: EnvironmentVisualStatus): string {
   if (status === 'ready') {
@@ -248,6 +285,78 @@ function renderEnvironmentStage(screen: EnvironmentScreenState): void {
   });
 }
 
+function renderPreviewStage(preview: PreviewScreenState): void {
+  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
+  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
+  const environmentGit = document.querySelector<HTMLElement>('[data-role="environment-git"]');
+  const environmentSvn = document.querySelector<HTMLElement>('[data-role="environment-svn"]');
+  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
+
+  setStatusMessage(preview.message);
+
+  if (environmentStatus) {
+    environmentStatus.textContent = preview.status === 'ready' ? 'Pronto' : 'Bloqueado';
+  }
+
+  if (environmentGit) {
+    environmentGit.textContent = preview.environment?.gitWorkspacePath ?? 'Não disponível';
+  }
+
+  if (environmentSvn) {
+    environmentSvn.textContent = preview.environment?.svnCheckoutPath ?? 'Não disponível';
+  }
+
+  if (advanceGuard) {
+    advanceGuard.textContent = preview.canApplyInSvn
+      ? 'Preview válido para próxima etapa'
+      : 'Continuidade bloqueada até preview válido';
+  }
+
+  if (!stageBody) {
+    return;
+  }
+
+  const blockers = preview.blockers
+    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
+    .join('');
+  const alerts = preview.alerts
+    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
+    .join('');
+
+  if (!preview.workspace || preview.workspace.files.length === 0) {
+    stageBody.innerHTML = `
+      <p class="empty-state">Nenhum arquivo afetado disponível para preview.</p>
+      ${blockers ? `<ul class="preview-list">${blockers}</ul>` : ''}
+      ${alerts ? `<ul class="preview-list">${alerts}</ul>` : ''}
+    `;
+    return;
+  }
+
+  const summary = `
+    <div class="preview-summary">
+      <p class="context-line">Branch: <strong>${escapeHtml(preview.workspace.branch ?? 'não identificado')}</strong></p>
+      <p class="context-line">Base: <strong>${escapeHtml(preview.workspace.baseBranch)}</strong></p>
+      <p class="context-line">Arquivos afetados: <strong>${preview.workspace.totalAffectedFiles}</strong></p>
+    </div>
+  `;
+
+  const files = preview.workspace.files
+    .map((file) => `
+      <li class="preview-row">
+        <span class="status-badge" data-kind="${preview.status === 'ready' ? 'ready' : 'attention'}">${escapeHtml(file.status)}</span>
+        <span>${escapeHtml(file.path)}</span>
+      </li>
+    `)
+    .join('');
+
+  stageBody.innerHTML = `
+    ${summary}
+    <ul class="preview-files">${files}</ul>
+    ${blockers ? `<p class="card-label">Bloqueios</p><ul class="preview-list">${blockers}</ul>` : ''}
+    ${alerts ? `<p class="card-label">Alertas</p><ul class="preview-list">${alerts}</ul>` : ''}
+  `;
+}
+
 async function updateMainContent(stage: StageDefinition): Promise<void> {
   const stageTitle = document.querySelector<HTMLElement>('[data-role="stage-title"]');
   const stageDescription = document.querySelector<HTMLElement>('[data-role="stage-description"]');
@@ -276,6 +385,19 @@ async function updateMainContent(stage: StageDefinition): Promise<void> {
     const screen = await window.svnflowDesktop.getEnvironmentScreenState(selectedEnvironmentId);
     selectedEnvironmentId = screen.selectedEnvironmentId;
     renderEnvironmentStage(screen);
+    return;
+  }
+
+  if (stage.key === 'preview') {
+    if (!window.svnflowDesktop?.getPreviewScreenState) {
+      stageBody.innerHTML = '<p class="empty-state">Integração de preview indisponível no preload.</p>';
+      setStatusMessage('Falha ao carregar integração de preview.');
+      return;
+    }
+
+    setStatusMessage('Carregando dados de preview...');
+    const preview = await window.svnflowDesktop.getPreviewScreenState(selectedEnvironmentId);
+    renderPreviewStage(preview);
     return;
   }
 
