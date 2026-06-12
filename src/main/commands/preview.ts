@@ -1,5 +1,5 @@
 import { validateEnvironmentState, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
-import type { GitChangedFile } from './workspace';
+import type { GitChangedFile, GitChangedFileStatus } from './workspace';
 import type { SelectedEnvironment } from './saved-environments';
 
 export type { SelectedEnvironment } from './saved-environments';
@@ -8,12 +8,18 @@ export interface PreviewEnvironmentContext extends SelectedEnvironment {
   svnCheckoutRoot?: string;
 }
 
+export interface ClassifiedGitChangedFile extends GitChangedFile {
+  humanReadableStatus: string;
+  description: string;
+}
+
 export interface PreviewWorkspaceContext {
   branch?: string;
   baseBranch: string;
   hasChanges: boolean;
   changedFilesCount: number;
   changedFiles: GitChangedFile[];
+  classifiedFiles: ClassifiedGitChangedFile[];
 }
 
 export interface PreviewChangedFilesTotals {
@@ -60,6 +66,40 @@ function createEnvironmentContext(
     ...selectedEnvironment,
     svnCheckoutRoot: state?.svn.checkout.checkoutRoot
   };
+}
+
+function getHumanReadableStatus(status: GitChangedFileStatus): string {
+  const statusMap: Record<GitChangedFileStatus, string> = {
+    added: 'Criado',
+    modified: 'Modificado',
+    deleted: 'Removido',
+    renamed: 'Renomeado',
+    copied: 'Copiado',
+    unknown: 'Desconhecido'
+  };
+  return statusMap[status];
+}
+
+function generateChangeDescription(file: GitChangedFile): string {
+  const humanStatus = getHumanReadableStatus(file.status);
+
+  if (file.status === 'renamed' && file.previousPath) {
+    return `${humanStatus}: ${file.previousPath} → ${file.path}`;
+  }
+
+  if (file.status === 'copied' && file.previousPath) {
+    return `${humanStatus}: ${file.previousPath} → ${file.path}`;
+  }
+
+  return `${humanStatus}: ${file.path}`;
+}
+
+function classifyChangedFiles(files: GitChangedFile[]): ClassifiedGitChangedFile[] {
+  return files.map((file) => ({
+    ...file,
+    humanReadableStatus: getHumanReadableStatus(file.status),
+    description: generateChangeDescription(file)
+  }));
 }
 
 function calculateChangedFilesTotals(changedFiles: GitChangedFile[]): PreviewChangedFilesTotals {
@@ -140,7 +180,8 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
     baseBranch: state.git.workspace.baseBranch,
     hasChanges: state.git.workspace.hasChanges,
     changedFilesCount: state.git.workspace.changedFiles.length,
-    changedFiles: state.git.workspace.changedFiles
+    changedFiles: state.git.workspace.changedFiles,
+    classifiedFiles: classifyChangedFiles(state.git.workspace.changedFiles)
   };
   const summary = createPreviewSummary(input.selectedEnvironment, workspace);
 

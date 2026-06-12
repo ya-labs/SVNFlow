@@ -88,6 +88,22 @@ describe('buildPreviewContext', () => {
           status: 'added',
           rawStatus: 'A'
         }
+      ],
+      classifiedFiles: [
+        {
+          path: 'src/app.ts',
+          status: 'modified',
+          rawStatus: 'M',
+          humanReadableStatus: 'Modificado',
+          description: 'Modificado: src/app.ts'
+        },
+        {
+          path: 'src/novo.ts',
+          status: 'added',
+          rawStatus: 'A',
+          humanReadableStatus: 'Criado',
+          description: 'Criado: src/novo.ts'
+        }
       ]
     });
     expect(result.summary).toEqual({
@@ -251,6 +267,123 @@ describe('buildPreviewContext', () => {
         unknown: 0
       },
       hasSufficientChanges: false
+    });
+  });
+
+  it('classifica arquivos com descrições humanas e preserva caminhos anteriores', () => {
+    mockValidateEnvironmentState.mockReturnValue({
+      status: 'ready',
+      message: 'Ambiente pronto para leitura e revisão.',
+      git: {
+        workspace: {
+          branch: 'feature/classif',
+          baseBranch: 'main',
+          hasChanges: true,
+          changedFiles: [
+            {
+              path: 'src/novo-arquivo.ts',
+              status: 'added',
+              rawStatus: 'A'
+            },
+            {
+              path: 'src/modificado.ts',
+              status: 'modified',
+              rawStatus: 'M'
+            },
+            {
+              path: 'src/deletado.ts',
+              status: 'deleted',
+              rawStatus: 'D'
+            },
+            {
+              path: 'src/novo-nome.ts',
+              status: 'renamed',
+              rawStatus: 'R',
+              previousPath: 'src/nome-antigo.ts'
+            },
+            {
+              path: 'src/copia.ts',
+              status: 'copied',
+              rawStatus: 'C',
+              previousPath: 'src/original.ts'
+            },
+            {
+              path: 'src/desconhecido.ts',
+              status: 'unknown',
+              rawStatus: 'X'
+            }
+          ]
+        }
+      } as never,
+      svn: {
+        checkout: {
+          checkoutRoot: '/repo/svn'
+        }
+      } as never
+    });
+
+    const result = buildPreviewContext({
+      selectedEnvironment: {
+        id: 'env-5',
+        name: 'Projeto com classificação',
+        gitWorkspacePath: '/repo/git',
+        svnCheckoutPath: '/repo/svn'
+      }
+    });
+
+    expect(result.workspace?.classifiedFiles).toEqual([
+      {
+        path: 'src/novo-arquivo.ts',
+        status: 'added',
+        rawStatus: 'A',
+        humanReadableStatus: 'Criado',
+        description: 'Criado: src/novo-arquivo.ts'
+      },
+      {
+        path: 'src/modificado.ts',
+        status: 'modified',
+        rawStatus: 'M',
+        humanReadableStatus: 'Modificado',
+        description: 'Modificado: src/modificado.ts'
+      },
+      {
+        path: 'src/deletado.ts',
+        status: 'deleted',
+        rawStatus: 'D',
+        humanReadableStatus: 'Removido',
+        description: 'Removido: src/deletado.ts'
+      },
+      {
+        path: 'src/novo-nome.ts',
+        status: 'renamed',
+        rawStatus: 'R',
+        previousPath: 'src/nome-antigo.ts',
+        humanReadableStatus: 'Renomeado',
+        description: 'Renomeado: src/nome-antigo.ts → src/novo-nome.ts'
+      },
+      {
+        path: 'src/copia.ts',
+        status: 'copied',
+        rawStatus: 'C',
+        previousPath: 'src/original.ts',
+        humanReadableStatus: 'Copiado',
+        description: 'Copiado: src/original.ts → src/copia.ts'
+      },
+      {
+        path: 'src/desconhecido.ts',
+        status: 'unknown',
+        rawStatus: 'X',
+        humanReadableStatus: 'Desconhecido',
+        description: 'Desconhecido: src/desconhecido.ts'
+      }
+    ]);
+    expect(result.summary?.totalsByChangeType).toEqual({
+      added: 1,
+      modified: 1,
+      deleted: 1,
+      renamed: 1,
+      copied: 1,
+      unknown: 1
     });
   });
 });
