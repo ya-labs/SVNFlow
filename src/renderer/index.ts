@@ -7,6 +7,7 @@ declare global {
       revalidateEnvironment?: (environmentId?: string) => Promise<EnvironmentScreenState>;
       getPreviewScreenState?: (environmentId?: string) => Promise<PreviewScreenState>;
       getCommitScreenState?: (environmentId?: string) => Promise<CommitScreenState>;
+      executeCommit?: (environmentId: string, title: string, description?: string) => Promise<ExecuteCommitResult>;
     };
   }
 }
@@ -75,6 +76,16 @@ interface CommitScreenState {
     canCommit: boolean;
   };
   canExecuteCommit: boolean;
+}
+
+interface ExecuteCommitResult {
+  status: 'success' | 'failed' | 'cancelled' | 'conflict';
+  message: string;
+  revision?: string;
+  filesCommitted?: number;
+  conflicts?: Array<{ file: string; reason: string }>;
+  errorCode?: string;
+  error?: string;
 }
 
 type StageKey = 'environment' | 'workspace' | 'preview' | 'apply' | 'commit' | 'packages' | 'history';
@@ -475,6 +486,61 @@ function renderCommitStage(commit: CommitScreenState): void {
     const titleValid = title.length >= 10 && /^[A-Z]/.test(title);
     const descriptionValid = desc.length === 0 || desc.length >= 20;
     executeButton.disabled = !titleValid || !descriptionValid || !commit.canExecuteCommit;
+  }
+
+  if (executeButton && commit.canExecuteCommit) {
+    executeButton.addEventListener('click', async () => {
+      const title = titleInput?.value?.trim() ?? '';
+      const description = descriptionInput?.value?.trim() ?? '';
+
+      if (title.length < 10) {
+        alert('Título deve ter no mínimo 10 caracteres');
+        return;
+      }
+
+      if (!/^[A-Z]/.test(title)) {
+        alert('Título deve começar com letra maiúscula');
+        return;
+      }
+
+      setStatusMessage('Executando commit SVN...');
+      executeButton.disabled = true;
+      executeButton.textContent = 'Processando...';
+
+      if (!window.svnflowDesktop?.executeCommit || !selectedEnvironmentId) {
+        alert('Integração de execução indisponível ou ambiente não selecionado.');
+        executeButton.disabled = false;
+        executeButton.textContent = 'Executar Commit SVN';
+        setStatusMessage('Falha ao executar commit.');
+        return;
+      }
+
+      const result = await window.svnflowDesktop.executeCommit(selectedEnvironmentId, title, description);
+
+      if (result.status === 'success') {
+        setStatusMessage(`Commit executado com sucesso (revisão ${result.revision}). ${result.filesCommitted} arquivo(s) commitado(s).`);
+        if (titleInput) titleInput.value = '';
+        if (descriptionInput) descriptionInput.value = '';
+        executeButton.textContent = 'Executar Commit SVN';
+        setTimeout(() => {
+          alert(`Commit SVN executado com sucesso!\n\nRevisão: ${result.revision}\nArquivos: ${result.filesCommitted}\n\nMensagem: ${result.message}`);
+        }, 500);
+      } else if (result.status === 'cancelled') {
+        setStatusMessage(result.message);
+        executeButton.disabled = false;
+        executeButton.textContent = 'Executar Commit SVN';
+      } else if (result.status === 'conflict') {
+        setStatusMessage(`Conflito durante commit: ${result.message}`);
+        alert(`Conflito SVN: ${result.message}\n\nDetalhes: ${result.error}`);
+        executeButton.disabled = false;
+        executeButton.textContent = 'Executar Commit SVN';
+      } else {
+        setStatusMessage(`Erro ao executar commit: ${result.message}`);
+        alert(`Erro ao executar commit SVN:\n\n${result.message}\n\nCódigo: ${result.errorCode}`);
+        executeButton.disabled = false;
+        executeButton.textContent = 'Executar Commit SVN';
+      }
+    });
   }
 }
 

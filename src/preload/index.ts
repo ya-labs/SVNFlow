@@ -66,6 +66,16 @@ interface CommitScreenState {
   canExecuteCommit: boolean;
 }
 
+interface ExecuteCommitResult {
+  status: 'success' | 'failed' | 'cancelled' | 'conflict';
+  message: string;
+  revision?: string;
+  filesCommitted?: number;
+  conflicts?: Array<{ file: string; reason: string }>;
+  errorCode?: string;
+  error?: string;
+}
+
 contextBridge.exposeInMainWorld('svnflowDesktop', {
   appName: 'SVNFlow',
   shellStatus: 'Renderer carregado com sucesso.',
@@ -76,5 +86,7 @@ contextBridge.exposeInMainWorld('svnflowDesktop', {
   getPreviewScreenState: (environmentId?: string): Promise<PreviewScreenState> =>
     ipcRenderer.invoke('preview:get-screen-state', { environmentId }),
   getCommitScreenState: (environmentId?: string): Promise<CommitScreenState> =>
-    ipcRenderer.invoke('commit:get-screen-state', { environmentId })
+    ipcRenderer.invoke('commit:get-screen-state', { environmentId }),
+  executeCommit: (environmentId: string, title: string, description?: string): Promise<ExecuteCommitResult> =>
+    ipcRenderer.invoke('commit:execute', { environmentId, title, description })
 });
