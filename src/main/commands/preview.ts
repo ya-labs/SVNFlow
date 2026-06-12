@@ -13,6 +13,19 @@ export interface ClassifiedGitChangedFile extends GitChangedFile {
   description: string;
 }
 
+export interface PreviewBlocker {
+  code: string;
+  message: string;
+  affectedFiles?: string[];
+}
+
+export interface PreviewAlert {
+  code: string;
+  message: string;
+  severity: 'info' | 'warning';
+  affectedFiles?: string[];
+}
+
 export interface PreviewWorkspaceContext {
   branch?: string;
   baseBranch: string;
@@ -50,7 +63,8 @@ export interface PreviewContextResult {
   environment?: PreviewEnvironmentContext;
   workspace?: PreviewWorkspaceContext;
   summary?: PreviewSummary;
-  blockers: string[];
+  blockers: (string | PreviewBlocker)[];
+  alerts?: PreviewAlert[];
 }
 
 export interface PreviewContextInput {
@@ -100,6 +114,53 @@ function classifyChangedFiles(files: GitChangedFile[]): ClassifiedGitChangedFile
     humanReadableStatus: getHumanReadableStatus(file.status),
     description: generateChangeDescription(file)
   }));
+}
+
+function getCommonBinaryExtensions(): Set<string> {
+  return new Set([
+    // Images
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'ico', 'webp', 'tiff',
+    // Documents
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', '7z', 'gz', 'tar',
+    // Audio/Video
+    'mp3', 'wav', 'mp4', 'avi', 'mov', 'flv', 'mkv', 'webm',
+    // Executables
+    'exe', 'dll', 'so', 'dylib', 'class', 'jar', 'app', 'msi',
+    // Archives
+    'iso', 'dmg', 'bin', 'img',
+    // Data
+    'db', 'sqlite', 'parquet', 'avro', 'proto',
+    // Fonts
+    'ttf', 'otf', 'woff', 'woff2'
+  ]);
+}
+
+function isPotentiallyBinary(filePath: string): boolean {
+  const extension = filePath.split('.').pop()?.toLowerCase();
+  if (!extension) return false;
+  return getCommonBinaryExtensions().has(extension);
+}
+
+function detectUnknownStatusFiles(files: GitChangedFile[]): string[] {
+  return files
+    .filter((file) => file.status === 'unknown')
+    .map((file) => file.path);
+}
+
+function detectPotentialBinaryFiles(files: GitChangedFile[]): string[] {
+  return files
+    .filter((file) => isPotentiallyBinary(file.path))
+    .map((file) => file.path);
+}
+
+function detectPreviewRisks(files: GitChangedFile[]): {
+  unknownStatusFiles: string[];
+  potentialBinaryFiles: string[];
+} {
+  return {
+    unknownStatusFiles: detectUnknownStatusFiles(files),
+    potentialBinaryFiles: detectPotentialBinaryFiles(files)
+  };
 }
 
 function calculateChangedFilesTotals(changedFiles: GitChangedFile[]): PreviewChangedFilesTotals {
@@ -184,6 +245,7 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
     classifiedFiles: classifyChangedFiles(state.git.workspace.changedFiles)
   };
   const summary = createPreviewSummary(input.selectedEnvironment, workspace);
+  const risks = detectPreviewRisks(state.git.workspace.changedFiles);
 
   if (state.status !== 'ready') {
     return {
@@ -194,7 +256,8 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
       workspace,
       summary,
       blockers: [state.git.workspace.error, state.git.repository.error, state.svn.checkout.error]
-        .filter((error): error is string => Boolean(error))
+        .filter((error): error is string => Boolean(error)),
+      alerts: []
     };
   }
 
@@ -206,8 +269,32 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
       environment,
       workspace,
       summary,
-      blockers: []
+      blockers: [{
+        code: 'NO_CHANGES',
+        message: 'Nenhuma alteração foi detectada. Revise o branch ou faça modificações antes de prosseguir.'
+      }],
+      alerts: []
     };
+  }
+
+  const alerts: PreviewAlert[] = [];
+
+  if (risks.unknownStatusFiles.length > 0) {
+    alerts.push({
+      code: 'UNKNOWN_FILE_STATUS',
+      message: `${risks.unknownStatusFiles.length} arquivo(s) com status desconhecido.`,
+      severity: 'warning',
+      affectedFiles: risks.unknownStatusFiles
+    });
+  }
+
+  if (risks.potentialBinaryFiles.length > 0) {
+    alerts.push({
+      code: 'POTENTIAL_BINARY_FILES',
+      message: `${risks.potentialBinaryFiles.length} arquivo(s) potencialmente binário(s) detectado(s). A aplicação pode ter limitações com conteúdo binário.`,
+      severity: 'info',
+      affectedFiles: risks.potentialBinaryFiles
+    });
   }
 
   return {
@@ -217,6 +304,7 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
     environment,
     workspace,
     summary,
-    blockers: []
+    blockers: [],
+    alerts
   };
 }

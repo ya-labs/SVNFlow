@@ -17,6 +17,8 @@ export {
 	type PreviewChangedFilesTotals,
 	type PreviewSummary,
 	type ClassifiedGitChangedFile,
+	type PreviewBlocker,
+	type PreviewAlert,
 	type SelectedEnvironment
 } from './preview';
 export { listGitChangedFiles, readGitWorkspaceState, validateGitComparisonBase, type GitChangedFile, type GitChangedFilesResult, type GitChangedFileStatus, type GitComparisonBaseValidationResult, type GitWorkspaceStateInput, type GitWorkspaceStateResult, type GitWorkspaceStateStatus } from './workspace';

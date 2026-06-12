@@ -386,4 +386,196 @@ describe('buildPreviewContext', () => {
       unknown: 1
     });
   });
+
+  it('detecta arquivo com status desconhecido e gera alerta', () => {
+    mockValidateEnvironmentState.mockReturnValue({
+      status: 'ready',
+      message: 'Ambiente pronto para leitura e revisão.',
+      git: {
+        workspace: {
+          branch: 'feature/com-risco',
+          baseBranch: 'main',
+          hasChanges: true,
+          changedFiles: [
+            {
+              path: 'src/arquivo-normal.ts',
+              status: 'modified',
+              rawStatus: 'M'
+            },
+            {
+              path: 'src/arquivo-misterioso.ts',
+              status: 'unknown',
+              rawStatus: 'X'
+            }
+          ]
+        }
+      } as never,
+      svn: {
+        checkout: {
+          checkoutRoot: '/repo/svn'
+        }
+      } as never
+    });
+
+    const result = buildPreviewContext({
+      selectedEnvironment: {
+        id: 'env-6',
+        name: 'Projeto com risco',
+        gitWorkspacePath: '/repo/git',
+        svnCheckoutPath: '/repo/svn'
+      }
+    });
+
+    expect(result.canPreview).toBe(true);
+    expect(result.alerts).toHaveLength(1);
+    expect(result.alerts?.[0]).toEqual({
+      code: 'UNKNOWN_FILE_STATUS',
+      message: '1 arquivo(s) com status desconhecido.',
+      severity: 'warning',
+      affectedFiles: ['src/arquivo-misterioso.ts']
+    });
+  });
+
+  it('detecta potenciais arquivos binários e gera alerta informativo', () => {
+    mockValidateEnvironmentState.mockReturnValue({
+      status: 'ready',
+      message: 'Ambiente pronto para leitura e revisão.',
+      git: {
+        workspace: {
+          branch: 'feature/com-binarios',
+          baseBranch: 'main',
+          hasChanges: true,
+          changedFiles: [
+            {
+              path: 'src/documento.pdf',
+              status: 'added',
+              rawStatus: 'A'
+            },
+            {
+              path: 'assets/imagem.png',
+              status: 'modified',
+              rawStatus: 'M'
+            },
+            {
+              path: 'src/codigo.ts',
+              status: 'added',
+              rawStatus: 'A'
+            }
+          ]
+        }
+      } as never,
+      svn: {
+        checkout: {
+          checkoutRoot: '/repo/svn'
+        }
+      } as never
+    });
+
+    const result = buildPreviewContext({
+      selectedEnvironment: {
+        id: 'env-7',
+        name: 'Projeto com binários',
+        gitWorkspacePath: '/repo/git',
+        svnCheckoutPath: '/repo/svn'
+      }
+    });
+
+    expect(result.canPreview).toBe(true);
+    expect(result.alerts).toHaveLength(1);
+    const binaryAlert = result.alerts?.find((a) => a.code === 'POTENTIAL_BINARY_FILES');
+    expect(binaryAlert).toBeDefined();
+    expect(binaryAlert?.affectedFiles).toEqual(['src/documento.pdf', 'assets/imagem.png']);
+    expect(binaryAlert?.severity).toBe('info');
+  });
+
+  it('bloqueia avanço quando não há alterações', () => {
+    mockValidateEnvironmentState.mockReturnValue({
+      status: 'ready',
+      message: 'Ambiente pronto para leitura e revisão.',
+      git: {
+        workspace: {
+          branch: 'feature/sem-mudancas',
+          baseBranch: 'main',
+          hasChanges: false,
+          changedFiles: []
+        }
+      } as never,
+      svn: {
+        checkout: {
+          checkoutRoot: '/repo/svn'
+        }
+      } as never
+    });
+
+    const result = buildPreviewContext({
+      selectedEnvironment: {
+        id: 'env-8',
+        name: 'Projeto sem mudanças',
+        gitWorkspacePath: '/repo/git',
+        svnCheckoutPath: '/repo/svn'
+      }
+    });
+
+    expect(result.canPreview).toBe(true);
+    expect(result.summary?.hasSufficientChanges).toBe(false);
+    expect(result.blockers).toHaveLength(1);
+    const noChangesBlocker = result.blockers[0];
+    expect(noChangesBlocker).toEqual({
+      code: 'NO_CHANGES',
+      message: 'Nenhuma alteração foi detectada. Revise o branch ou faça modificações antes de prosseguir.'
+    });
+  });
+
+  it('retorna múltiplos alertas quando há múltiplos riscos', () => {
+    mockValidateEnvironmentState.mockReturnValue({
+      status: 'ready',
+      message: 'Ambiente pronto para leitura e revisão.',
+      git: {
+        workspace: {
+          branch: 'feature/multiplos-riscos',
+          baseBranch: 'main',
+          hasChanges: true,
+          changedFiles: [
+            {
+              path: 'src/video.mp4',
+              status: 'added',
+              rawStatus: 'A'
+            },
+            {
+              path: 'src/stale-file.ts',
+              status: 'unknown',
+              rawStatus: 'X'
+            },
+            {
+              path: 'src/audio.mp3',
+              status: 'added',
+              rawStatus: 'A'
+            }
+          ]
+        }
+      } as never,
+      svn: {
+        checkout: {
+          checkoutRoot: '/repo/svn'
+        }
+      } as never
+    });
+
+    const result = buildPreviewContext({
+      selectedEnvironment: {
+        id: 'env-9',
+        name: 'Projeto com múltiplos riscos',
+        gitWorkspacePath: '/repo/git',
+        svnCheckoutPath: '/repo/svn'
+      }
+    });
+
+    expect(result.alerts).toHaveLength(2);
+    const unknownAlert = result.alerts?.find((a) => a.code === 'UNKNOWN_FILE_STATUS');
+    const binaryAlert = result.alerts?.find((a) => a.code === 'POTENTIAL_BINARY_FILES');
+    expect(unknownAlert).toBeDefined();
+    expect(binaryAlert).toBeDefined();
+    expect(binaryAlert?.affectedFiles).toEqual(['src/video.mp4', 'src/audio.mp3']);
+  });
 });
+
