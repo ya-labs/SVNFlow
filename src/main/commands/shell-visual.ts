@@ -1,4 +1,4 @@
-import { getYaLabsVisualProfile } from './ya-labs-visual';
+import { getYaLabsVisualProfile } from './ya-labs-visual.js';
 
 export type V1StageKey = 'environment' | 'preview' | 'apply' | 'commit' | 'packages';
 

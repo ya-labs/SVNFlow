@@ -1,6 +1,6 @@
-import { validateEnvironmentState, type EnvironmentStateInput } from './environment';
-import { selectSavedEnvironment, type SavedEnvironment, type SelectSavedEnvironmentInput } from './saved-environments';
-import { revalidateEnvironment, type RevalidationBlocker } from './revalidate-environment';
+import { validateEnvironmentState, type EnvironmentStateInput } from './environment.js';
+import { selectSavedEnvironment, type SavedEnvironment, type SelectSavedEnvironmentInput } from './saved-environments.js';
+import { revalidateEnvironment, type RevalidationBlocker } from './revalidate-environment.js';
 
 export interface InitialFlowWorkspaceSummary {
   branch?: string;

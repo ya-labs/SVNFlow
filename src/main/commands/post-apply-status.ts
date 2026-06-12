@@ -1,5 +1,5 @@
-import { readSvnStatus, type SvnCheckoutState } from './svn-status';
-import type { ApplyPatchResult } from './patch-applier';
+import { readSvnStatus, type SvnCheckoutState } from './svn-status.js';
+import type { ApplyPatchResult } from './patch-applier.js';
 
 export type PostApplyReviewStatus = 'ready-for-review' | 'requires-correction' | 'error';
 

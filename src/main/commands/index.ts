@@ -1,5 +1,5 @@
-export { validateGitAvailability, validateGitRepository, type GitValidationResult, type GitRepositoryValidationResult } from './git';
-export { validateSvnAvailability, validateSvnCheckout, type SvnValidationResult, type SvnCheckoutValidationResult } from './svn';
+export { validateGitAvailability, validateGitRepository, type GitValidationResult, type GitRepositoryValidationResult } from './git.js';
+export { validateSvnAvailability, validateSvnCheckout, type SvnValidationResult, type SvnCheckoutValidationResult } from './svn.js';
 export {
 	readSvnStatus,
 	type SvnFileStatus,
@@ -7,25 +7,25 @@ export {
 	type SvnStatusFile,
 	type SvnCheckoutState,
 	type ReadSvnStatusInput
-} from './svn-status';
+} from './svn-status.js';
 export {
 	validatePatchFit,
 	type PatchValidationStatus,
 	type ValidatePatchInput,
 	type ValidatePatchResult
-} from './patch-validator';
+} from './patch-validator.js';
 export {
 	applyPatch,
 	type ApplyPatchStatus,
 	type ApplyPatchInput,
 	type ApplyPatchResult
-} from './patch-applier';
+} from './patch-applier.js';
 export {
 	readPostApplyStatus,
 	type PostApplyReviewStatus,
 	type PostApplyStatusResult,
 	type ReadPostApplyStatusInput
-} from './post-apply-status';
+} from './post-apply-status.js';
 export {
 	buildSvnApplyConfirmationScreen,
 	executeSvnApply,
@@ -33,13 +33,13 @@ export {
 	type SvnApplyConfirmationScreenState,
 	type ExecuteSvnApplyInput,
 	type ExecuteSvnApplyResult
-} from './svn-apply-screen';
+} from './svn-apply-screen.js';
 export {
 	buildMainInterfaceState,
 	type InterfaceOperationStatus,
 	type MainInterfaceState,
 	type BuildMainInterfaceStateInput
-} from './interface-state';
+} from './interface-state.js';
 export {
 	buildShellVisualState,
 	type V1StageKey,
@@ -47,7 +47,7 @@ export {
 	type ShellVisualRegions,
 	type ShellVisualState,
 	type BuildShellVisualStateInput
-} from './shell-visual';
+} from './shell-visual.js';
 export {
 	buildFlowNavigationState,
 	type FlowStepKey,
@@ -55,7 +55,7 @@ export {
 	type FlowNavigationItem,
 	type FlowNavigationState,
 	type BuildFlowNavigationInput
-} from './flow-navigation';
+} from './flow-navigation.js';
 export {
 	getYaLabsVisualProfile,
 	getVisualMessageStyle,
@@ -63,15 +63,15 @@ export {
 	type YaLabsThemeTokens,
 	type VisualMessageStyle,
 	type YaLabsVisualProfile
-} from './ya-labs-visual';
-export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment';
+} from './ya-labs-visual.js';
+export { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment.js';
 export {
 	checkInitialFlowGate,
 	loadInitialFlowFromSavedEnvironment,
 	type InitialFlowGateResult,
 	type InitialFlowWorkspaceSummary,
 	type InitialFlowLoadedEnvironment
-} from './initial-flow';
+} from './initial-flow.js';
 export {
 	buildPreviewContext,
 	type PreviewContextInput,
@@ -84,7 +84,7 @@ export {
 	type PreviewBlocker,
 	type PreviewAlert,
 	type SelectedEnvironment
-} from './preview';
+} from './preview.js';
 export {
 	buildPreviewScreenState,
 	type BuildPreviewScreenStateInput,
@@ -95,8 +95,8 @@ export {
 	type PreviewScreenEnvironmentSection,
 	type PreviewScreenWorkspaceSection,
 	type PreviewScreenState
-} from './preview-screen';
-export { listGitChangedFiles, readGitWorkspaceState, validateGitComparisonBase, type GitChangedFile, type GitChangedFilesResult, type GitChangedFileStatus, type GitComparisonBaseValidationResult, type GitWorkspaceStateInput, type GitWorkspaceStateResult, type GitWorkspaceStateStatus } from './workspace';
+} from './preview-screen.js';
+export { listGitChangedFiles, readGitWorkspaceState, validateGitComparisonBase, type GitChangedFile, type GitChangedFilesResult, type GitChangedFileStatus, type GitComparisonBaseValidationResult, type GitWorkspaceStateInput, type GitWorkspaceStateResult, type GitWorkspaceStateStatus } from './workspace.js';
 export {
 	listSavedEnvironments,
 	selectSavedEnvironment,
@@ -107,7 +107,7 @@ export {
 	type ListSavedEnvironmentsResult,
 	type SelectSavedEnvironmentInput,
 	type SelectSavedEnvironmentResult
-} from './saved-environments';
+} from './saved-environments.js';
 export {
 	resolveSavedEnvironmentStoragePath,
 	readSavedEnvironments,
@@ -120,18 +120,18 @@ export {
 	type SavedEnvironmentStorageResult,
 	type SaveSavedEnvironmentInput,
 	type UpdateSavedEnvironmentInput
-} from './saved-environment-store';
+} from './saved-environment-store.js';
 export {
 	registerSavedEnvironmentFromLocalPaths,
 	type RegisterSavedEnvironmentErrorCode,
 	type RegisterSavedEnvironmentBlocker,
 	type RegisterSavedEnvironmentInput,
 	type RegisterSavedEnvironmentResult
-} from './register-saved-environment';
+} from './register-saved-environment.js';
 export {
 	revalidateEnvironment,
 	type RevalidatedEnvironment,
 	type RevalidationBlocker,
 	type RevalidateEnvironmentInput,
 	type RevalidateEnvironmentResult
-} from './revalidate-environment';
+} from './revalidate-environment.js';
