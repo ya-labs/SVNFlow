@@ -31,7 +31,9 @@ O SVNFlow deve operar localmente e não deve enviar código para servidores exte
 
 ## Fluxo de trabalho
 
-Milestones, épicos e subissues da V1 seguem o [fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md).
+O SVNFlow segue o padrão organizacional do YABook para issues, branches, commits e Pull Requests.
+
+Milestones, épicos, labels e exceções específicas da V1 ficam em [Fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md).
 
 Para documentação, use commits no formato:
 

@@ -18,7 +18,6 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 8. [Manual de uso da V1](uso/manual-de-uso-v1.md)
 9. [Roteiro geral de etapas](planejamento/roteiro-geral-de-etapas.md)
 10. [Fluxo de trabalho no GitHub](processos/fluxo-de-trabalho-github.md)
-10. [Uso econômico da IA](processos/uso-economico-da-ia.md)
 
 ## Pastas
 
@@ -30,7 +29,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | `docs/fluxos/` | Sequências de uso do produto. |
 | `docs/interface/` | Diretrizes de interface visual, renderização e critérios de entrega frontend. |
 | `docs/contratos/` | Formatos, comandos, entradas, saídas, bloqueios e falhas esperadas. |
-| `docs/processos/` | Fluxo de trabalho, Project, milestones, épicos e Pull Requests. |
+| `docs/processos/` | Aplicação local do fluxo de trabalho, Project, milestones, épicos e ajustes operacionais do SVNFlow. |
 | `docs/adrs/` | Decisões aceitas, com contexto e consequências. |
 | `docs/rfcs/` | Propostas ainda não aceitas como decisão. |
 | [`docs/prototipos/`](prototipos/) | Provas técnicas, protótipos e validações experimentais. |
@@ -46,7 +45,6 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Regras para IA | `AGENTS.md` |
 | Índice geral | `docs/README.md` |
 | Consulta e manutenção documental pela IA | `docs/guia-de-documentacao-para-ia.md` |
-| Colaboração econômica com IA | `docs/processos/uso-economico-da-ia.md` |
 | Produto e definição da V1 | `docs/produto/` |
 | Arquitetura conceitual | `docs/arquitetura/` |
 | Requisitos | `docs/requisitos/` |
@@ -55,7 +53,7 @@ Para regras operacionais específicas de IA, use o [Guia de Documentação Para 
 | Contratos | `docs/contratos/` |
 | Ambientes salvos | `docs/contratos/ambientes-salvos.md` |
 | Histórico local | `docs/contratos/historico-local.md` |
-| Fluxo de trabalho no GitHub | `docs/processos/fluxo-de-trabalho-github.md` |
+| Fluxo local de trabalho no GitHub | `docs/processos/fluxo-de-trabalho-github.md` |
 | Decisões aceitas | `docs/adrs/` |
 | Propostas em discussão | `docs/rfcs/` |
 | Protótipos e provas técnicas | [`docs/prototipos/`](prototipos/) |

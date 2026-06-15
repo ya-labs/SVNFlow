@@ -16,7 +16,6 @@ Markdown deve guardar conhecimento do produto. Trabalho, backlog, progresso, ép
 - [Manual de uso da V1](uso/manual-de-uso-v1.md)
 - [Guia de consulta da documentação](guia-da-documentacao.md)
 - [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
-- [Uso econômico da IA](processos/uso-economico-da-ia.md)
 
 ## Estrutura atual
 
@@ -45,7 +44,7 @@ docs/
 - Use `docs/fluxos/` para sequências de uso.
 - Use `docs/interface/` para diretrizes de interface visual, renderização e critérios de entrega frontend.
 - Use `docs/contratos/` para formatos, comandos, entradas, saídas, bloqueios e modelos locais como ambientes salvos.
-- Use `docs/processos/` para fluxo de trabalho, Project, milestones e épicos.
+- Use `docs/processos/` para aplicação local do fluxo de trabalho, Project, milestones, épicos e ajustes operacionais do SVNFlow.
 - Use `docs/adrs/` para decisões aceitas.
 - Use `docs/rfcs/` para propostas ainda abertas.
 - Use `docs/prototipos/` para validações e experimentos.

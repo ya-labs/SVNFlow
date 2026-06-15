@@ -6,6 +6,14 @@ Este arquivo não é obrigatório para toda alteração pequena. Use-o apenas qu
 
 ---
 
+## 2026-06-15
+
+**Commit:** este commit
+**Tipo:** docs/proc
+**O que mudou:** Removida documentação genérica de uso econômico da IA do SVNFlow e reduzido o fluxo GitHub local para regras específicas da V1.
+**Por quê:** O YABook passou a concentrar o modelo organizacional de condução de projetos, uso de IA, documentação e fluxo GitHub.
+**Impacto:** O SVNFlow mantém apenas milestones, épicos, labels, Project, ajustes operacionais e exceções específicas do produto; regras gerais devem ser consultadas no YABook.
+
 ## 2026-06-12
 
 **Commit:** commit que introduz esta entrada

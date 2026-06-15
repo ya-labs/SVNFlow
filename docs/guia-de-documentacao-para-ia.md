@@ -2,9 +2,11 @@
 
 ## Objetivo
 
-Este documento orienta assistentes de IA a consultar, manter e atualizar a documentação do SVNFlow com economia de contexto.
+Este documento orienta assistentes de IA a consultar, manter e atualizar a documentação específica do SVNFlow.
 
 Ele representa o estado atual da documentação, não o andamento operacional do projeto. Backlog, progresso, épicos, milestones e execução devem ficar no GitHub.
+
+Regras organizacionais de uso de IA, economia de contexto, issues preparadas e fluxo geral ficam no YABook. Este arquivo existe apenas para localizar fontes específicas do SVNFlow.
 
 ## Fluxo de consulta
 
@@ -28,8 +30,7 @@ Não leia todos os documentos por padrão.
 | `docs/fluxos/` | Sequências de uso. | Jornada da pessoa usuária. | Mudança na ordem ou comportamento de uso. | `fluxo`, `preview`, `aplicar`, `commit` |
 | `docs/interface/` | Diretrizes de interface visual. | Saber se uma entrega é contrato de UI, interface renderizada ou integração visual. | Mudança em critérios de entrega frontend, navegação visual ou diretriz de renderização. | `interface`, `renderizada`, `frontend`, `shell`, `tela` |
 | `docs/contratos/` | Formatos e operações. | Pacote, patch, `pr.md`, comandos, entradas, saídas, ambientes salvos e histórico local. | Mudança de formato, bloqueio, falha, validação ou modelo local. | `.svnflow`, `patch.diff`, `pr.md`, `manifest`, `ambiente`, `histórico` |
-| `docs/processos/` | Processo de trabalho. | Issue, branch, PR, Project, milestones, épicos e subissues. | Mudança de fluxo operacional do repositório. | `Project`, `milestone`, `epic`, `subissue`, `Pull Request` |
-| `docs/processos/uso-economico-da-ia.md` | Processo para reduzir gasto de contexto ao trabalhar com IA. | Definir modo econômico, modo automático, issue preparada ou leitura mínima. | Mudança no acordo de colaboração entre pessoa usuária e IA. | `modo econômico`, `modo automático`, `issue preparada`, `contexto` |
+| `docs/processos/` | Aplicação local do processo de trabalho. | Project, milestones, épicos, subissues, ajustes operacionais e exceções específicas do SVNFlow. | Mudança de fluxo operacional do repositório. | `Project`, `milestone`, `epic`, `subissue`, `Pull Request`, `ajuste` |
 | `docs/adrs/` | Decisões aceitas. | Confirmar decisão já tomada. | Nova decisão aceita ou substituição de decisão. | `ADR`, `decisão`, `consequências` |
 | `docs/rfcs/` | Propostas abertas. | Ideias ainda não decididas. | Nova proposta em discussão. | `RFC`, `proposta`, `discussão` |
 | `docs/prototipos/` | Provas e experimentos. | Evidência técnica ou validação experimental. | Nova prova, resultado ou limite observado. | `prova técnica`, `ambiente fictício`, `validação` |
@@ -45,7 +46,7 @@ Não leia todos os documentos por padrão.
 - Ao alterar fluxo, revise requisitos e contratos relacionados.
 - Ao alterar manual de uso, revise fluxos, requisitos e definição da V1 relacionados.
 - Ao alterar contrato, revise arquitetura, fluxo e protótipos relacionados.
-- Ao alterar fluxo de trabalho no GitHub, revise `AGENTS.md`, `README.md`, `docs/README.md` e o guia humano apenas se a regra afetar navegação ou execução recorrente.
+- Ao alterar a aplicação local do fluxo de trabalho no GitHub, revise `AGENTS.md`, `README.md`, `docs/README.md` e o guia humano apenas se a regra afetar navegação ou execução recorrente.
 - Ao aceitar uma decisão, registre como ADR.
 - Ao discutir ideia ainda não aceita, use RFC.
 - Ao alterar etapa macro da V1, revise o roteiro geral.
@@ -86,7 +87,6 @@ Discordar com critério faz parte do papel da IA neste projeto.
 | SVN | `rg -n "SVN|svn status|svn update|commit SVN" docs` |
 | Decisões | `rg -n "ADR|decisão|consequências" docs/adrs` |
 | Requisitos | `rg -n "RF-|requisito|deve" docs/requisitos` |
-| Processo GitHub | `rg -n "Project|milestone|epic|subissue|Pull Request|branch" docs/processos AGENTS.md README.md` |
-| Uso econômico da IA | `rg -n "modo econômico|modo automático|issue preparada|contexto" docs/processos docs/guia-de-documentacao-para-ia.md` |
+| Processo GitHub | `rg -n "Project|milestone|epic|subissue|Pull Request|branch|ajuste" docs/processos AGENTS.md README.md` |
 | Histórico local | `rg -n "histórico local|evento_aplicacao|gerado|importado|aplicado|falhou" docs/contratos docs/prototipos` |
 | Interface visual | `rg -n "interface|renderizada|frontend|shell|tela|navegação" docs/interface docs/prototipos docs/requisitos` |
