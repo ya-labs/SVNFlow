@@ -49,6 +49,33 @@ interface PreviewScreenState {
   canApplyInSvn: boolean;
 }
 
+interface CommitScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    svnCheckoutPath: string;
+  };
+  commitValidation?: {
+    hasChanges: boolean;
+    affectedFilesCount: number;
+    blockers: Array<{ code: string; message: string }>;
+    canCommit: boolean;
+  };
+  canExecuteCommit: boolean;
+}
+
+interface ExecuteCommitResult {
+  status: 'success' | 'failed' | 'cancelled' | 'conflict';
+  message: string;
+  revision?: string;
+  filesCommitted?: number;
+  conflicts?: Array<{ file: string; reason: string }>;
+  errorCode?: string;
+  error?: string;
+}
+
 contextBridge.exposeInMainWorld('svnflowDesktop', {
   appName: 'SVNFlow',
   shellStatus: 'Renderer carregado com sucesso.',
@@ -57,5 +84,9 @@ contextBridge.exposeInMainWorld('svnflowDesktop', {
   revalidateEnvironment: (environmentId?: string): Promise<EnvironmentScreenState> =>
     ipcRenderer.invoke('environment:revalidate', { environmentId }),
   getPreviewScreenState: (environmentId?: string): Promise<PreviewScreenState> =>
-    ipcRenderer.invoke('preview:get-screen-state', { environmentId })
+    ipcRenderer.invoke('preview:get-screen-state', { environmentId }),
+  getCommitScreenState: (environmentId?: string): Promise<CommitScreenState> =>
+    ipcRenderer.invoke('commit:get-screen-state', { environmentId }),
+  executeCommit: (environmentId: string, title: string, description?: string): Promise<ExecuteCommitResult> =>
+    ipcRenderer.invoke('commit:execute', { environmentId, title, description })
 });
