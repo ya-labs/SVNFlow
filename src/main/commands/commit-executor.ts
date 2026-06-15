@@ -23,6 +23,44 @@ export interface ExecuteCommitResult {
   error?: string;
 }
 
+function extractRevisionFromCommitOutput(output: string): string | undefined {
+  const patterns = [
+    /Committed revision\s+(\d+)\./i,
+    /Revis[aã]o\s+(\d+)\s+(?:commitada|transmitida)\.?/i,
+    /Revis[aã]o\s+(\d+)\.?/i,
+    /revision\s+(\d+)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = output.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return undefined;
+}
+
+function countChangedPathsInRevision(checkoutPath: string, revision: string): number | undefined {
+  try {
+    const logOutput = execSync(`svn log -v -r ${revision} "${checkoutPath}"`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    // Linhas de caminhos mudados no log detalhado seguem o padrão:
+    // "   M /caminho" | "   A /caminho" | "   D /caminho" | "   R /caminho"
+    const changedPaths = logOutput
+      .split('\n')
+      .filter((line) => /^\s+[AMDR]\s+\S+/.test(line));
+
+    return changedPaths.length;
+  } catch {
+    return undefined;
+  }
+}
+
 export function executeCommit(input: ExecuteCommitInput): ExecuteCommitResult {
   const { checkoutPath, title, description } = input;
 
@@ -58,6 +96,10 @@ export function executeCommit(input: ExecuteCommitInput): ExecuteCommitResult {
       };
     }
 
+    const trackedChangesBeforeCommit = statusOutput
+      .split('\n')
+      .filter((line) => /^([AMDRC]|.[AMDRC])/.test(line)).length;
+
     // Executar svn commit com a mensagem
     let output: string;
     try {
@@ -91,16 +133,30 @@ export function executeCommit(input: ExecuteCommitInput): ExecuteCommitResult {
     }
 
     // Extrair número de revisão e arquivos commitados da saída
-    const revisionMatch = output.match(/Committed revision (\d+)\./);
-    const revision = revisionMatch ? revisionMatch[1] : undefined;
+    let revision = extractRevisionFromCommitOutput(output);
+    if (!revision) {
+      // Fallback quando o cliente SVN localiza a mensagem de commit em formato inesperado
+      // e não conseguimos extrair a revisão diretamente do output do commit.
+      try {
+        revision = execSync(`svn info --show-item revision "${checkoutPath}"`, {
+          encoding: 'utf-8',
+          timeout: 5000,
+          stdio: ['pipe', 'pipe', 'pipe']
+        }).trim();
+      } catch {
+        revision = undefined;
+      }
+    }
 
-    // Contar linhas de mudanças (primeira letra da linha é o status)
-    const changedLines = output.split('\n').filter((line) => /^[AMDRC]/.test(line));
-    const filesCommitted = changedLines.length;
+    const filesCommitted = revision
+      ? countChangedPathsInRevision(checkoutPath, revision) ?? trackedChangesBeforeCommit
+      : trackedChangesBeforeCommit;
 
     return {
       status: 'success',
-      message: `Commit realizado com sucesso na revisão ${revision}.`,
+      message: revision
+        ? `Commit realizado com sucesso na revisão ${revision}.`
+        : 'Commit realizado com sucesso.',
       revision,
       filesCommitted
     };
