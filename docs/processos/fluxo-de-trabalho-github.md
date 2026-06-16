@@ -80,6 +80,10 @@ O título do épico não deve usar prefixo como `Épico:`. A identificação dev
 
 O corpo, branch e Pull Request seguem o padrão do YABook.
 
+Issues da V1 podem usar seções complementares quando isso ajudar a execução, como `Cabeçalho`, `Entrega Visual Esperada`, `Fora de escopo`, `Validação`, `Referências` e `Dependências`.
+
+Essas seções servem para reduzir ambiguidade em tarefas preparadas para IA, não para criar um template obrigatório maior que o necessário.
+
 Ao criar ou classificar uma issue do SVNFlow:
 
 1. Identifique a milestone atual ou futura.
