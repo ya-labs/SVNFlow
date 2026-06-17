@@ -50,6 +50,42 @@ interface PreviewScreenState {
   canApplyInSvn: boolean;
 }
 
+interface WorkspaceScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    gitWorkspacePath: string;
+    svnCheckoutPath: string;
+    svnCheckoutRoot?: string;
+  };
+  workspace?: {
+    branch?: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+    files: Array<{
+      path: string;
+      previousPath?: string;
+      status: string;
+      description: string;
+      rawStatus: string;
+    }>;
+    totals: {
+      added: number;
+      modified: number;
+      deleted: number;
+      renamed: number;
+      copied: number;
+      unknown: number;
+    };
+  };
+  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
+  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  hasChanges: boolean;
+  canAdvanceToPreview: boolean;
+}
+
 interface ExportPackageResult {
   ok: boolean;
   message: string;
@@ -163,6 +199,8 @@ contextBridge.exposeInMainWorld('svnflowDesktop', {
     ipcRenderer.invoke('environment:revalidate', { environmentId }),
   getPreviewScreenState: (environmentId?: string): Promise<PreviewScreenState> =>
     ipcRenderer.invoke('preview:get-screen-state', { environmentId }),
+  getWorkspaceScreenState: (environmentId?: string): Promise<WorkspaceScreenState> =>
+    ipcRenderer.invoke('workspace:get-screen-state', { environmentId }),
   getCommitScreenState: (environmentId?: string): Promise<CommitScreenState> =>
     ipcRenderer.invoke('commit:get-screen-state', { environmentId }),
   executeCommit: (environmentId: string, title: string, description?: string): Promise<ExecuteCommitResult> =>
