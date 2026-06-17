@@ -159,5 +159,6 @@ export {
 	type ImportPackageErrorCategory,
 	type ImportPackageValidationError,
 	type ImportPackageSummary,
+	type ImportPackageReview,
 	type ImportPackageResult
 } from './package-importer.js';
