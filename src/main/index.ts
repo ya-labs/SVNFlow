@@ -20,6 +20,7 @@ import { validateCommitPreConditions, type ValidateCommitResult } from './comman
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
 import { importAndValidateSvnflowPackage, type ImportPackageResult } from './commands/package-importer.js';
+import { appendPackageHistory, readPackageHistory, type PackageHistoryResult } from './commands/package-history.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -315,7 +316,7 @@ function registerIpcHandlers(): void {
       };
     }
 
-    return exportSvnflowPackage({
+    const exportResult = await exportSvnflowPackage({
       preview: {
         environment: preview.environment,
         workspace: preview.workspace,
@@ -323,10 +324,46 @@ function registerIpcHandlers(): void {
         alerts: preview.alerts
       }
     });
+
+    if (exportResult.ok && exportResult.packagePath && exportResult.manifest) {
+      await appendPackageHistory({
+        entry: {
+          kind: 'exported',
+          packageId: exportResult.manifest.packageId,
+          packagePath: exportResult.packagePath,
+          environmentName: preview.environment.environmentName,
+          baseBranch: preview.workspace.baseBranch,
+          totalAffectedFiles: preview.workspace.totalAffectedFiles,
+          generatedAt: exportResult.manifest.generatedAt
+        }
+      });
+    }
+
+    return exportResult;
   });
 
   ipcMain.handle('packages:import-and-validate', async (_event, payload?: { packagePath?: string }): Promise<ImportPackageResult> => {
-    return importAndValidateSvnflowPackage(payload?.packagePath ?? '');
+    const result = await importAndValidateSvnflowPackage(payload?.packagePath ?? '');
+
+    if (result.manifest && result.summary) {
+      await appendPackageHistory({
+        entry: {
+          kind: result.ok ? 'imported' : 'invalid',
+          packageId: result.manifest.packageId,
+          packagePath: result.packagePath,
+          environmentName: result.summary.environmentName,
+          baseBranch: result.summary.baseBranch,
+          totalAffectedFiles: result.summary.totalAffectedFiles,
+          generatedAt: result.manifest.generatedAt
+        }
+      });
+    }
+
+    return result;
+  });
+
+  ipcMain.handle('packages:read-history', async (): Promise<PackageHistoryResult> => {
+    return readPackageHistory();
   });
 
   ipcMain.handle('commit:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
