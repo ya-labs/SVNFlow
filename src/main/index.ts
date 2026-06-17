@@ -15,6 +15,7 @@ import {
   type SavedEnvironmentValidationStatus
 } from './commands/saved-environments.js';
 import { revalidateEnvironment } from './commands/revalidate-environment.js';
+import { buildPreviewContext } from './commands/preview.js';
 import { buildPreviewScreenState } from './commands/preview-screen.js';
 import { validateCommitPreConditions, type ValidateCommitResult } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
@@ -79,6 +80,42 @@ interface PreviewScreenState {
   canApplyInSvn: boolean;
 }
 
+interface WorkspaceScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    gitWorkspacePath: string;
+    svnCheckoutPath: string;
+    svnCheckoutRoot?: string;
+  };
+  workspace?: {
+    branch?: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+    files: Array<{
+      path: string;
+      previousPath?: string;
+      status: string;
+      description: string;
+      rawStatus: string;
+    }>;
+    totals: {
+      added: number;
+      modified: number;
+      deleted: number;
+      renamed: number;
+      copied: number;
+      unknown: number;
+    };
+  };
+  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
+  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  hasChanges: boolean;
+  canAdvanceToPreview: boolean;
+}
+
 interface CommitScreenState {
   status: 'ready' | 'blocked';
   title: string;
@@ -129,6 +166,68 @@ async function buildPreviewRendererState(environmentId?: string): Promise<Previe
     alerts: preview.alerts,
     canExportPackage: preview.actions.canExportPackage.canAdvance,
     canApplyInSvn: preview.actions.canApplyInSvn.canAdvance
+  };
+}
+
+function normalizeWorkspaceBlockers(blockers: Array<string | { code: string; message: string; affectedFiles?: string[] }>): Array<{ code: string; message: string; affectedFiles?: string[] }> {
+  return blockers.map((blocker) => {
+    if (typeof blocker === 'string') {
+      return {
+        code: blocker,
+        message: 'Existe um bloqueio no workspace Git. Revise o ambiente para continuar.'
+      };
+    }
+
+    return blocker;
+  });
+}
+
+async function buildWorkspaceRendererState(environmentId?: string): Promise<WorkspaceScreenState> {
+  const selectedEnvironment = await resolveSelectedEnvironmentById(environmentId);
+  const workspaceContext = buildPreviewContext({
+    selectedEnvironment
+  });
+  const blockers = normalizeWorkspaceBlockers(workspaceContext.blockers);
+  const hasChanges = Boolean(workspaceContext.summary?.hasSufficientChanges);
+
+  return {
+    status: workspaceContext.status === 'ready' ? 'ready' : 'blocked',
+    title: 'Workspace Git',
+    message: workspaceContext.message,
+    environment: workspaceContext.environment
+      ? {
+          environmentName: workspaceContext.environment.name,
+          gitWorkspacePath: workspaceContext.environment.gitWorkspacePath,
+          svnCheckoutPath: workspaceContext.environment.svnCheckoutPath,
+          svnCheckoutRoot: workspaceContext.environment.svnCheckoutRoot
+        }
+      : undefined,
+    workspace: workspaceContext.workspace
+      ? {
+          branch: workspaceContext.workspace.branch,
+          baseBranch: workspaceContext.workspace.baseBranch,
+          totalAffectedFiles: workspaceContext.workspace.changedFilesCount,
+          files: workspaceContext.workspace.classifiedFiles.map((file) => ({
+            path: file.path,
+            previousPath: file.previousPath,
+            status: file.humanReadableStatus,
+            description: file.description,
+            rawStatus: file.rawStatus
+          })),
+          totals: workspaceContext.summary?.totalsByChangeType ?? {
+            added: 0,
+            modified: 0,
+            deleted: 0,
+            renamed: 0,
+            copied: 0,
+            unknown: 0
+          }
+        }
+      : undefined,
+    blockers,
+    alerts: workspaceContext.alerts ?? [],
+    hasChanges,
+    canAdvanceToPreview: workspaceContext.canPreview && hasChanges && blockers.length === 0
   };
 }
 
@@ -303,6 +402,10 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('preview:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildPreviewRendererState(payload?.environmentId)
+  );
+
+  ipcMain.handle('workspace:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
+    buildWorkspaceRendererState(payload?.environmentId)
   );
 
   ipcMain.handle('packages:export-from-preview', async (_event, payload?: { environmentId?: string }): Promise<ExportPackageResult> => {

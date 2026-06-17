@@ -6,6 +6,7 @@ declare global {
       getEnvironmentScreenState?: (environmentId?: string) => Promise<EnvironmentScreenState>;
       revalidateEnvironment?: (environmentId?: string) => Promise<EnvironmentScreenState>;
       getPreviewScreenState?: (environmentId?: string) => Promise<PreviewScreenState>;
+      getWorkspaceScreenState?: (environmentId?: string) => Promise<WorkspaceScreenState>;
       getCommitScreenState?: (environmentId?: string) => Promise<CommitScreenState>;
       executeCommit?: (environmentId: string, title: string, description?: string) => Promise<ExecuteCommitResult>;
       exportPackageFromPreview?: (environmentId?: string) => Promise<ExportPackageResult>;
@@ -63,6 +64,42 @@ interface PreviewScreenState {
   alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
   canExportPackage: boolean;
   canApplyInSvn: boolean;
+}
+
+interface WorkspaceScreenState {
+  status: 'ready' | 'blocked';
+  title: string;
+  message: string;
+  environment?: {
+    environmentName: string;
+    gitWorkspacePath: string;
+    svnCheckoutPath: string;
+    svnCheckoutRoot?: string;
+  };
+  workspace?: {
+    branch?: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+    files: Array<{
+      path: string;
+      previousPath?: string;
+      status: string;
+      description: string;
+      rawStatus: string;
+    }>;
+    totals: {
+      added: number;
+      modified: number;
+      deleted: number;
+      renamed: number;
+      copied: number;
+      unknown: number;
+    };
+  };
+  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
+  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  hasChanges: boolean;
+  canAdvanceToPreview: boolean;
 }
 
 interface ExportPackageResult {
@@ -171,9 +208,9 @@ const STAGES: StageDefinition[] = [
   {
     key: 'workspace',
     label: 'Workspace Git',
-    mode: 'placeholder',
-    description: 'Área reservada para inspeção do workspace Git e validações prévias de alterações.',
-    helper: 'Placeholder visual: sem execução de operações sensíveis nesta etapa.'
+    mode: 'available',
+    description: 'Inspeção do workspace Git com branch, base, arquivos alterados e sinais de bloqueio.',
+    helper: 'Revise o estado do Git antes de seguir para o preview.'
   },
   {
     key: 'preview',
@@ -472,6 +509,79 @@ function renderPreviewStage(preview: PreviewScreenState): void {
       exportButton.disabled = false;
     }
   });
+}
+
+function renderWorkspaceStage(workspaceState: WorkspaceScreenState): void {
+  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
+  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
+  const environmentGit = document.querySelector<HTMLElement>('[data-role="environment-git"]');
+  const environmentSvn = document.querySelector<HTMLElement>('[data-role="environment-svn"]');
+  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
+
+  setStatusMessage(workspaceState.message);
+
+  if (environmentStatus) {
+    environmentStatus.textContent = workspaceState.status === 'ready' ? 'Pronto' : 'Bloqueado';
+  }
+
+  if (environmentGit) {
+    environmentGit.textContent = workspaceState.environment?.gitWorkspacePath ?? 'Não disponível';
+  }
+
+  if (environmentSvn) {
+    environmentSvn.textContent = workspaceState.environment?.svnCheckoutPath ?? 'Não disponível';
+  }
+
+  if (advanceGuard) {
+    advanceGuard.textContent = workspaceState.canAdvanceToPreview
+      ? 'Workspace Git pronto para seguir ao preview.'
+      : 'Revise bloqueios ou ausência de alterações antes de seguir.';
+  }
+
+  if (!stageBody) {
+    return;
+  }
+
+  const blockers = workspaceState.blockers
+    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
+    .join('');
+  const alerts = workspaceState.alerts
+    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
+    .join('');
+
+  if (!workspaceState.workspace) {
+    stageBody.innerHTML = `
+      <p class="empty-state">Nenhum workspace Git disponível para inspeção.</p>
+      ${blockers ? `<ul class="preview-list">${blockers}</ul>` : ''}
+    `;
+    return;
+  }
+
+  const summary = `
+    <div class="preview-summary">
+      <p class="context-line">Branch atual: <strong>${escapeHtml(workspaceState.workspace.branch ?? 'não identificado')}</strong></p>
+      <p class="context-line">Base de comparação: <strong>${escapeHtml(workspaceState.workspace.baseBranch)}</strong></p>
+      <p class="context-line">Situação do repositório: <strong>${workspaceState.hasChanges ? 'Com alterações detectadas' : 'Sem alterações detectadas'}</strong></p>
+      <p class="context-line">Arquivos afetados: <strong>${workspaceState.workspace.totalAffectedFiles}</strong></p>
+      <p class="context-line">Resumo: <strong>${workspaceState.workspace.totals.added}</strong> criados, <strong>${workspaceState.workspace.totals.modified}</strong> modificados, <strong>${workspaceState.workspace.totals.deleted}</strong> removidos</p>
+    </div>
+  `;
+
+  const files = workspaceState.workspace.files
+    .map((file) => `
+      <li class="preview-row">
+        <span class="status-badge" data-kind="${workspaceState.status === 'ready' ? 'ready' : 'attention'}">${escapeHtml(file.status)}</span>
+        <span title="${escapeHtml(file.description)}">${escapeHtml(file.path)}</span>
+      </li>
+    `)
+    .join('');
+
+  stageBody.innerHTML = `
+    ${summary}
+    ${files ? `<ul class="preview-files">${files}</ul>` : '<p class="empty-state">Nenhum arquivo alterado foi detectado.</p>'}
+    ${blockers ? `<p class="card-label">Bloqueios</p><ul class="preview-list">${blockers}</ul>` : ''}
+    ${alerts ? `<p class="card-label">Alertas</p><ul class="preview-list">${alerts}</ul>` : ''}
+  `;
 }
 
 function renderCommitStage(commit: CommitScreenState): void {
@@ -878,6 +988,19 @@ async function updateMainContent(stage: StageDefinition): Promise<void> {
     setStatusMessage('Carregando dados de preview...');
     const preview = await window.svnflowDesktop.getPreviewScreenState(selectedEnvironmentId);
     renderPreviewStage(preview);
+    return;
+  }
+
+  if (stage.key === 'workspace') {
+    if (!window.svnflowDesktop?.getWorkspaceScreenState) {
+      stageBody.innerHTML = '<p class="empty-state">Integração de workspace Git indisponível no preload.</p>';
+      setStatusMessage('Falha ao carregar integração de workspace Git.');
+      return;
+    }
+
+    setStatusMessage('Carregando estado do workspace Git...');
+    const workspace = await window.svnflowDesktop.getWorkspaceScreenState(selectedEnvironmentId);
+    renderWorkspaceStage(workspace);
     return;
   }
 
