@@ -64,6 +64,37 @@ interface ExportPackageResult {
   errorCode?: 'INVALID_PREVIEW' | 'WRITE_FAILED';
 }
 
+type ImportPackageErrorCategory = 'io' | 'schema' | 'integrity' | 'artifact';
+
+interface ImportPackageValidationError {
+  code: string;
+  category: ImportPackageErrorCategory;
+  message: string;
+  path?: string;
+}
+
+interface ImportPackageResult {
+  ok: boolean;
+  status: 'valid' | 'invalid';
+  message: string;
+  packagePath: string;
+  manifest?: {
+    formatVersion: '1.0.0';
+    packageId: string;
+    generatedAt: string;
+    checksumAlgorithm: 'sha256';
+    checksum: string;
+  };
+  summary?: {
+    packageId: string;
+    generatedAt: string;
+    environmentName: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+  };
+  errors: ImportPackageValidationError[];
+}
+
 interface CommitScreenState {
   status: 'ready' | 'blocked';
   title: string;
@@ -105,5 +136,7 @@ contextBridge.exposeInMainWorld('svnflowDesktop', {
   executeCommit: (environmentId: string, title: string, description?: string): Promise<ExecuteCommitResult> =>
     ipcRenderer.invoke('commit:execute', { environmentId, title, description }),
   exportPackageFromPreview: (environmentId?: string): Promise<ExportPackageResult> =>
-    ipcRenderer.invoke('packages:export-from-preview', { environmentId })
+    ipcRenderer.invoke('packages:export-from-preview', { environmentId }),
+  importAndValidatePackage: (packagePath: string): Promise<ImportPackageResult> =>
+    ipcRenderer.invoke('packages:import-and-validate', { packagePath })
 });

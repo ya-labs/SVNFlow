@@ -19,6 +19,7 @@ import { buildPreviewScreenState } from './commands/preview-screen.js';
 import { validateCommitPreConditions, type ValidateCommitResult } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
+import { importAndValidateSvnflowPackage, type ImportPackageResult } from './commands/package-importer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -322,6 +323,10 @@ function registerIpcHandlers(): void {
         alerts: preview.alerts
       }
     });
+  });
+
+  ipcMain.handle('packages:import-and-validate', async (_event, payload?: { packagePath?: string }): Promise<ImportPackageResult> => {
+    return importAndValidateSvnflowPackage(payload?.packagePath ?? '');
   });
 
   ipcMain.handle('commit:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
