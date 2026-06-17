@@ -10,6 +10,7 @@ declare global {
       executeCommit?: (environmentId: string, title: string, description?: string) => Promise<ExecuteCommitResult>;
       exportPackageFromPreview?: (environmentId?: string) => Promise<ExportPackageResult>;
       importAndValidatePackage?: (packagePath: string) => Promise<ImportPackageResult>;
+      readPackageHistory?: () => Promise<PackageHistoryResult>;
     };
   }
 }
@@ -205,9 +206,9 @@ const STAGES: StageDefinition[] = [
   {
     key: 'history',
     label: 'Histórico',
-    mode: 'placeholder',
-    description: 'Histórico local de operações e publicações aparecerá aqui nas próximas implementações.',
-    helper: 'Placeholder visual para rota de histórico.'
+    mode: 'available',
+    description: 'Histórico local de exportações e importações de pacotes .svnflow.',
+    helper: 'Eventos de pacote registrados localmente.'
   }
 ];
 
@@ -747,6 +748,95 @@ function renderPackagesStage(): void {
   });
 }
 
+type PackageHistoryEventKind = 'exported' | 'imported' | 'invalid';
+
+interface PackageHistoryEntry {
+  id: string;
+  kind: PackageHistoryEventKind;
+  packageId: string;
+  packagePath: string;
+  environmentName: string;
+  baseBranch: string;
+  totalAffectedFiles: number;
+  generatedAt: string;
+  recordedAt: string;
+}
+
+interface PackageHistoryResult {
+  ok: boolean;
+  entries: PackageHistoryEntry[];
+  storagePath: string;
+  message: string;
+}
+
+async function renderHistoryStage(): Promise<void> {
+  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
+
+  if (!stageBody) {
+    return;
+  }
+
+  stageBody.innerHTML = '<p class="empty-state">Carregando histórico...</p>';
+  setStatusMessage('Carregando histórico de pacotes...');
+
+  if (!window.svnflowDesktop?.readPackageHistory) {
+    stageBody.innerHTML = '<p class="empty-state">Integração de histórico indisponível no preload.</p>';
+    setStatusMessage('Falha ao carregar integração de histórico.');
+    return;
+  }
+
+  const result: PackageHistoryResult = await window.svnflowDesktop.readPackageHistory();
+
+  if (!result.ok || result.entries.length === 0) {
+    stageBody.innerHTML = `
+      <div class="card-group">
+        <p class="empty-state">Nenhum evento registrado ainda.</p>
+        <small>O histórico será preenchido após exportar ou importar pacotes.</small>
+      </div>
+    `;
+    setStatusMessage('Histórico de pacotes vazio.');
+    return;
+  }
+
+  const kindLabel: Record<PackageHistoryEventKind, string> = {
+    exported: 'Exportado',
+    imported: 'Importado',
+    invalid: 'Inválido'
+  };
+
+  const rows = result.entries.map(entry => `
+    <tr>
+      <td>${kindLabel[entry.kind] ?? entry.kind}</td>
+      <td>${escapeHtml(entry.environmentName)}</td>
+      <td>${escapeHtml(entry.baseBranch)}</td>
+      <td>${entry.totalAffectedFiles}</td>
+      <td title="${escapeHtml(entry.packagePath)}">${escapeHtml(entry.packageId)}</td>
+      <td>${escapeHtml(new Date(entry.recordedAt).toLocaleString('pt-BR'))}</td>
+    </tr>
+  `).join('');
+
+  stageBody.innerHTML = `
+    <div class="card-group">
+      <p class="card-label">${result.entries.length} registro(s)</p>
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Ação</th>
+            <th>Ambiente</th>
+            <th>Branch base</th>
+            <th>Arquivos</th>
+            <th>Pacote ID</th>
+            <th>Registrado em</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+
+  setStatusMessage(`${result.entries.length} evento(s) no histórico de pacotes.`);
+}
+
 async function updateMainContent(stage: StageDefinition): Promise<void> {
   const stageTitle = document.querySelector<HTMLElement>('[data-role="stage-title"]');
   const stageDescription = document.querySelector<HTMLElement>('[data-role="stage-description"]');
@@ -806,6 +896,11 @@ async function updateMainContent(stage: StageDefinition): Promise<void> {
 
   if (stage.key === 'packages') {
     renderPackagesStage();
+    return;
+  }
+
+  if (stage.key === 'history') {
+    await renderHistoryStage();
     return;
   }
 

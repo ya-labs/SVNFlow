@@ -133,6 +133,27 @@ interface ExecuteCommitResult {
   error?: string;
 }
 
+type PackageHistoryEventKind = 'exported' | 'imported' | 'invalid';
+
+interface PackageHistoryEntry {
+  id: string;
+  kind: PackageHistoryEventKind;
+  packageId: string;
+  packagePath: string;
+  environmentName: string;
+  baseBranch: string;
+  totalAffectedFiles: number;
+  generatedAt: string;
+  recordedAt: string;
+}
+
+interface PackageHistoryResult {
+  ok: boolean;
+  entries: PackageHistoryEntry[];
+  storagePath: string;
+  message: string;
+}
+
 contextBridge.exposeInMainWorld('svnflowDesktop', {
   appName: 'SVNFlow',
   shellStatus: 'Renderer carregado com sucesso.',
@@ -149,5 +170,7 @@ contextBridge.exposeInMainWorld('svnflowDesktop', {
   exportPackageFromPreview: (environmentId?: string): Promise<ExportPackageResult> =>
     ipcRenderer.invoke('packages:export-from-preview', { environmentId }),
   importAndValidatePackage: (packagePath: string): Promise<ImportPackageResult> =>
-    ipcRenderer.invoke('packages:import-and-validate', { packagePath })
+    ipcRenderer.invoke('packages:import-and-validate', { packagePath }),
+  readPackageHistory: (): Promise<PackageHistoryResult> =>
+    ipcRenderer.invoke('packages:read-history')
 });

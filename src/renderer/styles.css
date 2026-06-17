@@ -394,3 +394,29 @@ h1 {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.history-table th,
+.history-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  vertical-align: top;
+  word-break: break-all;
+}
+
+.history-table th {
+  color: var(--text-secondary, #8b9eb7);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.history-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}

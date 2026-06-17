@@ -162,3 +162,14 @@ export {
 	type ImportPackageReview,
 	type ImportPackageResult
 } from './package-importer.js';
+export {
+	readPackageHistory,
+	appendPackageHistory,
+	resolvePackageHistoryPath,
+	type PackageHistoryEventKind,
+	type PackageHistoryEntry,
+	type PackageHistoryFile,
+	type AppendPackageHistoryInput,
+	type ReadPackageHistoryInput,
+	type PackageHistoryResult
+} from './package-history.js';
