@@ -154,3 +154,10 @@ export {
 	type ExportPackageInput,
 	type ExportPackageResult
 } from './package-exporter.js';
+export {
+	importAndValidateSvnflowPackage,
+	type ImportPackageErrorCategory,
+	type ImportPackageValidationError,
+	type ImportPackageSummary,
+	type ImportPackageResult
+} from './package-importer.js';

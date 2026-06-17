@@ -9,6 +9,7 @@ declare global {
       getCommitScreenState?: (environmentId?: string) => Promise<CommitScreenState>;
       executeCommit?: (environmentId: string, title: string, description?: string) => Promise<ExecuteCommitResult>;
       exportPackageFromPreview?: (environmentId?: string) => Promise<ExportPackageResult>;
+      importAndValidatePackage?: (packagePath: string) => Promise<ImportPackageResult>;
     };
   }
 }
@@ -75,6 +76,37 @@ interface ExportPackageResult {
     checksum: string;
   };
   errorCode?: 'INVALID_PREVIEW' | 'WRITE_FAILED';
+}
+
+type ImportPackageErrorCategory = 'io' | 'schema' | 'integrity' | 'artifact';
+
+interface ImportPackageValidationError {
+  code: string;
+  category: ImportPackageErrorCategory;
+  message: string;
+  path?: string;
+}
+
+interface ImportPackageResult {
+  ok: boolean;
+  status: 'valid' | 'invalid';
+  message: string;
+  packagePath: string;
+  manifest?: {
+    formatVersion: '1.0.0';
+    packageId: string;
+    generatedAt: string;
+    checksumAlgorithm: 'sha256';
+    checksum: string;
+  };
+  summary?: {
+    packageId: string;
+    generatedAt: string;
+    environmentName: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+  };
+  errors: ImportPackageValidationError[];
 }
 
 interface CommitScreenState {
@@ -155,9 +187,9 @@ const STAGES: StageDefinition[] = [
   {
     key: 'packages',
     label: 'Pacotes',
-    mode: 'placeholder',
-    description: 'Área de pacotes será conectada ao histórico operacional em entregas seguintes.',
-    helper: 'Placeholder visual para navegação da V1.'
+    mode: 'available',
+    description: 'Importação e validação de pacote .svnflow com erros por categoria.',
+    helper: 'Validação do contrato de pacote e checksum.'
   },
   {
     key: 'history',
@@ -588,6 +620,98 @@ function renderCommitStage(commit: CommitScreenState): void {
   }
 }
 
+function renderPackagesStage(): void {
+  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
+  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
+
+  if (!stageBody) {
+    return;
+  }
+
+  if (advanceGuard) {
+    advanceGuard.textContent = 'Pacotes: validação por contrato e integridade.';
+  }
+
+  stageBody.innerHTML = `
+    <div class="commit-form">
+      <p class="card-label">Importar e validar pacote .svnflow</p>
+      <input id="package-path" class="form-input" type="text" placeholder="/caminho/completo/arquivo.svnflow" />
+      <div id="package-feedback" class="feedback"></div>
+      <div class="stage-actions">
+        <button id="validate-package" class="action-button">Validar pacote</button>
+      </div>
+      <div id="package-result" class="commit-context"></div>
+    </div>
+  `;
+
+  const pathInput = stageBody.querySelector<HTMLInputElement>('#package-path');
+  const validateButton = stageBody.querySelector<HTMLButtonElement>('#validate-package');
+  const feedback = stageBody.querySelector<HTMLElement>('#package-feedback');
+  const resultContainer = stageBody.querySelector<HTMLElement>('#package-result');
+
+  validateButton?.addEventListener('click', async () => {
+    const packagePath = pathInput?.value?.trim() ?? '';
+
+    if (!packagePath) {
+      if (feedback) {
+        feedback.textContent = 'Informe o caminho completo do pacote .svnflow.';
+        feedback.className = 'feedback invalid';
+      }
+      return;
+    }
+
+    if (!window.svnflowDesktop?.importAndValidatePackage) {
+      setStatusMessage('Integração de importação de pacote indisponível.');
+      return;
+    }
+
+    setStatusMessage('Importando e validando pacote .svnflow...');
+    validateButton.disabled = true;
+
+    const result = await window.svnflowDesktop.importAndValidatePackage(packagePath);
+
+    if (!resultContainer) {
+      return;
+    }
+
+    if (result.ok) {
+      if (feedback) {
+        feedback.textContent = 'Pacote válido.';
+        feedback.className = 'feedback valid';
+      }
+
+      resultContainer.innerHTML = `
+        <p class="context-line"><strong>Status:</strong> válido</p>
+        <p class="context-line"><strong>Package ID:</strong> ${escapeHtml(result.summary?.packageId ?? '-')}</p>
+        <p class="context-line"><strong>Ambiente:</strong> ${escapeHtml(result.summary?.environmentName ?? '-')}</p>
+        <p class="context-line"><strong>Base:</strong> ${escapeHtml(result.summary?.baseBranch ?? '-')}</p>
+        <p class="context-line"><strong>Arquivos:</strong> ${result.summary?.totalAffectedFiles ?? 0}</p>
+        <p class="context-line"><strong>Checksum:</strong> ${escapeHtml(result.manifest?.checksum ?? '-')}</p>
+      `;
+      setStatusMessage('Pacote .svnflow validado com sucesso.');
+    } else {
+      if (feedback) {
+        feedback.textContent = 'Pacote inválido. Verifique os erros abaixo.';
+        feedback.className = 'feedback invalid';
+      }
+
+      const errors = result.errors
+        .map((error) => `<li>[${escapeHtml(error.category)}:${escapeHtml(error.code)}] ${escapeHtml(error.message)}</li>`)
+        .join('');
+
+      resultContainer.innerHTML = `
+        <p class="context-line"><strong>Status:</strong> inválido</p>
+        <p class="context-line"><strong>Mensagem:</strong> ${escapeHtml(result.message)}</p>
+        <p class="card-label">Erros</p>
+        <ul class="preview-list">${errors}</ul>
+      `;
+      setStatusMessage('Falha na validação do pacote .svnflow.');
+    }
+
+    validateButton.disabled = false;
+  });
+}
+
 async function updateMainContent(stage: StageDefinition): Promise<void> {
   const stageTitle = document.querySelector<HTMLElement>('[data-role="stage-title"]');
   const stageDescription = document.querySelector<HTMLElement>('[data-role="stage-description"]');
@@ -642,6 +766,11 @@ async function updateMainContent(stage: StageDefinition): Promise<void> {
     setStatusMessage('Carregando dados de commit...');
     const commit = await window.svnflowDesktop.getCommitScreenState(selectedEnvironmentId);
     renderCommitStage(commit);
+    return;
+  }
+
+  if (stage.key === 'packages') {
+    renderPackagesStage();
     return;
   }
 
