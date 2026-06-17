@@ -142,3 +142,15 @@ export {
 	type RevalidateEnvironmentInput,
 	type RevalidateEnvironmentResult
 } from './revalidate-environment.js';
+export {
+	exportSvnflowPackage,
+	resolveSvnflowPackagesDirectory,
+	type ExportPreviewEnvironment,
+	type ExportPreviewWorkspaceFile,
+	type ExportPreviewWorkspace,
+	type ExportPreviewSnapshot,
+	type SvnflowManifest,
+	type SvnflowPackageFile,
+	type ExportPackageInput,
+	type ExportPackageResult
+} from './package-exporter.js';

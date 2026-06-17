@@ -18,6 +18,7 @@ import { revalidateEnvironment } from './commands/revalidate-environment.js';
 import { buildPreviewScreenState } from './commands/preview-screen.js';
 import { validateCommitPreConditions, type ValidateCommitResult } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
+import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,6 +73,7 @@ interface PreviewScreenState {
   };
   blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
   alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  canExportPackage: boolean;
   canApplyInSvn: boolean;
 }
 
@@ -123,6 +125,7 @@ async function buildPreviewRendererState(environmentId?: string): Promise<Previe
     workspace: preview.workspace,
     blockers: preview.blockers,
     alerts: preview.alerts,
+    canExportPackage: preview.actions.canExportPackage.canAdvance,
     canApplyInSvn: preview.actions.canApplyInSvn.canAdvance
   };
 }
@@ -299,6 +302,27 @@ function registerIpcHandlers(): void {
   ipcMain.handle('preview:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildPreviewRendererState(payload?.environmentId)
   );
+
+  ipcMain.handle('packages:export-from-preview', async (_event, payload?: { environmentId?: string }): Promise<ExportPackageResult> => {
+    const preview = await buildPreviewRendererState(payload?.environmentId);
+
+    if (!preview.environment || !preview.workspace) {
+      return {
+        ok: false,
+        message: 'Preview indisponivel para exportacao de pacote.',
+        errorCode: 'INVALID_PREVIEW'
+      };
+    }
+
+    return exportSvnflowPackage({
+      preview: {
+        environment: preview.environment,
+        workspace: preview.workspace,
+        blockers: preview.blockers,
+        alerts: preview.alerts
+      }
+    });
+  });
 
   ipcMain.handle('commit:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildCommitScreenState(payload?.environmentId)

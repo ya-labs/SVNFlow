@@ -8,6 +8,7 @@ declare global {
       getPreviewScreenState?: (environmentId?: string) => Promise<PreviewScreenState>;
       getCommitScreenState?: (environmentId?: string) => Promise<CommitScreenState>;
       executeCommit?: (environmentId: string, title: string, description?: string) => Promise<ExecuteCommitResult>;
+      exportPackageFromPreview?: (environmentId?: string) => Promise<ExportPackageResult>;
     };
   }
 }
@@ -58,7 +59,22 @@ interface PreviewScreenState {
   };
   blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
   alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  canExportPackage: boolean;
   canApplyInSvn: boolean;
+}
+
+interface ExportPackageResult {
+  ok: boolean;
+  message: string;
+  packagePath?: string;
+  manifest?: {
+    formatVersion: '1.0.0';
+    packageId: string;
+    generatedAt: string;
+    checksumAlgorithm: 'sha256';
+    checksum: string;
+  };
+  errorCode?: 'INVALID_PREVIEW' | 'WRITE_FAILED';
 }
 
 interface CommitScreenState {
@@ -383,7 +399,35 @@ function renderPreviewStage(preview: PreviewScreenState): void {
     <ul class="preview-files">${files}</ul>
     ${blockers ? `<p class="card-label">Bloqueios</p><ul class="preview-list">${blockers}</ul>` : ''}
     ${alerts ? `<p class="card-label">Alertas</p><ul class="preview-list">${alerts}</ul>` : ''}
+    <div class="stage-actions">
+      <button class="action-button" data-role="export-package-action" ${preview.canExportPackage ? '' : 'disabled'}>
+        Exportar pacote .svnflow
+      </button>
+    </div>
   `;
+
+  const exportButton = stageBody.querySelector<HTMLButtonElement>('[data-role="export-package-action"]');
+
+  exportButton?.addEventListener('click', async () => {
+    if (!window.svnflowDesktop?.exportPackageFromPreview) {
+      setStatusMessage('Integração de exportação de pacote indisponível.');
+      return;
+    }
+
+    setStatusMessage('Exportando pacote .svnflow...');
+    exportButton.disabled = true;
+
+    const result = await window.svnflowDesktop.exportPackageFromPreview(selectedEnvironmentId);
+
+    if (result.ok) {
+      setStatusMessage(`Pacote exportado com sucesso em: ${result.packagePath}`);
+      alert(`Pacote .svnflow exportado!\n\nArquivo: ${result.packagePath}\nChecksum: ${result.manifest?.checksum}`);
+    } else {
+      setStatusMessage(`Falha ao exportar pacote: ${result.message}`);
+      alert(`Falha ao exportar pacote .svnflow:\n\n${result.message}`);
+      exportButton.disabled = false;
+    }
+  });
 }
 
 function renderCommitStage(commit: CommitScreenState): void {

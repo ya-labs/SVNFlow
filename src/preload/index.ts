@@ -46,7 +46,22 @@ interface PreviewScreenState {
   };
   blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
   alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
+  canExportPackage: boolean;
   canApplyInSvn: boolean;
+}
+
+interface ExportPackageResult {
+  ok: boolean;
+  message: string;
+  packagePath?: string;
+  manifest?: {
+    formatVersion: '1.0.0';
+    packageId: string;
+    generatedAt: string;
+    checksumAlgorithm: 'sha256';
+    checksum: string;
+  };
+  errorCode?: 'INVALID_PREVIEW' | 'WRITE_FAILED';
 }
 
 interface CommitScreenState {
@@ -88,5 +103,7 @@ contextBridge.exposeInMainWorld('svnflowDesktop', {
   getCommitScreenState: (environmentId?: string): Promise<CommitScreenState> =>
     ipcRenderer.invoke('commit:get-screen-state', { environmentId }),
   executeCommit: (environmentId: string, title: string, description?: string): Promise<ExecuteCommitResult> =>
-    ipcRenderer.invoke('commit:execute', { environmentId, title, description })
+    ipcRenderer.invoke('commit:execute', { environmentId, title, description }),
+  exportPackageFromPreview: (environmentId?: string): Promise<ExportPackageResult> =>
+    ipcRenderer.invoke('packages:export-from-preview', { environmentId })
 });
