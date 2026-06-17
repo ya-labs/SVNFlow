@@ -106,6 +106,17 @@ interface ImportPackageResult {
     baseBranch: string;
     totalAffectedFiles: number;
   };
+  review?: {
+    title: string;
+    environmentName: string;
+    branch: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+    generatedAt: string;
+    whatChanged: string[];
+    notes: string;
+    markdown: string;
+  };
   errors: ImportPackageValidationError[];
 }
 
@@ -680,6 +691,29 @@ function renderPackagesStage(): void {
         feedback.className = 'feedback valid';
       }
 
+      const review = result.review;
+      const reviewWhatChanged = review?.whatChanged ?? [];
+      const reviewRows = reviewWhatChanged
+        .map((item) => `<li>${escapeHtml(item)}</li>`)
+        .join('');
+
+      const reviewCard = review
+        ? `
+          <p class="card-label">Revisão do pr.md</p>
+          <p class="context-line"><strong>Título:</strong> ${escapeHtml(review.title)}</p>
+          <p class="context-line"><strong>Ambiente:</strong> ${escapeHtml(review.environmentName)}</p>
+          <p class="context-line"><strong>Branch:</strong> ${escapeHtml(review.branch)}</p>
+          <p class="context-line"><strong>Base:</strong> ${escapeHtml(review.baseBranch)}</p>
+          <p class="context-line"><strong>Arquivos afetados:</strong> ${review.totalAffectedFiles}</p>
+          <p class="context-line"><strong>Gerado em:</strong> ${escapeHtml(review.generatedAt)}</p>
+          <p class="context-line"><strong>Notas:</strong> ${escapeHtml(review.notes)}</p>
+          <p class="card-label">O que mudou</p>
+          ${reviewRows ? `<ul class="preview-list">${reviewRows}</ul>` : '<p class="empty-state">Sem itens listados.</p>'}
+          <p class="card-label">Markdown original</p>
+          <pre class="review-markdown">${escapeHtml(review.markdown)}</pre>
+        `
+        : '<p class="empty-state">Revisão indisponível para este pacote.</p>';
+
       resultContainer.innerHTML = `
         <p class="context-line"><strong>Status:</strong> válido</p>
         <p class="context-line"><strong>Package ID:</strong> ${escapeHtml(result.summary?.packageId ?? '-')}</p>
@@ -687,6 +721,7 @@ function renderPackagesStage(): void {
         <p class="context-line"><strong>Base:</strong> ${escapeHtml(result.summary?.baseBranch ?? '-')}</p>
         <p class="context-line"><strong>Arquivos:</strong> ${result.summary?.totalAffectedFiles ?? 0}</p>
         <p class="context-line"><strong>Checksum:</strong> ${escapeHtml(result.manifest?.checksum ?? '-')}</p>
+        ${reviewCard}
       `;
       setStatusMessage('Pacote .svnflow validado com sucesso.');
     } else {

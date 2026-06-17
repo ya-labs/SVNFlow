@@ -20,6 +20,18 @@ export interface ImportPackageSummary {
   totalAffectedFiles: number;
 }
 
+export interface ImportPackageReview {
+  title: string;
+  environmentName: string;
+  branch: string;
+  baseBranch: string;
+  totalAffectedFiles: number;
+  generatedAt: string;
+  whatChanged: string[];
+  notes: string;
+  markdown: string;
+}
+
 export interface ImportPackageResult {
   ok: boolean;
   status: 'valid' | 'invalid';
@@ -27,7 +39,110 @@ export interface ImportPackageResult {
   packagePath: string;
   manifest?: SvnflowManifest;
   summary?: ImportPackageSummary;
+  review?: ImportPackageReview;
   errors: ImportPackageValidationError[];
+}
+
+function parseMarkdownField(markdown: string, label: string): string | undefined {
+  const expression = new RegExp(`^-\\s*${label}:\\s*(.+)$`, 'im');
+  const match = markdown.match(expression);
+  return match?.[1]?.trim();
+}
+
+function parseWhatChanged(markdown: string): string[] {
+  const marker = /^##\s+O que mudou\s*$/im;
+  const markerMatch = markdown.match(marker);
+
+  if (!markerMatch || markerMatch.index === undefined) {
+    return [];
+  }
+
+  const section = markdown.slice(markerMatch.index + markerMatch[0].length).trim();
+  if (!section) {
+    return [];
+  }
+
+  const lines = section.split('\n').map((line) => line.trim());
+  return lines
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.slice(2).trim())
+    .filter((line) => line.length > 0);
+}
+
+function buildReview(
+  parsed: SvnflowPackageFile,
+  errors: ImportPackageValidationError[]
+): ImportPackageReview | undefined {
+  const markdown = parsed.artifacts['pr.md'];
+  const preview = parsed.artifacts['preview.json'];
+
+  if (!isNonEmptyString(markdown)) {
+    errors.push({
+      code: 'REVIEW_MARKDOWN_REQUIRED',
+      category: 'artifact',
+      message: 'Revisao indisponivel: pr.md obrigatorio para renderizacao.',
+      path: 'artifacts.pr.md'
+    });
+    return undefined;
+  }
+
+  const whatChanged = parseWhatChanged(markdown);
+  if (whatChanged.length === 0) {
+    errors.push({
+      code: 'REVIEW_WHAT_CHANGED_REQUIRED',
+      category: 'artifact',
+      message: 'Revisao invalida: secao "O que mudou" e obrigatoria.',
+      path: 'artifacts.pr.md'
+    });
+  }
+
+  if (!preview?.environment?.environmentName) {
+    errors.push({
+      code: 'REVIEW_ENVIRONMENT_REQUIRED',
+      category: 'artifact',
+      message: 'Revisao invalida: nome do ambiente e obrigatorio.',
+      path: 'artifacts.preview.json.environment.environmentName'
+    });
+  }
+
+  if (!preview?.workspace?.baseBranch) {
+    errors.push({
+      code: 'REVIEW_BASE_BRANCH_REQUIRED',
+      category: 'artifact',
+      message: 'Revisao invalida: branch base e obrigatoria.',
+      path: 'artifacts.preview.json.workspace.baseBranch'
+    });
+  }
+
+  const totalAffected = preview?.workspace?.totalAffectedFiles;
+  if (typeof totalAffected !== 'number') {
+    errors.push({
+      code: 'REVIEW_TOTAL_AFFECTED_REQUIRED',
+      category: 'artifact',
+      message: 'Revisao invalida: total de arquivos afetados e obrigatorio.',
+      path: 'artifacts.preview.json.workspace.totalAffectedFiles'
+    });
+  }
+
+  const generatedAt = parseMarkdownField(markdown, 'Gerado em')
+    ?? parsed.manifest.generatedAt;
+  const branch = parseMarkdownField(markdown, 'Branch')
+    ?? preview.workspace.branch
+    ?? 'nao identificado';
+  const notes = parseMarkdownField(markdown, 'Notas')
+    ?? 'Sem notas adicionais.';
+
+  return {
+    title: 'Revisao de Pacote SVNFlow',
+    environmentName: preview.environment.environmentName,
+    branch,
+    baseBranch: preview.workspace.baseBranch,
+    totalAffectedFiles: preview.workspace.totalAffectedFiles,
+    generatedAt,
+    whatChanged,
+    notes,
+    markdown
+  };
 }
 
 function stableStringify(value: unknown): string {
@@ -325,6 +440,20 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
   }
 
   const validPackage = parsed as unknown as SvnflowPackageFile;
+  const review = buildReview(validPackage, errors);
+
+  if (errors.length > 0) {
+    return {
+      ok: false,
+      status: 'invalid',
+      message: 'Pacote .svnflow invalido para revisao. Revise os erros obrigatorios.',
+      packagePath: normalizedPath,
+      manifest: validPackage.manifest,
+      summary: buildSummary(validPackage),
+      review,
+      errors
+    };
+  }
 
   return {
     ok: true,
@@ -333,6 +462,7 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
     packagePath: normalizedPath,
     manifest: validPackage.manifest,
     summary: buildSummary(validPackage),
+    review,
     errors: []
   };
 }

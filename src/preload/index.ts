@@ -92,6 +92,17 @@ interface ImportPackageResult {
     baseBranch: string;
     totalAffectedFiles: number;
   };
+  review?: {
+    title: string;
+    environmentName: string;
+    branch: string;
+    baseBranch: string;
+    totalAffectedFiles: number;
+    generatedAt: string;
+    whatChanged: string[];
+    notes: string;
+    markdown: string;
+  };
   errors: ImportPackageValidationError[];
 }
 
