@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 
 import type { SvnflowManifest, SvnflowPackageFile } from './package-exporter.js';
 
@@ -323,6 +323,29 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
         }
       ]
     };
+  }
+
+  try {
+    const fileInfo = await stat(normalizedPath);
+
+    if (fileInfo.isDirectory()) {
+      return {
+        ok: false,
+        status: 'invalid',
+        message: 'O caminho informado aponta para uma pasta, nao para um arquivo .svnflow.',
+        packagePath: normalizedPath,
+        errors: [
+          {
+            code: 'PACKAGE_PATH_IS_DIRECTORY',
+            category: 'io',
+            message: 'Informe o caminho completo de um arquivo .svnflow, nao de uma pasta.',
+            path: normalizedPath
+          }
+        ]
+      };
+    }
+  } catch {
+    // Mantem a leitura abaixo como fonte do erro quando o arquivo nao existe ou nao pode ser acessado.
   }
 
   if (!normalizedPath.endsWith('.svnflow')) {

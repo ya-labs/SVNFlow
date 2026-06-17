@@ -110,6 +110,17 @@ describe('package-importer', () => {
     expect(result.errors.some((e) => e.code === 'PACKAGE_EXTENSION_INVALID' && e.category === 'schema')).toBe(true);
   });
 
+  it('retorna erro de io quando o caminho aponta para uma pasta', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'svnflow-importer-'));
+
+    const result = await importAndValidateSvnflowPackage(tempDir);
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe('invalid');
+    expect(result.errors.some((e) => e.code === 'PACKAGE_PATH_IS_DIRECTORY' && e.category === 'io')).toBe(true);
+    expect(result.errors.some((e) => e.code === 'PACKAGE_EXTENSION_INVALID')).toBe(false);
+  });
+
   it('aplica fallback em campo opcional de revisao (notas)', async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'svnflow-importer-'));
 
