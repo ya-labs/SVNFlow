@@ -15,9 +15,13 @@ Na v1, o `.svnflow` é um arquivo ZIP renomeado.
 ```text
 Pessoa A
 ↓
-Exportar Alteração
+Gerar Preview do Workspace
 ↓
-Preencher mini PR local
+Abrir Pacotes
+↓
+Preencher Mini PR Local
+↓
+Exportar Pacote
 ↓
 5647-bug001.svnflow
 ↓
@@ -54,6 +58,31 @@ Um pacote pode ser representado conceitualmente assim:
 
 A pasta `files/` fica reservada para casos futuros, como arquivos binários ou cenários em que patch não for suficiente. Na v1, a alteração técnica deve ser transportada primeiro por `patch.diff`.
 
+## Relação com Preview e Pacotes
+
+O Preview é a fonte técnica da alteração.
+
+Ele fornece:
+
+- branch de origem;
+- base de comparação;
+- arquivos afetados;
+- diferenças usadas para gerar o `patch.diff`;
+- riscos ou limitações detectadas.
+
+A etapa Pacotes é a fonte humana e operacional do pacote.
+
+Ela deve concentrar:
+
+- exportação do pacote a partir de um preview válido;
+- preenchimento dos campos estruturados que geram o `pr.md`;
+- escolha ou confirmação da pasta local de pacotes;
+- listagem de pacotes recentes, exportados e importados;
+- importação e validação de pacotes existentes;
+- revisão do `pr.md` antes da aplicação.
+
+Essa separação evita que o Preview misture revisão técnica do workspace com edição de mini PR. O Preview pode sugerir dados para o pacote, mas não deve ser a tela principal de preenchimento do `pr.md`.
+
 ## Transporte por patch
 
 O `patch.diff` é a receita da alteração.
@@ -78,6 +107,25 @@ A v1 deve considerar estes metadados:
 - versão do formato `.svnflow`;
 - checksum ou validação equivalente do conteúdo do pacote.
 
+Na V1, os dados técnicos devem vir do Preview validado e os dados humanos devem vir da etapa Pacotes.
+
+Campos técnicos:
+
+- branch de origem;
+- base de comparação;
+- lista de arquivos;
+- artefatos gerados;
+- checksum ou hash equivalente;
+- versão do formato.
+
+Campos humanos:
+
+- título;
+- contexto;
+- o que mudou;
+- observações;
+- autor quando informado ou detectado.
+
 A branch de origem deve ser detectada automaticamente no momento da exportação. Ela serve para rastreabilidade, não como destino de aplicação.
 
 A base de comparação deve indicar de onde o `patch.diff` foi gerado, normalmente `main` local. O destino de aplicação é o checkout SVN escolhido na importação ou aplicação.
@@ -95,7 +143,7 @@ O pacote `.svnflow` não representa uma branch Git de destino. Ele representa um
 
 ## Prévia na importação
 
-Ao importar um pacote, o SVNFlow deve mostrar uma tela objetiva antes de qualquer aplicação:
+Ao importar um pacote na etapa Pacotes, o SVNFlow deve mostrar uma tela objetiva antes de qualquer aplicação:
 
 ```text
 Autor: Marco
@@ -124,6 +172,20 @@ Observações:
 A pessoa usuária deve conseguir revisar o conteúdo antes de aceitar.
 
 Essa prévia deve ser gerada a partir do `pr.md` interno do pacote, renderizado pelo app para facilitar leitura.
+
+## Pasta e listagem de pacotes
+
+A V1 deve evitar depender apenas de digitação manual de caminho do arquivo `.svnflow`.
+
+A etapa Pacotes deve priorizar:
+
+- uma pasta local de pacotes configurada ou escolhida pela pessoa;
+- listagem de pacotes encontrados nessa pasta;
+- identificação visual de pacotes exportados e importados;
+- opção de selecionar arquivo manualmente quando necessário;
+- aviso claro quando o pacote referenciado não existir mais.
+
+O app não deve buscar pacotes em servidor externo na V1.
 
 ## Registro local
 
