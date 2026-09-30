@@ -5,6 +5,7 @@ export interface SavedEnvironment {
   name: string;
   gitWorkspacePath: string;
   svnCheckoutPath: string;
+  baseBranch?: string;
   svnUrl?: string;
   svnCheckoutRoot?: string;
   svnRevision?: string;
@@ -41,6 +42,7 @@ export interface SelectedEnvironment {
   name: string;
   gitWorkspacePath: string;
   svnCheckoutPath: string;
+  baseBranch?: string;
 }
 
 export interface SelectSavedEnvironmentResult {
@@ -144,7 +146,8 @@ export function selectSavedEnvironment(input: SelectSavedEnvironmentInput): Sele
       id: selected.id,
       name: selected.name,
       gitWorkspacePath: selected.gitWorkspacePath,
-      svnCheckoutPath: selected.svnCheckoutPath
+      svnCheckoutPath: selected.svnCheckoutPath,
+      baseBranch: selected.baseBranch
     },
     lastValidationStatus: selected.lastValidationStatus,
     needsRevalidation: true,

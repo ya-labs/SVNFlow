@@ -43,6 +43,7 @@ export interface SavedEnvironmentChanges {
 	name?: string;
 	gitWorkspacePath?: string;
 	svnCheckoutPath?: string;
+	baseBranch?: string;
 	svnUrl?: string;
 	svnCheckoutRoot?: string;
 	svnRevision?: string;
@@ -111,6 +112,7 @@ function sanitizeSavedEnvironment(environment: SavedEnvironment): SavedEnvironme
 		name: normalizeText(environment.name),
 		gitWorkspacePath: normalizeText(environment.gitWorkspacePath),
 		svnCheckoutPath: normalizeText(environment.svnCheckoutPath),
+		baseBranch: normalizeOptionalText(environment.baseBranch),
 		svnUrl: normalizeOptionalText(environment.svnUrl),
 		svnCheckoutRoot: normalizeOptionalText(environment.svnCheckoutRoot),
 		svnRevision: normalizeOptionalText(environment.svnRevision),
@@ -329,4 +331,31 @@ export async function updateSavedEnvironment(
 	updatedEnvironments[index] = updatedEnvironment;
 
 	return persistStorageFile(storagePath, updatedEnvironments);
+}
+export interface RemoveSavedEnvironmentInput extends SavedEnvironmentStorageOptions {
+	environmentId: string;
+}
+
+export async function removeSavedEnvironment(
+	input: RemoveSavedEnvironmentInput
+): Promise<SavedEnvironmentStorageResult> {
+	const storagePath = getStoragePath(input.storagePath);
+	const current = await readSavedEnvironments({ storagePath });
+
+	if (!current.ok) {
+		return current;
+	}
+
+	const remaining = current.environments.filter((environment) => environment.id !== input.environmentId);
+
+	if (remaining.length === current.environments.length) {
+		return createFailure(
+			storagePath,
+			`Ambiente salvo ${input.environmentId} não encontrado para remoção.`,
+			'NOT_FOUND',
+			current.environments
+		);
+	}
+
+	return persistStorageFile(storagePath, remaining);
 }

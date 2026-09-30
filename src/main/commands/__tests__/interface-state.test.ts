@@ -38,18 +38,6 @@ describe('buildMainInterfaceState', () => {
             severity: 'info'
           }
         ],
-        miniPrLocal: {
-          draft: {
-            title: 'titulo',
-            context: 'contexto',
-            whatChanged: 'mudanças',
-            notes: ''
-          },
-          validation: {
-            isValid: true,
-            pendingRequiredFields: []
-          }
-        },
         actions: {
           canExportPackage: { canAdvance: true },
           canApplyInSvn: { canAdvance: true }
@@ -77,18 +65,6 @@ describe('buildMainInterfaceState', () => {
           }
         ],
         alerts: [],
-        miniPrLocal: {
-          draft: {
-            title: '',
-            context: '',
-            whatChanged: '',
-            notes: ''
-          },
-          validation: {
-            isValid: false,
-            pendingRequiredFields: ['title', 'context', 'whatChanged']
-          }
-        },
         actions: {
           canExportPackage: { canAdvance: false, reason: 'Bloqueado' },
           canApplyInSvn: { canAdvance: false, reason: 'Bloqueado' }

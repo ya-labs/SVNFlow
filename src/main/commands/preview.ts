@@ -1,6 +1,7 @@
 import { validateEnvironmentState, type EnvironmentStateResult, type EnvironmentStateStatus } from './environment.js';
 import type { GitChangedFile, GitChangedFileStatus } from './workspace.js';
 import type { SelectedEnvironment } from './saved-environments.js';
+import { readUncommittedChanges } from './git-patch.js';
 
 export type { SelectedEnvironment } from './saved-environments.js';
 
@@ -232,7 +233,7 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
   const state = validateEnvironmentState({
     gitRepositoryPath: input.selectedEnvironment.gitWorkspacePath,
     svnCheckoutPath: input.selectedEnvironment.svnCheckoutPath,
-    baseBranch: input.baseBranch
+    baseBranch: input.baseBranch ?? input.selectedEnvironment.baseBranch
   });
 
   const environment = createEnvironmentContext(input.selectedEnvironment, state);
@@ -285,6 +286,17 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
       message: `${risks.unknownStatusFiles.length} arquivo(s) com status desconhecido.`,
       severity: 'warning',
       affectedFiles: risks.unknownStatusFiles
+    });
+  }
+
+  const uncommitted = readUncommittedChanges(input.selectedEnvironment.gitWorkspacePath);
+
+  if (uncommitted.count > 0) {
+    alerts.push({
+      code: 'UNCOMMITTED_CHANGES',
+      message: `${uncommitted.count} alteração(ões) não commitada(s) no workspace Git. O preview considera apenas commits da branch atual em relação à base.`,
+      severity: 'warning',
+      affectedFiles: uncommitted.files
     });
   }
 

@@ -1,214 +1,51 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-interface EnvironmentScreenState {
-  message: string;
-  storagePath: string;
-  items: Array<{
-    id: string;
-    name: string;
-    lastValidationStatus: 'ready' | 'blocked' | 'error' | 'pending';
-    needsRevalidation: boolean;
-    visualStatus: 'ready' | 'attention' | 'blocked' | 'error' | 'pending';
-  }>;
-  selectedEnvironmentId?: string;
-  selected?: {
-    id: string;
-    name: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    visualStatus: 'ready' | 'attention' | 'blocked' | 'error' | 'pending';
-  };
-  emptyState: boolean;
-  canAdvanceToSensitiveOperations: boolean;
+import type { SvnflowDesktopApi } from '../shared/ipc-types.js';
+
+function readAppVersion(): string {
+  const argument = process.argv.find((item) => item.startsWith('--svnflow-version='));
+  return argument?.split('=')[1] ?? 'dev';
 }
 
-interface PreviewScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    svnCheckoutRoot?: string;
-  };
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: Array<{
-      path: string;
-      previousPath?: string;
-      status: string;
-      description: string;
-      rawStatus: string;
-    }>;
-  };
-  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
-  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
-  canExportPackage: boolean;
-  canApplyInSvn: boolean;
-}
-
-interface WorkspaceScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    svnCheckoutRoot?: string;
-  };
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: Array<{
-      path: string;
-      previousPath?: string;
-      status: string;
-      description: string;
-      rawStatus: string;
-    }>;
-    totals: {
-      added: number;
-      modified: number;
-      deleted: number;
-      renamed: number;
-      copied: number;
-      unknown: number;
-    };
-  };
-  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
-  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
-  hasChanges: boolean;
-  canAdvanceToPreview: boolean;
-}
-
-interface ExportPackageResult {
-  ok: boolean;
-  message: string;
-  packagePath?: string;
-  manifest?: {
-    formatVersion: '1.0.0';
-    packageId: string;
-    generatedAt: string;
-    checksumAlgorithm: 'sha256';
-    checksum: string;
-  };
-  errorCode?: 'INVALID_PREVIEW' | 'WRITE_FAILED';
-}
-
-type ImportPackageErrorCategory = 'io' | 'schema' | 'integrity' | 'artifact';
-
-interface ImportPackageValidationError {
-  code: string;
-  category: ImportPackageErrorCategory;
-  message: string;
-  path?: string;
-}
-
-interface ImportPackageResult {
-  ok: boolean;
-  status: 'valid' | 'invalid';
-  message: string;
-  packagePath: string;
-  manifest?: {
-    formatVersion: '1.0.0';
-    packageId: string;
-    generatedAt: string;
-    checksumAlgorithm: 'sha256';
-    checksum: string;
-  };
-  summary?: {
-    packageId: string;
-    generatedAt: string;
-    environmentName: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-  };
-  review?: {
-    title: string;
-    environmentName: string;
-    branch: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    generatedAt: string;
-    whatChanged: string[];
-    notes: string;
-    markdown: string;
-  };
-  errors: ImportPackageValidationError[];
-}
-
-interface CommitScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    svnCheckoutPath: string;
-  };
-  commitValidation?: {
-    hasChanges: boolean;
-    affectedFilesCount: number;
-    blockers: Array<{ code: string; message: string }>;
-    canCommit: boolean;
-  };
-  canExecuteCommit: boolean;
-}
-
-interface ExecuteCommitResult {
-  status: 'success' | 'failed' | 'cancelled' | 'conflict';
-  message: string;
-  revision?: string;
-  filesCommitted?: number;
-  conflicts?: Array<{ file: string; reason: string }>;
-  errorCode?: string;
-  error?: string;
-}
-
-type PackageHistoryEventKind = 'exported' | 'imported' | 'invalid';
-
-interface PackageHistoryEntry {
-  id: string;
-  kind: PackageHistoryEventKind;
-  packageId: string;
-  packagePath: string;
-  environmentName: string;
-  baseBranch: string;
-  totalAffectedFiles: number;
-  generatedAt: string;
-  recordedAt: string;
-}
-
-interface PackageHistoryResult {
-  ok: boolean;
-  entries: PackageHistoryEntry[];
-  storagePath: string;
-  message: string;
-}
-
-contextBridge.exposeInMainWorld('svnflowDesktop', {
+const api: SvnflowDesktopApi = {
   appName: 'SVNFlow',
-  shellStatus: 'Renderer carregado com sucesso.',
-  getEnvironmentScreenState: (environmentId?: string): Promise<EnvironmentScreenState> =>
+  appVersion: readAppVersion(),
+  getEnvironmentScreenState: (environmentId) =>
     ipcRenderer.invoke('environment:get-screen-state', { environmentId }),
-  revalidateEnvironment: (environmentId?: string): Promise<EnvironmentScreenState> =>
+  revalidateEnvironment: (environmentId) =>
     ipcRenderer.invoke('environment:revalidate', { environmentId }),
-  getPreviewScreenState: (environmentId?: string): Promise<PreviewScreenState> =>
-    ipcRenderer.invoke('preview:get-screen-state', { environmentId }),
-  getWorkspaceScreenState: (environmentId?: string): Promise<WorkspaceScreenState> =>
+  registerEnvironment: (input) =>
+    ipcRenderer.invoke('environment:register', input),
+  removeEnvironment: (environmentId) =>
+    ipcRenderer.invoke('environment:remove', { environmentId }),
+  selectDirectory: (title, defaultPath) =>
+    ipcRenderer.invoke('dialog:select-directory', { title, defaultPath }),
+  selectPackageFile: (defaultPath) =>
+    ipcRenderer.invoke('dialog:select-package-file', { defaultPath }),
+  getWorkspaceScreenState: (environmentId) =>
     ipcRenderer.invoke('workspace:get-screen-state', { environmentId }),
-  getCommitScreenState: (environmentId?: string): Promise<CommitScreenState> =>
-    ipcRenderer.invoke('commit:get-screen-state', { environmentId }),
-  executeCommit: (environmentId: string, title: string, description?: string): Promise<ExecuteCommitResult> =>
-    ipcRenderer.invoke('commit:execute', { environmentId, title, description }),
-  exportPackageFromPreview: (environmentId?: string): Promise<ExportPackageResult> =>
-    ipcRenderer.invoke('packages:export-from-preview', { environmentId }),
-  importAndValidatePackage: (packagePath: string): Promise<ImportPackageResult> =>
+  getPreviewScreenState: (environmentId) =>
+    ipcRenderer.invoke('preview:get-screen-state', { environmentId }),
+  getPackagesScreenState: (environmentId) =>
+    ipcRenderer.invoke('packages:get-screen-state', { environmentId }),
+  setPackagesDirectory: (directory) =>
+    ipcRenderer.invoke('packages:set-directory', { directory }),
+  previewMiniPrMarkdown: (request) =>
+    ipcRenderer.invoke('packages:preview-pr-md', request),
+  exportPackage: (request) =>
+    ipcRenderer.invoke('packages:export', request),
+  importAndValidatePackage: (packagePath) =>
     ipcRenderer.invoke('packages:import-and-validate', { packagePath }),
-  readPackageHistory: (): Promise<PackageHistoryResult> =>
-    ipcRenderer.invoke('packages:read-history')
-});
+  readPackageHistory: () =>
+    ipcRenderer.invoke('packages:read-history'),
+  getApplyPlan: (environmentId, source) =>
+    ipcRenderer.invoke('apply:get-plan', { environmentId, source }),
+  executeApply: (environmentId, source) =>
+    ipcRenderer.invoke('apply:execute', { environmentId, source }),
+  getCommitScreenState: (environmentId) =>
+    ipcRenderer.invoke('commit:get-screen-state', { environmentId }),
+  executeCommit: (environmentId, title, description) =>
+    ipcRenderer.invoke('commit:execute', { environmentId, title, description })
+};
+
+contextBridge.exposeInMainWorld('svnflowDesktop', api);

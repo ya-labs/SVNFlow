@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import {
 	readSavedEnvironments,
+	removeSavedEnvironment,
 	saveSavedEnvironment,
 	updateSavedEnvironment,
 	writeSavedEnvironments
@@ -149,5 +150,20 @@ describe('saved-environment-store', () => {
 
 		expect(result.ok).toBe(false);
 		expect(result.errorCode).toBe('NOT_FOUND');
+	});
+
+	it('remove ambiente salvo e preserva a base de comparação dos demais', async () => {
+		await writeSavedEnvironments([
+			{ id: 'env-1', name: 'Um', gitWorkspacePath: '/repo/um', svnCheckoutPath: '/svn/um', baseBranch: 'develop' },
+			{ id: 'env-2', name: 'Dois', gitWorkspacePath: '/repo/dois', svnCheckoutPath: '/svn/dois' }
+		], { storagePath });
+
+		const removed = await removeSavedEnvironment({ storagePath, environmentId: 'env-2' });
+		expect(removed.ok).toBe(true);
+		expect(removed.environments.map((environment) => environment.id)).toEqual(['env-1']);
+		expect(removed.environments[0].baseBranch).toBe('develop');
+
+		const missing = await removeSavedEnvironment({ storagePath, environmentId: 'env-2' });
+		expect(missing.errorCode).toBe('NOT_FOUND');
 	});
 });

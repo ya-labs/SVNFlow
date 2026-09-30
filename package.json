@@ -1,7 +1,7 @@
 {
   "name": "svnflow",
-  "version": "0.0.1",
-  "description": "Desktop app for Git+SVN workflow management in corporate environments",
+  "version": "0.1.0",
+  "description": "Aplicativo desktop local em que Git prepara alterações e SVN permanece como destino oficial de publicação",
   "main": "dist/main/index.js",
   "type": "module",
   "scripts": {

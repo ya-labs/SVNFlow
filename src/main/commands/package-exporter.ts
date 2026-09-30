@@ -3,6 +3,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+import { buildMiniPrMarkdown, normalizeMiniPrDraft, validateMiniPrDraft, type MiniPrDraft } from './mini-pr.js';
+
 export interface ExportPreviewEnvironment {
   environmentName: string;
   gitWorkspacePath: string;
@@ -32,43 +34,62 @@ export interface ExportPreviewSnapshot {
   alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
 }
 
+export type SvnflowFormatVersion = '1.0.0' | '1.1.0';
+
+export const CURRENT_SVNFLOW_FORMAT_VERSION: SvnflowFormatVersion = '1.1.0';
+
 export interface SvnflowManifest {
-  formatVersion: '1.0.0';
+  formatVersion: SvnflowFormatVersion;
   packageId: string;
   generatedAt: string;
   checksumAlgorithm: 'sha256';
   checksum: string;
   requiredFields: string[];
+  author?: string;
   artifacts: {
     previewJson: 'preview.json';
     prMarkdown: 'pr.md';
+    patchDiff?: 'patch.diff';
+    miniPrJson?: 'mini-pr.json';
   };
+}
+
+export interface SvnflowPackageArtifacts {
+  'preview.json': ExportPreviewSnapshot;
+  'pr.md': string;
+  'patch.diff'?: string;
+  'mini-pr.json'?: MiniPrDraft;
 }
 
 export interface SvnflowPackageFile {
   manifest: SvnflowManifest;
-  artifacts: {
-    'preview.json': ExportPreviewSnapshot;
-    'pr.md': string;
-  };
+  artifacts: SvnflowPackageArtifacts;
 }
 
 export interface ExportPackageInput {
   preview: ExportPreviewSnapshot;
+  miniPr?: Partial<MiniPrDraft>;
+  patchContent: string;
+  author?: string;
   outputDirectory?: string;
   now?: string;
 }
+
+export type ExportPackageErrorCode = 'INVALID_PREVIEW' | 'INVALID_MINI_PR' | 'INVALID_PATCH' | 'WRITE_FAILED';
 
 export interface ExportPackageResult {
   ok: boolean;
   message: string;
   packagePath?: string;
   manifest?: SvnflowManifest;
-  errorCode?: 'INVALID_PREVIEW' | 'WRITE_FAILED';
+  errorCode?: ExportPackageErrorCode;
+  pendingRequiredFields?: string[];
 }
 
 function sanitizeFileName(input: string): string {
   return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9\-_]+/g, '-')
@@ -76,7 +97,8 @@ function sanitizeFileName(input: string): string {
     .replace(/^-|-$/g, '') || 'pacote';
 }
 
-function stableStringify(value: unknown): string {
+
+export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') {
     return JSON.stringify(value);
   }
@@ -86,28 +108,19 @@ function stableStringify(value: unknown): string {
   }
 
   const objectValue = value as Record<string, unknown>;
-  const keys = Object.keys(objectValue).sort();
+  const keys = Object.keys(objectValue).filter((key) => objectValue[key] !== undefined).sort();
   const serialized = keys.map((key) => `${JSON.stringify(key)}:${stableStringify(objectValue[key])}`);
   return `{${serialized.join(',')}}`;
 }
 
-function buildPrMarkdown(preview: ExportPreviewSnapshot, generatedAt: string): string {
-  const lines = preview.workspace.files.map(
-    (file) => `- **${file.status}** ${file.path}${file.previousPath ? ` (antes: ${file.previousPath})` : ''}`
-  );
+export function calculateArtifactsChecksum(artifacts: unknown): string {
+  return createHash('sha256')
+    .update(stableStringify(artifacts), 'utf8')
+    .digest('hex');
+}
 
-  return [
-    '# Revisao de Pacote SVNFlow',
-    '',
-    `- Ambiente: ${preview.environment.environmentName}`,
-    `- Branch: ${preview.workspace.branch ?? 'nao identificado'}`,
-    `- Base: ${preview.workspace.baseBranch}`,
-    `- Arquivos afetados: ${preview.workspace.totalAffectedFiles}`,
-    `- Gerado em: ${generatedAt}`,
-    '',
-    '## O que mudou',
-    ...lines
-  ].join('\n');
+export function buildSuggestedPackageFileName(title: string, generatedAt: string): string {
+  return `${generatedAt.slice(0, 19).replace(/[:T]/g, '-')}-${sanitizeFileName(title).slice(0, 60)}.svnflow`;
 }
 
 export function resolveSvnflowPackagesDirectory(baseDirectory: string = os.homedir()): string {
@@ -126,34 +139,71 @@ export async function exportSvnflowPackage(input: ExportPackageInput): Promise<E
     };
   }
 
+  if (input.preview.blockers.length > 0) {
+    return {
+      ok: false,
+      message: `Preview com bloqueios: ${input.preview.blockers[0].message}`,
+      errorCode: 'INVALID_PREVIEW'
+    };
+  }
+
+  const miniPr = normalizeMiniPrDraft(input.miniPr);
+  const miniPrValidation = validateMiniPrDraft(miniPr);
+
+  if (!miniPrValidation.isValid) {
+    return {
+      ok: false,
+      message: miniPrValidation.message,
+      errorCode: 'INVALID_MINI_PR',
+      pendingRequiredFields: miniPrValidation.pendingRequiredFields
+    };
+  }
+
+  if (!input.patchContent || !input.patchContent.trim()) {
+    return {
+      ok: false,
+      message: 'Patch vazio: nao ha alteracao tecnica para incluir no pacote.',
+      errorCode: 'INVALID_PATCH'
+    };
+  }
+
   const packageId = randomUUID();
-  const prMarkdown = buildPrMarkdown(input.preview, generatedAt);
-  const artifacts = {
+  const prMarkdown = buildMiniPrMarkdown(miniPr, {
+    environmentName: input.preview.environment.environmentName,
+    branch: input.preview.workspace.branch,
+    baseBranch: input.preview.workspace.baseBranch,
+    author: input.author,
+    generatedAt,
+    files: input.preview.workspace.files
+  });
+  const artifacts: SvnflowPackageArtifacts = {
     'preview.json': input.preview,
-    'pr.md': prMarkdown
+    'pr.md': prMarkdown,
+    'patch.diff': input.patchContent,
+    'mini-pr.json': miniPr
   };
 
-  const checksum = createHash('sha256')
-    .update(stableStringify(artifacts), 'utf8')
-    .digest('hex');
-
   const manifest: SvnflowManifest = {
-    formatVersion: '1.0.0',
+    formatVersion: CURRENT_SVNFLOW_FORMAT_VERSION,
     packageId,
     generatedAt,
     checksumAlgorithm: 'sha256',
-    checksum,
+    checksum: calculateArtifactsChecksum(artifacts),
     requiredFields: [
       'manifest.formatVersion',
       'manifest.packageId',
       'manifest.generatedAt',
       'manifest.checksum',
       'artifacts.preview.json',
-      'artifacts.pr.md'
+      'artifacts.pr.md',
+      'artifacts.patch.diff'
     ],
+    author: input.author,
     artifacts: {
       previewJson: 'preview.json',
-      prMarkdown: 'pr.md'
+      prMarkdown: 'pr.md',
+      patchDiff: 'patch.diff',
+      miniPrJson: 'mini-pr.json'
     }
   };
 
@@ -162,8 +212,7 @@ export async function exportSvnflowPackage(input: ExportPackageInput): Promise<E
     artifacts
   };
 
-  const fileName = `${generatedAt.slice(0, 19).replace(/[:T]/g, '-')}-${sanitizeFileName(input.preview.environment.environmentName)}.svnflow`;
-  const packagePath = path.join(outputDirectory, fileName);
+  const packagePath = path.join(outputDirectory, buildSuggestedPackageFileName(miniPr.title, generatedAt));
 
   try {
     await mkdir(outputDirectory, { recursive: true });

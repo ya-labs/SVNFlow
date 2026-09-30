@@ -4,6 +4,8 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 
+import { isolatedGitEnv } from './git-patch.js';
+
 export type PatchValidationStatus = 'ready' | 'incompatible' | 'error';
 
 export interface ValidatePatchInput {
@@ -28,7 +30,8 @@ export function validatePatchFit(input: ValidatePatchInput): ValidatePatchResult
       encoding: 'utf-8',
       timeout: 15000,
       stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: input.checkoutPath
+      cwd: input.checkoutPath,
+      env: isolatedGitEnv(input.checkoutPath)
     });
 
     return {
