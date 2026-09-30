@@ -4,6 +4,17 @@ SVNFlow é um estudo de produto para um aplicativo desktop local que apoia fluxo
 
 O projeto busca tornar esse processo mais visual, seguro e repetível, com foco em prévia, validação e confirmação antes de qualquer operação sensível no checkout SVN.
 
+## Como executar
+
+Pré-requisitos: Node.js 20+, Git e cliente `svn` no `PATH`.
+
+```bash
+npm ci
+npm run app
+```
+
+Detalhes, dados locais e limitações conhecidas estão em [Entrega experimental da V1](docs/release/entrega-experimental-v1.md).
+
 ## Documentação
 
 A documentação estável fica em [docs/](docs/README.md).
@@ -17,6 +28,8 @@ Leitura recomendada:
 - [Arquitetura geral](docs/arquitetura/arquitetura-geral.md)
 - [Requisitos da V1](docs/requisitos/requisitos-v1.md)
 - [Fluxo principal da V1](docs/fluxos/fluxo-principal.md)
+- [Manual de uso da V1](docs/uso/manual-de-uso-v1.md)
+- [Entrega experimental da V1](docs/release/entrega-experimental-v1.md)
 - [Fluxo de trabalho no GitHub](docs/processos/fluxo-de-trabalho-github.md)
 - [Roteiro geral de etapas](docs/planejamento/roteiro-geral-de-etapas.md)
 - [ADRs](docs/adrs/)

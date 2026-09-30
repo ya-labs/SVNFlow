@@ -14,6 +14,7 @@ Markdown deve guardar conhecimento do produto. Trabalho, backlog, progresso, ép
 - [Requisitos da V1](requisitos/requisitos-v1.md)
 - [Fluxo principal da V1](fluxos/fluxo-principal.md)
 - [Manual de uso da V1](uso/manual-de-uso-v1.md)
+- [Entrega experimental da V1](release/entrega-experimental-v1.md)
 - [Guia de consulta da documentação](guia-da-documentacao.md)
 - [Guia de documentação para IA](guia-de-documentacao-para-ia.md)
 

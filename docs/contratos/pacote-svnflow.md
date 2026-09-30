@@ -8,7 +8,7 @@ Ele permite que uma pessoa exporte uma alteração preparada no Git e que outra 
 
 O pacote não substitui Git, SVN ou Pull Request. Ele funciona como uma mini PR transportável: reúne contexto, mudanças, observações, arquivos afetados, um `pr.md` padronizado e o patch necessário para aplicar a alteração.
 
-Na v1, o `.svnflow` é um arquivo ZIP renomeado.
+Na v1, o `.svnflow` é um arquivo JSON único, com `manifest` e `artifacts`, conforme a [ADR-006](../adrs/ADR-006-pacote-svnflow-json-v1.md). O formato atual é `1.1.0`.
 
 ## Fluxo
 
@@ -57,6 +57,8 @@ Um pacote pode ser representado conceitualmente assim:
 ```
 
 A pasta `files/` fica reservada para casos futuros, como arquivos binários ou cenários em que patch não for suficiente. Na v1, a alteração técnica deve ser transportada primeiro por `patch.diff`.
+
+Na implementação da V1, essa estrutura conceitual é gravada como um JSON único: o `manifest` corresponde ao `manifest.json`, e `pr.md`, `patch.diff`, `preview.json` e `mini-pr.json` ficam em `artifacts`. O nome do arquivo usa a data de exportação e o título da mini PR.
 
 ## Relação com Preview e Pacotes
 

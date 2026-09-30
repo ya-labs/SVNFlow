@@ -18,6 +18,7 @@ Campos mínimos:
 | `nome` | Apelido amigável definido pela pessoa usuária. |
 | `gitWorkspacePath` | Caminho local do workspace Git. |
 | `svnCheckoutPath` | Caminho local do checkout SVN. |
+| `baseBranch` | Branch local usada como base de comparação no Git. Padrão: `main`. Validada no cadastro. |
 | `svnUrl` | URL detectada por `svn info`, quando disponível. |
 | `svnCheckoutRoot` | Raiz do checkout detectada por `svn info`, quando disponível. |
 | `svnRevision` | Revisão local detectada, quando disponível. |

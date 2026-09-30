@@ -133,6 +133,20 @@ Para a V1, o armazenamento deve ser simples:
 
 SQLite local pode ser considerado se houver necessidade clara de concorrência, busca ou volume maior de dados. Servidor externo, sincronização entre máquinas e soluções distribuídas ficam fora da V1.
 
+## Implementação da V1
+
+A V1 grava o histórico em `~/.svnflow/package-history.json`, com o registro mais recente primeiro.
+
+| Evento gravado | Status conceitual | Quando é registrado |
+| --- | --- | --- |
+| `exported` | `gerado` | Exportação concluída na etapa Pacotes. |
+| `imported` | `importado` | Pacote aberto e validado. |
+| `invalid` | `falhou` | Pacote aberto com erro de estrutura, versão ou checksum. |
+| `applied` | `aplicado` | Patch aplicado com sucesso no checkout SVN, a partir do workspace ou de um pacote. |
+| `committed` | evento de SVN | Commit SVN protegido concluído, com a revisão em `packageId`. |
+
+Cada registro guarda caminho do pacote (quando houver), ambiente, base, total de arquivos, data e uma descrição curta em `detail`. Falhas de aplicação aparecem na tela, mas não são gravadas no histórico da V1.
+
 ## Visualização esperada
 
 A tela de histórico deve permitir:

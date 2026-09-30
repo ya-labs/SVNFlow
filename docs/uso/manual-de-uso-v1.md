@@ -7,6 +7,8 @@ Este manual descreve como a V1 do SVNFlow deve ser usada em dois cenários:
 - trabalho solo;
 - colaboração por pacote `.svnflow`.
 
+Para instalar, executar e conhecer as limitações da entrega atual, consulte a [Entrega Experimental da V1](../release/entrega-experimental-v1.md).
+
 O trabalho solo é o fluxo padrão da V1. A colaboração é uma camada adicional para transportar e revisar alterações por pacote, sem transformar o SVNFlow em plataforma colaborativa completa.
 
 ## Premissas de Segurança
