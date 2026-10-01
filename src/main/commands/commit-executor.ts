@@ -106,7 +106,8 @@ export function executeCommit(input: ExecuteCommitInput): ExecuteCommitResult {
       // Argumentos sem shell: a mensagem pode conter crases, $() ou aspas.
       output = execFileSync(
         'svn',
-        ['commit', checkoutPath, '-m', commitMessage],
+        // Sem terminal: falha na hora se o servidor pedir credenciais.
+        ['commit', checkoutPath, '--non-interactive', '-m', commitMessage],
         {
           encoding: 'utf-8',
           timeout: 30000,

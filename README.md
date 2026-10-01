@@ -12,7 +12,11 @@ O projeto busca tornar esse processo mais visual, seguro e repetível, com foco 
 
 O fluxo por patch e pacotes `.svnflow` continua disponível em **Modo avançado**.
 
-## Como executar
+## Como instalar
+
+No Linux, baixe o `.deb` ou o `.AppImage` na página de [Releases](https://github.com/ya-labs/SVNFlow/releases). Veja [Instalar o SVNFlow no Linux](docs/release/instalacao-linux.md).
+
+## Como executar a partir do código
 
 Pré-requisitos: Node.js 20+, Git e cliente `svn` no `PATH`.
 

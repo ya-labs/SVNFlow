@@ -1,0 +1,49 @@
+name: Release Linux
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Confere tag e versão
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "A tag $GITHUB_REF_NAME não bate com a versão $VERSION do package.json."
+            exit 1
+          fi
+
+      - name: Instala SVN para os testes
+        run: sudo apt-get update && sudo apt-get install -y subversion
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Gera AppImage e .deb
+        run: npm run dist
+
+      - name: Publica a Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            release/*.AppImage \
+            release/*.deb \
+            --title "SVNFlow $GITHUB_REF_NAME" \
+            --notes-file docs/release/instalacao-linux.md
