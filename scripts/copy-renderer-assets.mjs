@@ -14,6 +14,11 @@ const copies = [
   {
     from: path.join(root, 'src', 'renderer', 'styles.css'),
     to: path.join(root, 'dist', 'renderer', 'styles.css')
+  },
+  {
+    // No Linux, a janela só informa ícone à barra de tarefas se a BrowserWindow receber um.
+    from: path.join(root, 'build', 'icon.png'),
+    to: path.join(root, 'dist', 'assets', 'icon.png')
   }
 ];
 
