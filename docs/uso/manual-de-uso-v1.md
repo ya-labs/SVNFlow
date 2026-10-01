@@ -9,6 +9,8 @@ Este manual descreve como a V1 do SVNFlow deve ser usada em dois cenários:
 
 Para instalar, executar e conhecer as limitações da entrega atual, consulte a [Entrega Experimental da V1](../release/entrega-experimental-v1.md).
 
+Quando o desenvolvimento acontece todo no Git (por exemplo, no GitHub) e o SVN só precisa receber o código, use a etapa **Sincronizar**, descrita na [ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md). As trilhas abaixo descrevem o modo avançado, por patch e pacote `.svnflow`.
+
 O trabalho solo é o fluxo padrão da V1. A colaboração é uma camada adicional para transportar e revisar alterações por pacote, sem transformar o SVNFlow em plataforma colaborativa completa.
 
 ## Premissas de Segurança

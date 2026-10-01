@@ -10,6 +10,16 @@ Os critérios que definem a V1 ficam em [Critérios de Pronto da V1](criterios-p
 
 ## O Que a V1 Entrega
 
+O fluxo principal é **Sincronizar** ([ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md)): o app deixa o checkout SVN igual ao último commit do Git e publica com um commit SVN.
+
+| Etapa | O que faz |
+| --- | --- |
+| Ambiente | Cadastra o repositório Git e o checkout SVN, com escolha de pasta e validação. |
+| Sincronizar | Compara o último commit do Git com o checkout e mostra o que será criado, atualizado e removido. Após confirmação, copia os arquivos e roda `svn add`/`svn delete`. Em seguida, sugere uma mensagem de commit editável e publica após nova confirmação. |
+| Histórico | Commits SVN publicados, com o commit Git correspondente. |
+
+As etapas abaixo ficam em **Modo avançado**, para o fluxo por patch e pacotes `.svnflow`:
+
 | Etapa | O que faz |
 | --- | --- |
 | Ambiente | Cadastra workspace Git, checkout SVN e base de comparação, com escolha de pasta, validação, revalidação e remoção da lista. |
@@ -60,6 +70,17 @@ O app grava apenas na pasta do usuário e nos caminhos escolhidos pela pessoa:
 Nenhum dado é enviado para servidor externo. Remover um ambiente da lista não apaga pastas.
 
 ## Limitações Conhecidas
+
+### Sincronizar
+
+- **Só o último commit.** Alterações não commitadas no Git não entram, e o app avisa quando elas existem.
+- **O Git manda.** Arquivos e pastas versionados no SVN que não existem no Git são removidos. Edições feitas direto no checkout SVN são sobrescritas.
+- **Um commit SVN por sincronização.** Os commits Git aparecem listados na mensagem, não como revisões separadas.
+- **Fim de linha.** A comparação é byte a byte. Se o checkout usa `svn:eol-style` com conversão (comum no Windows), arquivos podem aparecer como alterados sem mudança real.
+- **Links simbólicos e submódulos** não são copiados.
+- **Sem `svn update`.** Atualize o checkout fora do app se outra pessoa também commita no SVN.
+
+### Modo avançado
 
 - **Só commits entram no preview.** A diferença é calculada entre a base e a branch atual (`base...HEAD`). Alterações não commitadas aparecem como alerta, mas não entram no patch.
 - **Estrutura igual nos dois lados.** O patch é aplicado a partir da raiz do checkout SVN cadastrado. Se o checkout corresponder a uma subpasta do repositório Git, a pré-validação falha.

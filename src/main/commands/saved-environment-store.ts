@@ -44,6 +44,7 @@ export interface SavedEnvironmentChanges {
 	gitWorkspacePath?: string;
 	svnCheckoutPath?: string;
 	baseBranch?: string;
+	lastSyncedGitCommit?: string;
 	svnUrl?: string;
 	svnCheckoutRoot?: string;
 	svnRevision?: string;
@@ -113,6 +114,7 @@ function sanitizeSavedEnvironment(environment: SavedEnvironment): SavedEnvironme
 		gitWorkspacePath: normalizeText(environment.gitWorkspacePath),
 		svnCheckoutPath: normalizeText(environment.svnCheckoutPath),
 		baseBranch: normalizeOptionalText(environment.baseBranch),
+		lastSyncedGitCommit: normalizeOptionalText(environment.lastSyncedGitCommit),
 		svnUrl: normalizeOptionalText(environment.svnUrl),
 		svnCheckoutRoot: normalizeOptionalText(environment.svnCheckoutRoot),
 		svnRevision: normalizeOptionalText(environment.svnRevision),

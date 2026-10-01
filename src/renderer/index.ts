@@ -14,6 +14,8 @@ import type {
   ScreenBlocker,
   ScreenWorkspaceFile,
   SvnflowDesktopApi,
+  SyncPlan,
+  SyncScreenState,
   WorkspaceScreenState
 } from '../shared/ipc-types.js';
 
@@ -23,13 +25,14 @@ declare global {
   }
 }
 
-type StageKey = 'environment' | 'workspace' | 'preview' | 'packages' | 'apply' | 'commit' | 'history';
+type StageKey = 'environment' | 'sync' | 'workspace' | 'preview' | 'packages' | 'apply' | 'commit' | 'history';
 
 interface StageDefinition {
   key: StageKey;
   label: string;
   description: string;
   helper: string;
+  advanced?: boolean;
 }
 
 const STAGES: StageDefinition[] = [
@@ -40,42 +43,55 @@ const STAGES: StageDefinition[] = [
     helper: 'Cadastro e validação local.'
   },
   {
+    key: 'sync',
+    label: 'Sincronizar',
+    description: 'Deixa o checkout SVN igual ao último commit do Git e publica com um commit SVN.',
+    helper: 'Git → checkout SVN → commit.'
+  },
+  {
+    key: 'history',
+    label: 'Histórico',
+    description: 'Eventos locais de sincronização, commit e pacotes.',
+    helper: 'Registro local.'
+  },
+  {
     key: 'workspace',
     label: 'Workspace Git',
     description: 'Estado do workspace Git: branch atual, base de comparação e arquivos alterados.',
-    helper: 'Leitura do Git local.'
+    helper: 'Leitura do Git local.',
+    advanced: true
   },
   {
     key: 'preview',
     label: 'Preview',
     description: 'Revisão técnica da alteração antes de aplicar no SVN ou gerar pacote. Nada é alterado nesta etapa.',
-    helper: 'Revisão técnica do workspace.'
+    helper: 'Revisão técnica do workspace.',
+    advanced: true
   },
   {
     key: 'packages',
     label: 'Pacotes',
     description: 'Crie pacotes .svnflow com mini PR, liste a pasta local e abra pacotes recebidos para revisão.',
-    helper: 'Exportar, listar e importar.'
+    helper: 'Exportar, listar e importar.',
+    advanced: true
   },
   {
     key: 'apply',
     label: 'Aplicação SVN',
     description: 'Aplica o patch no checkout SVN local após pré-validação e confirmação. Não publica commit.',
-    helper: 'Altera arquivos locais.'
+    helper: 'Altera arquivos locais.',
+    advanced: true
   },
   {
     key: 'commit',
     label: 'Commit SVN',
     description: 'Publicação oficial no SVN com validação e confirmação explícita.',
-    helper: 'Publicação protegida.'
-  },
-  {
-    key: 'history',
-    label: 'Histórico',
-    description: 'Eventos locais de exportação, importação, aplicação e commit.',
-    helper: 'Registro local.'
+    helper: 'Publicação protegida.',
+    advanced: true
   }
 ];
+
+const ADVANCED_STORAGE_KEY = 'svnflow.showAdvanced';
 
 const STATUS_LABELS: Record<EnvironmentVisualStatus, string> = {
   ready: 'Pronto',
@@ -104,14 +120,33 @@ interface AppState {
   applySource: ApplySourceRequest;
   lastApplyResult?: ExecuteApplyResult;
   suggestedCommitTitle?: string;
+  showAdvanced: boolean;
+  syncCommitDraft?: { commit: string; message: string };
 }
 
 const state: AppState = {
   activeStage: 'environment',
   showEnvironmentForm: false,
   miniPr: { title: '', context: '', whatChanged: '', notes: '' },
-  applySource: { kind: 'workspace' }
+  applySource: { kind: 'workspace' },
+  showAdvanced: readShowAdvanced()
 };
+
+function readShowAdvanced(): boolean {
+  try {
+    return window.localStorage.getItem(ADVANCED_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writeShowAdvanced(value: boolean): void {
+  try {
+    window.localStorage.setItem(ADVANCED_STORAGE_KEY, String(value));
+  } catch {
+    // Preferência apenas de conveniência.
+  }
+}
 
 function api(): SvnflowDesktopApi {
   if (!window.svnflowDesktop) {
@@ -255,7 +290,7 @@ function renderEnvironmentForm(): string {
         </span>
       </label>
       <label class="field">
-        <span>Base de comparação Git</span>
+        <span>Base de comparação Git (usada só no modo avançado)</span>
         <input class="form-input" name="baseBranch" type="text" value="main" />
       </label>
       <p class="feedback" data-role="environment-form-feedback"></p>
@@ -392,7 +427,7 @@ function renderEnvironmentStage(screen: EnvironmentScreenState): void {
     ${details}
     <div class="stage-actions">
       <button class="action-button" data-role="revalidate-action" ${screen.selectedEnvironmentId ? '' : 'disabled'}>Validar ou revalidar ambiente</button>
-      <button class="action-button secondary" data-role="next-stage">Seguir para Workspace Git</button>
+      <button class="action-button secondary" data-role="next-stage">Seguir para Sincronizar</button>
       <button class="action-button secondary" data-role="new-environment">Cadastrar outro ambiente</button>
       <button class="action-button danger" data-role="remove-environment" ${screen.selectedEnvironmentId ? '' : 'disabled'}>Remover da lista</button>
     </div>
@@ -410,7 +445,7 @@ function renderEnvironmentStage(screen: EnvironmentScreenState): void {
     renderEnvironmentStage(await api().revalidateEnvironment(state.selectedEnvironmentId));
   });
 
-  bindClick(body, '[data-role="next-stage"]', () => goToStage('workspace'));
+  bindClick(body, '[data-role="next-stage"]', () => goToStage('sync'));
 
   bindClick(body, '[data-role="new-environment"]', async () => {
     state.showEnvironmentForm = true;
@@ -1113,13 +1148,238 @@ function renderCommitStage(commit: CommitScreenState): void {
 }
 
 // ---------------------------------------------------------------------------
+// Sincronizar
+
+const MAX_SYNC_ROWS = 400;
+
+function renderSyncChanges(plan: SyncPlan): string {
+  const labels: Record<string, { label: string; kind: EnvironmentVisualStatus }> = {
+    added: { label: 'Criar', kind: 'ready' },
+    modified: { label: 'Atualizar', kind: 'attention' },
+    deleted: { label: 'Remover', kind: 'error' }
+  };
+  const rows = plan.changes
+    .slice(0, MAX_SYNC_ROWS)
+    .map((change) => `<li class="preview-row">${badge(labels[change.kind].kind, labels[change.kind].label)}<span>${escapeHtml(change.path)}</span></li>`)
+    .join('');
+  const hidden = plan.changes.length - MAX_SYNC_ROWS;
+
+  return `<ul class="preview-files">${rows}</ul>${hidden > 0 ? `<p class="hint">E mais ${hidden} arquivo(s).</p>` : ''}`;
+}
+
+function renderSyncWarnings(plan: SyncPlan): string {
+  if (plan.warnings.length === 0) {
+    return '';
+  }
+
+  return `<div class="notice" data-tone="attention"><p class="card-label">Atenção</p><ul class="preview-list">${plan.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul></div>`;
+}
+
+function renderSyncCommitForm(screen: SyncScreenState): string {
+  const plan = screen.plan!;
+  const commit = plan.source!.commit;
+
+  if (state.syncCommitDraft?.commit !== commit) {
+    state.syncCommitDraft = { commit, message: screen.suggestedCommitMessage ?? '' };
+  }
+
+  return `
+    <div class="notice" data-tone="ready">
+      <p class="card-label">Pronto para commit SVN</p>
+      <p class="context-line">O checkout está igual ao commit <strong>${escapeHtml(plan.source!.shortCommit)}</strong>, com <strong>${plan.pendingSvnChanges}</strong> alteração(ões) aguardando publicação.</p>
+    </div>
+    ${renderSyncWarnings(plan)}
+    <form class="form-grid" data-role="sync-commit-form">
+      <label class="field">
+        <span>Mensagem do commit SVN (sugerida a partir dos commits Git — edite à vontade)</span>
+        <textarea class="form-input commit-message" name="message" rows="8">${escapeHtml(state.syncCommitDraft.message)}</textarea>
+      </label>
+      <p class="feedback" data-role="sync-commit-feedback"></p>
+      <div class="stage-actions">
+        <button class="action-button secondary" type="button" data-role="reset-message">Restaurar sugestão</button>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" name="confirm" />
+        Confirmo a publicação oficial destas alterações no repositório SVN.
+      </label>
+      <div class="stage-actions">
+        <button class="action-button" type="submit" disabled>Commitar no SVN</button>
+      </div>
+      <div data-role="sync-commit-result"></div>
+    </form>
+  `;
+}
+
+function bindSyncCommitForm(root: HTMLElement, screen: SyncScreenState): void {
+  const form = query<HTMLFormElement>('[data-role="sync-commit-form"]', root);
+
+  if (!form) {
+    return;
+  }
+
+  const textarea = form.elements.namedItem('message') as HTMLTextAreaElement;
+  const confirmBox = form.elements.namedItem('confirm') as HTMLInputElement;
+  const submit = query<HTMLButtonElement>('button[type="submit"]', form)!;
+  const feedback = query<HTMLElement>('[data-role="sync-commit-feedback"]', form)!;
+  const resultContainer = query<HTMLElement>('[data-role="sync-commit-result"]', form)!;
+
+  const refresh = () => {
+    const message = textarea.value.trim();
+    if (state.syncCommitDraft) {
+      state.syncCommitDraft.message = textarea.value;
+    }
+    feedback.textContent = message ? '' : 'A mensagem do commit não pode ficar vazia.';
+    feedback.className = message ? 'feedback' : 'feedback invalid';
+    submit.disabled = !message || !confirmBox.checked;
+  };
+
+  textarea.addEventListener('input', refresh);
+  confirmBox.addEventListener('change', refresh);
+  refresh();
+
+  bindClick(form, '[data-role="reset-message"]', () => {
+    textarea.value = screen.suggestedCommitMessage ?? '';
+    refresh();
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      submit.disabled = true;
+      submit.textContent = 'Publicando...';
+      setStatusMessage('Executando svn commit...');
+
+      const response = await api().commitSync(state.selectedEnvironmentId, textarea.value);
+
+      if (response.result.status === 'success') {
+        state.syncCommitDraft = undefined;
+        renderSyncStage(response.screen, `
+          <div class="notice" data-tone="ready">
+            <p class="card-label">Commit SVN publicado</p>
+            <p class="context-line">Revisão <strong>${escapeHtml(response.result.revision ?? '?')}</strong> · ${escapeHtml(response.result.filesCommitted ?? 0)} caminho(s)</p>
+          </div>
+        `);
+        return;
+      }
+
+      submit.textContent = 'Commitar no SVN';
+      resultContainer.innerHTML = `
+        <div class="notice" data-tone="blocked">
+          <p class="card-label">${response.result.status === 'conflict' ? 'Conflito no commit' : 'Commit não realizado'}</p>
+          <p class="context-line">${escapeHtml(response.result.message)}</p>
+          ${response.result.error ? `<pre class="review-markdown">${escapeHtml(response.result.error)}</pre>` : ''}
+        </div>
+      `;
+      setStatusMessage(response.result.message);
+      refresh();
+    })();
+  });
+}
+
+function renderSyncStage(screen: SyncScreenState, banner = ''): void {
+  const body = stageBody();
+  const plan = screen.plan;
+  setStatusMessage(screen.message);
+
+  if (!screen.environment || !plan) {
+    body.innerHTML = `
+      <p class="empty-state">${escapeHtml(screen.message)}</p>
+      <div class="stage-actions"><button class="action-button" data-role="go-environment">Cadastrar ambiente</button></div>
+    `;
+    bindClick(body, '[data-role="go-environment"]', () => goToStage('environment'));
+    return;
+  }
+
+  updateContext({
+    status: plan.status === 'ready' ? 'Diferenças encontradas' : plan.status === 'up-to-date' ? 'Sincronizado' : 'Bloqueado',
+    git: screen.environment.gitWorkspacePath,
+    svn: screen.environment.svnCheckoutPath,
+    base: plan.source ? `${plan.source.branch ?? 'HEAD'} @ ${plan.source.shortCommit}` : '-',
+    guard: plan.canSync ? 'Atualizar o checkout exige confirmação' : screen.canCommit ? 'Commit exige confirmação' : 'Nada pendente'
+  });
+
+  const source = plan.source
+    ? `
+      <div class="preview-summary">
+        <p class="context-line">Git: <strong>${escapeHtml(plan.source.branch ?? 'HEAD')}</strong> @ <strong>${escapeHtml(plan.source.shortCommit)}</strong> — ${escapeHtml(plan.source.subject)}</p>
+        <p class="context-line">Checkout SVN: <strong>${escapeHtml(screen.environment.svnCheckoutPath)}</strong></p>
+        <p class="context-line">Última sincronização publicada: <strong>${escapeHtml(screen.lastSyncedCommit ? screen.lastSyncedCommit.slice(0, 7) : 'nenhuma ainda')}</strong></p>
+      </div>
+    `
+    : '';
+
+  let content = '';
+
+  if (plan.status === 'blocked') {
+    content = `<div class="notice" data-tone="blocked"><p class="card-label">Sincronização bloqueada</p><ul class="preview-list">${plan.blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join('')}</ul></div>`;
+  } else if (plan.status === 'ready') {
+    content = `
+      <p class="context-line">Para o checkout ficar igual ao Git: <strong>${plan.totals.added}</strong> a criar, <strong>${plan.totals.modified}</strong> a atualizar, <strong>${plan.totals.deleted}</strong> a remover.</p>
+      ${renderSyncChanges(plan)}
+      ${renderSyncWarnings(plan)}
+      ${plan.pendingSvnChanges > 0 ? `<p class="hint">O checkout já tinha ${plan.pendingSvnChanges} alteração(ões) não commitada(s); arquivos que existem no Git serão sobrescritos.</p>` : ''}
+      <label class="checkbox-row">
+        <input type="checkbox" data-role="confirm-sync" />
+        Copiar o commit ${escapeHtml(plan.source?.shortCommit)} para o checkout SVN local. Nada é publicado nesta etapa.
+      </label>
+      <div class="stage-actions">
+        <button class="action-button" data-role="execute-sync" disabled>Atualizar checkout SVN</button>
+      </div>
+    `;
+  } else if (screen.canCommit) {
+    content = renderSyncCommitForm(screen);
+  } else {
+    content = `
+      <div class="notice" data-tone="ready">
+        <p class="card-label">Tudo sincronizado</p>
+        <p class="context-line">${escapeHtml(plan.message)}</p>
+      </div>
+      ${renderSyncWarnings(plan)}
+    `;
+  }
+
+  body.innerHTML = `
+    ${banner}
+    ${source}
+    ${content}
+    <div class="stage-actions"><button class="action-button secondary" data-role="refresh-sync">Verificar novamente</button></div>
+  `;
+
+  bindClick(body, '[data-role="refresh-sync"]', () => renderActiveStage());
+  bindSyncCommitForm(body, screen);
+
+  const confirmBox = query<HTMLInputElement>('[data-role="confirm-sync"]', body);
+  const executeButton = query<HTMLButtonElement>('[data-role="execute-sync"]', body);
+
+  confirmBox?.addEventListener('change', () => {
+    if (executeButton) {
+      executeButton.disabled = !confirmBox.checked;
+    }
+  });
+
+  executeButton?.addEventListener('click', () => {
+    void (async () => {
+      executeButton.disabled = true;
+      executeButton.textContent = 'Copiando arquivos...';
+      setStatusMessage('Atualizando checkout SVN com o commit Git...');
+
+      const response = await api().executeSync(state.selectedEnvironmentId);
+      const errors = response.result?.errors ?? [];
+      renderSyncStage(response.screen, errors.length > 0
+        ? `<div class="notice" data-tone="blocked"><p class="card-label">Erros ao atualizar o checkout</p><ul class="preview-list">${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join('')}</ul></div>`
+        : '');
+    })();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Histórico
 
 function renderHistoryStage(result: PackageHistoryResult): void {
   const body = stageBody();
 
   if (!result.ok || result.entries.length === 0) {
-    body.innerHTML = '<p class="empty-state">Nenhum evento registrado ainda. O histórico é preenchido ao exportar, importar, aplicar e commitar.</p>';
+    body.innerHTML = '<p class="empty-state">Nenhum evento registrado ainda. O histórico é preenchido a cada commit SVN e, no modo avançado, ao exportar, importar e aplicar pacotes.</p>';
     setStatusMessage('Histórico vazio.');
     return;
   }
@@ -1176,6 +1436,8 @@ async function renderActiveStage(): Promise<void> {
 
     if (stage.key === 'environment') {
       renderEnvironmentStage(await desktop.getEnvironmentScreenState(environmentId));
+    } else if (stage.key === 'sync') {
+      renderSyncStage(await desktop.getSyncScreenState(environmentId));
     } else if (stage.key === 'workspace') {
       renderWorkspaceStage(await desktop.getWorkspaceScreenState(environmentId));
     } else if (stage.key === 'preview') {
@@ -1205,13 +1467,15 @@ function renderNavigation(): void {
 
   stageList.innerHTML = '';
 
-  STAGES.forEach((stage, index) => {
+  const visible = STAGES.filter((stage) => !stage.advanced || state.showAdvanced);
+
+  visible.forEach((stage) => {
     const li = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'stage-button';
     button.dataset.state = stage.key === state.activeStage ? 'active' : 'available';
-    button.innerHTML = `${index + 1}. ${escapeHtml(stage.label)}<small>${escapeHtml(stage.helper)}</small>`;
+    button.innerHTML = `${escapeHtml(stage.label)}<small>${escapeHtml(stage.advanced ? `Avançado · ${stage.helper}` : stage.helper)}</small>`;
     button.addEventListener('click', () => {
       void goToStage(stage.key);
     });
@@ -1219,6 +1483,25 @@ function renderNavigation(): void {
     li.appendChild(button);
     stageList.appendChild(li);
   });
+
+  const toggleItem = document.createElement('li');
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'advanced-toggle';
+  toggle.textContent = state.showAdvanced ? 'Ocultar modo avançado' : 'Modo avançado (patch e pacotes .svnflow)';
+  toggle.addEventListener('click', () => {
+    state.showAdvanced = !state.showAdvanced;
+    writeShowAdvanced(state.showAdvanced);
+
+    if (!state.showAdvanced && STAGES.find((stage) => stage.key === state.activeStage)?.advanced) {
+      void goToStage('sync');
+      return;
+    }
+
+    renderNavigation();
+  });
+  toggleItem.appendChild(toggle);
+  stageList.appendChild(toggleItem);
 }
 
 async function renderAppBootstrap(): Promise<void> {
@@ -1230,7 +1513,15 @@ async function renderAppBootstrap(): Promise<void> {
   }
 
   if (subtitle) {
-    subtitle.textContent = `Git prepara, SVN publica · versão ${window.svnflowDesktop?.appVersion ?? 'dev'}`;
+    subtitle.textContent = `Do Git para o SVN · versão ${window.svnflowDesktop?.appVersion ?? 'dev'}`;
+  }
+
+  try {
+    const environments = await api().getEnvironmentScreenState();
+    state.selectedEnvironmentId = environments.selectedEnvironmentId;
+    state.activeStage = environments.items.length > 0 ? 'sync' : 'environment';
+  } catch {
+    state.activeStage = 'environment';
   }
 
   renderNavigation();

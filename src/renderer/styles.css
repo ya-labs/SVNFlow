@@ -591,3 +591,25 @@ details summary {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.advanced-toggle {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.advanced-toggle:hover {
+  color: var(--text-primary);
+}
+
+.commit-message {
+  font-family: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+  font-size: 0.88rem;
+}
