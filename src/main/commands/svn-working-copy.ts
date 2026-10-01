@@ -5,6 +5,7 @@ import path from 'node:path';
 import { isBinary, MAX_DIFF_FILE_BYTES, toDiffResult, type SyncFileDiff } from './git-svn-sync.js';
 import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-client.js';
 import { runSvnInSession } from './svn-session.js';
+import { svnLocalTarget } from './svn-path.js';
 import { parseInfoXml, parseStatusXml } from './svn-xml.js';
 
 export type WorkingCopyKind = 'modified' | 'added' | 'deleted' | 'missing' | 'unversioned' | 'conflicted' | 'replaced' | 'obstructed';
@@ -169,7 +170,7 @@ export async function readWorkingCopyDiff(checkoutPath: string, filePath: string
     return { ...base, kind: 'text', lines };
   }
 
-  const status = await runSvnInSession(['status', '--xml', '--', filePath], { cwd: checkoutPath });
+  const status = await runSvnInSession(['status', '--xml', '--', svnLocalTarget(filePath)], { cwd: checkoutPath });
   const item = status.ok ? parseStatusXml(status.stdout)[0]?.item : undefined;
 
   // Arquivo novo fora do SVN: mostra o conteúdo inteiro como adição.
@@ -192,6 +193,7 @@ export async function readWorkingCopyDiff(checkoutPath: string, filePath: string
     }
   }
 
+  // O diff de um único alvo local usa o nome literal, sem separar peg revision.
   const diff = await runSvnInSession(['diff', '--', filePath], { cwd: checkoutPath });
 
   if (!diff.ok) {
@@ -242,14 +244,14 @@ export async function commitSelected(input: CommitSelectedInput): Promise<Commit
   const toDelete = changes.filter((change) => change.kind === 'missing').map((change) => change.path);
 
   if (toAdd.length > 0) {
-    const added = await runSvnInSession(['add', '--parents', '--force', '--', ...toAdd], session);
+    const added = await runSvnInSession(['add', '--parents', '--force', '--', ...toAdd.map(svnLocalTarget)], session);
     if (!added.ok) {
       return { ...base, ok: false, message: `Falha ao adicionar arquivos novos: ${added.message}`, detail: svnErrorDetail(added.stderr), errorCode: added.errorCode };
     }
   }
 
   if (toDelete.length > 0) {
-    const deleted = await runSvnInSession(['delete', '--force', '--', ...toDelete], session);
+    const deleted = await runSvnInSession(['delete', '--force', '--', ...toDelete.map(svnLocalTarget)], session);
     if (!deleted.ok) {
       return { ...base, ok: false, message: `Falha ao remover arquivos ausentes: ${deleted.message}`, detail: svnErrorDetail(deleted.stderr), errorCode: deleted.errorCode };
     }
@@ -285,7 +287,7 @@ export async function commitSelected(input: CommitSelectedInput): Promise<Commit
   // Mudança de propriedade de pasta (ex.: svn:ignore) só commita com a pasta na
   // revisão mais nova; --depth empty atualiza a pasta sem mexer nos arquivos dela.
   for (const change of changes.filter((item) => item.propertiesOnly)) {
-    const refreshed = await runSvnInSession(['update', '--depth', 'empty', '--accept', 'postpone', '--', change.path], session);
+    const refreshed = await runSvnInSession(['update', '--depth', 'empty', '--accept', 'postpone', '--', svnLocalTarget(change.path)], session);
     const conflicted = refreshed.ok && /^.C|^C/m.test(refreshed.stdout);
 
     if (!refreshed.ok || conflicted) {
@@ -301,7 +303,7 @@ export async function commitSelected(input: CommitSelectedInput): Promise<Commit
     }
   }
   // --keep-changelists: um arquivo "ignorado no commit" que a pessoa decidiu publicar continua marcado como ignorado.
-  const result = await runSvnInSession(['commit', '--depth', 'empty', '--keep-changelists', '-m', message, '--', ...targets], { ...session, timeoutMs: 10 * 60 * 1000 });
+  const result = await runSvnInSession(['commit', '--depth', 'empty', '--keep-changelists', '-m', message, '--', ...targets.map(svnLocalTarget)], { ...session, timeoutMs: 10 * 60 * 1000 });
 
   if (!result.ok) {
     const outOfDate = result.errorCode === 'OUT_OF_DATE';
@@ -518,7 +520,7 @@ export async function discardChanges(input: DiscardInput): Promise<DiscardResult
         }
 
         const depth = change.propertiesOnly ? 'empty' : 'infinity';
-        const reverted = await runSvnInSession(['revert', '--depth', depth, '--', change.path], session);
+        const reverted = await runSvnInSession(['revert', '--depth', depth, '--', svnLocalTarget(change.path)], session);
 
         if (!reverted.ok) {
           throw new Error(`${reverted.message} ${svnErrorDetail(reverted.stderr)}`.trim());
@@ -572,8 +574,8 @@ export async function setIgnoreOnCommit(input: IgnoreOnCommitInput): Promise<Sim
   }
 
   const args = input.ignore
-    ? ['changelist', ...(input.recursive ? ['--depth', 'infinity'] : []), IGNORE_ON_COMMIT, '--', input.path]
-    : ['changelist', '--remove', ...(input.recursive ? ['--depth', 'infinity'] : []), '--', input.path];
+    ? ['changelist', ...(input.recursive ? ['--depth', 'infinity'] : []), IGNORE_ON_COMMIT, '--', svnLocalTarget(input.path)]
+    : ['changelist', '--remove', ...(input.recursive ? ['--depth', 'infinity'] : []), '--', svnLocalTarget(input.path)];
   const result = await runSvnInSession(args, { cwd: input.checkoutPath, configDir: input.configDir });
 
   if (!result.ok) {
@@ -620,7 +622,7 @@ export async function addToSvnIgnore(input: SvnIgnoreInput): Promise<SimpleResul
   const parent = path.posix.dirname(input.path);
   const pattern = input.mode === 'extension' ? `*${extension}` : name;
   const session = { cwd: input.checkoutPath, configDir: input.configDir };
-  const current = await runSvnInSession(['propget', 'svn:ignore', '--', parent], session);
+  const current = await runSvnInSession(['propget', 'svn:ignore', '--', svnLocalTarget(parent)], session);
   // Sem a propriedade definida, o propget falha: começa de uma lista vazia.
   const patterns = current.ok ? current.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [];
 
@@ -633,7 +635,7 @@ export async function addToSvnIgnore(input: SvnIgnoreInput): Promise<SimpleResul
 
   try {
     await writeFile(file, `${[...patterns, pattern].join('\n')}\n`, 'utf8');
-    const result = await runSvnInSession(['propset', 'svn:ignore', '-F', file, '--', parent], session);
+    const result = await runSvnInSession(['propset', 'svn:ignore', '-F', file, '--', svnLocalTarget(parent)], session);
 
     if (!result.ok) {
       return { ok: false, message: result.message, detail: svnErrorDetail(result.stderr) };

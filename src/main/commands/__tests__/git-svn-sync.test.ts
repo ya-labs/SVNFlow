@@ -125,4 +125,25 @@ describeWithTools('sincronização Git -> SVN por espelhamento', () => {
 
     expect(buildSyncPlan({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath }).message).toContain('Nada a sincronizar');
   });
+  it('espelha adições e remoções com @ e mantém a prévia do diff local', () => {
+    const name = 'src/icone@2x.txt';
+    writeFileSync(path.join(gitPath, name), 'inicial\n');
+    commitAll(gitPath, 'feat: adiciona arquivo com @');
+    expect(executeSync({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, confirmed: true }).errors).toEqual([]);
+    expect(executeCommit({ checkoutPath: svnPath, title: 'Adiciona ícone' }).status).toBe('success');
+
+    writeFileSync(path.join(gitPath, name), 'modificado\n');
+    commitAll(gitPath, 'fix: modifica arquivo com @');
+    expect(executeSync({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, confirmed: true }).errors).toEqual([]);
+    const diff = buildFileDiff({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, filePath: name });
+    expect(diff.source).toBe('svn-pending');
+    expect(diff.lines).toEqual(expect.arrayContaining(['-inicial', '+modificado']));
+    expect(executeCommit({ checkoutPath: svnPath, title: 'Modifica ícone' }).status).toBe('success');
+
+    rmSync(path.join(gitPath, name));
+    commitAll(gitPath, 'fix: remove arquivo com @');
+    expect(executeSync({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, confirmed: true }).errors).toEqual([]);
+    expect(executeCommit({ checkoutPath: svnPath, title: 'Remove ícone' }).status).toBe('success');
+    expect(existsSync(path.join(svnPath, name))).toBe(false);
+  });
 });

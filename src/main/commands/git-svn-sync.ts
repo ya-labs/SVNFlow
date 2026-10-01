@@ -7,6 +7,7 @@ import path from 'path';
 import { readUncommittedChanges } from './git-patch.js';
 import { validateSvnCheckout } from './svn.js';
 import { parseStatusXml } from './svn-xml.js';
+import { svnLocalTarget } from './svn-path.js';
 
 export interface SyncFileChange {
   path: string;
@@ -403,7 +404,7 @@ export function executeSync(input: SyncPlanInput & { confirmed: boolean }): Exec
   const deleted = topmostPaths(plan.changes.filter((change) => change.kind === 'deleted').map((change) => change.path));
 
   try {
-    runInChunks(deleted, (chunk) => svn(input.svnCheckoutPath, ['delete', '--force', '--', ...chunk]));
+    runInChunks(deleted, (chunk) => svn(input.svnCheckoutPath, ['delete', '--force', '--', ...chunk.map(svnLocalTarget)]));
   } catch (error) {
     errors.push(`Falha ao executar svn delete: ${errorMessage(error)}`);
   }
@@ -411,7 +412,7 @@ export function executeSync(input: SyncPlanInput & { confirmed: boolean }): Exec
   const added = plan.changes.filter((change) => change.kind === 'added').map((change) => change.path);
 
   try {
-    runInChunks(added, (chunk) => svn(input.svnCheckoutPath, ['add', '--parents', '--force', '--', ...chunk]));
+    runInChunks(added, (chunk) => svn(input.svnCheckoutPath, ['add', '--parents', '--force', '--', ...chunk.map(svnLocalTarget)]));
   } catch (error) {
     errors.push(`Falha ao executar svn add: ${errorMessage(error)}`);
   }

@@ -50,6 +50,7 @@ function svnEnvironment(): NodeJS.ProcessEnv {
 }
 
 const ERROR_PATTERNS: Array<{ code: SvnErrorCode; pattern: RegExp; message: string }> = [
+  { code: 'FAILED', pattern: /a peg revision is not allowed here|syntax error parsing peg revision|invalid peg revision/i, message: 'O SVN interpretou parte do caminho como revisão. Verifique o tratamento de nomes com @.' },
   { code: 'AUTH_REQUIRED', pattern: /E170001|E215004|E170013.*authoriz|Authentication failed|authorization failed/i, message: 'O servidor SVN pediu usuário e senha.' },
   { code: 'NOT_FOUND', pattern: /E180001|E160013|E170000|E200009|E155010|doesn't exist|not found/i, message: 'Caminho ou repositório SVN não encontrado.' },
   { code: 'NOT_WORKING_COPY', pattern: /E155007/, message: 'A pasta não é um checkout SVN.' },
