@@ -6,7 +6,7 @@ import path from 'path';
 
 import { readUncommittedChanges } from './git-patch.js';
 import { validateSvnCheckout } from './svn.js';
-import { parseLogXml, parseStatusXml } from './svn-xml.js';
+import { parseStatusXml } from './svn-xml.js';
 
 export interface SyncFileChange {
   path: string;
@@ -28,7 +28,7 @@ export interface SyncPendingChange {
 export interface SyncFileDiff {
   path: string;
   kind: 'text' | 'binary' | 'directory' | 'empty' | 'too-large';
-  source: 'git-vs-checkout' | 'svn-pending';
+  source: 'git-vs-checkout' | 'svn-pending' | 'svn-revision';
   lines: string[];
   truncated: boolean;
 }
@@ -562,39 +562,5 @@ export function buildFileDiff(input: SyncPlanInput & { filePath: string }): Sync
     return toDiffResult(input.filePath, 'svn-pending', svnDiff);
   } catch {
     return { ...base, kind: 'empty', source: 'svn-pending' };
-  }
-}
-
-export interface SvnRevisionLog {
-  ok: boolean;
-  message: string;
-  revision: string;
-  author?: string;
-  date?: string;
-  logMessage?: string;
-  paths: Array<{ action: string; path: string }>;
-}
-
-export function readSvnRevisionLog(svnCheckoutPath: string, revision: string): SvnRevisionLog {
-  if (!/^\d+$/.test(revision)) {
-    return { ok: false, message: 'Revisão inválida.', revision, paths: [] };
-  }
-
-  try {
-    const entry = parseLogXml(svn(svnCheckoutPath, ['log', '-v', '--xml', '-r', revision, '.']))[0];
-
-    return {
-      ok: true,
-      message: `Revisão ${revision}`,
-      revision,
-      author: entry?.author,
-      date: entry?.date,
-      logMessage: entry?.message,
-      paths: (entry?.paths ?? [])
-        .filter((item) => item.kind !== 'dir' || item.action === 'D')
-        .map((item) => ({ action: item.action, path: item.path }))
-    };
-  } catch (error) {
-    return { ok: false, message: `Não foi possível ler a revisão ${revision}: ${errorMessage(error)}`, revision, paths: [] };
   }
 }

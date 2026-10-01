@@ -1533,3 +1533,69 @@ details summary {
   font-family: var(--mono);
   font-size: 12px;
 }
+
+/* Histórico SVN --------------------------------------------------------- */
+
+.badge-new {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.revision-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.revision-files {
+  border-right: 1px solid var(--border);
+}
+
+.revision-files li {
+  padding: 0;
+}
+
+.revision-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: left;
+}
+
+.revision-file:hover {
+  background: var(--bg-hover);
+}
+
+.revision-file[aria-selected='true'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.revision-file[aria-selected='true'] .change-icon {
+  color: var(--accent-text);
+}
+
+.revision-diff {
+  min-width: 0;
+}
+
+.repo-header .diff-header-source {
+  display: flex;
+  gap: 8px;
+}
+
+.remote-history-detail td {
+  background: var(--bg-muted);
+}

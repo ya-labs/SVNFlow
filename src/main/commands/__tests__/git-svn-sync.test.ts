@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { executeCommit } from '../commit-executor';
-import { buildFileDiff, buildSyncPlan, executeSync, readSvnRevisionLog, suggestSyncCommitMessage } from '../git-svn-sync';
+import { buildFileDiff, buildSyncPlan, executeSync, suggestSyncCommitMessage } from '../git-svn-sync';
 
 function commandAvailable(command: string, args: string[]): boolean {
   try {
@@ -122,12 +122,6 @@ describeWithTools('sincronização Git -> SVN por espelhamento', () => {
     expect(log).toContain('D /remover.txt');
     expect(log).toContain('A /src/novo.js');
     expect(log).toContain('M /src/app.js');
-
-    const revisionLog = readSvnRevisionLog(svnPath, commit.revision!);
-    expect(revisionLog.ok).toBe(true);
-    expect(revisionLog.logMessage).toContain('$(rm -rf /) de mentira');
-    expect(revisionLog.paths).toEqual(expect.arrayContaining([{ action: 'A', path: '/src/novo.js' }]));
-    expect(readSvnRevisionLog(svnPath, '1; rm -rf /').ok).toBe(false);
 
     expect(buildSyncPlan({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath }).message).toContain('Nada a sincronizar');
   });
