@@ -39,6 +39,10 @@ As etapas abaixo ficam em **Modo avançado**, para o fluxo por patch e pacotes `
 
 ## Como Executar
 
+Para usar sem clonar o repositório, baixe o instalador na página de Releases: veja [Instalar o SVNFlow no Linux](instalacao-linux.md).
+
+Para executar a partir do código:
+
 ```bash
 npm ci
 npm run app
@@ -55,6 +59,14 @@ npm test
 A suíte inclui um teste ponta a ponta que cria um repositório SVN e um Git temporários, exporta um pacote, aplica no checkout e faz o commit. Esse teste é ignorado quando `git`, `svn` ou `svnadmin` não estão disponíveis.
 
 Se o Electron abrir como Node puro (erro dizendo que o módulo `electron` não exporta `app` ou `BrowserWindow`), a variável `ELECTRON_RUN_AS_NODE` está definida no terminal. Remova a variável e execute de novo.
+
+Para gerar os instaladores Linux localmente (`release/`):
+
+```bash
+npm run dist
+```
+
+Ao enviar uma tag `vX.Y.Z` igual à versão do `package.json`, o workflow `Release Linux` gera os mesmos arquivos e publica a Release.
 
 ## Dados Locais
 
@@ -91,5 +103,6 @@ Nenhum dado é enviado para servidor externo. Remover um ambiente da lista não 
 - **Arquivos não versionados bloqueiam o commit.** O app não ignora nem versiona automaticamente arquivos `?` que não vieram do patch.
 - **Histórico sem falhas de aplicação.** Falhas aparecem na tela, mas não são gravadas.
 - **Pacote em JSON.** O formato é um JSON único ([ADR-006](../adrs/ADR-006-pacote-svnflow-json-v1.md)). Pacotes `1.0.0`, gerados antes desta entrega, só podem ser revisados.
-- **Sem instalador.** A V1 roda a partir do repositório com `npm run app`.
+- **Só Linux empacotado.** Há `.deb` e `.AppImage` ([instalação no Linux](instalacao-linux.md)). Em outros sistemas, rode a partir do repositório com `npm run app`.
+- **Credenciais SVN.** O commit roda sem terminal (`--non-interactive`). As credenciais precisam estar salvas no cache do SVN.
 - **Revalidação.** Um ambiente validado há mais de 60 minutos aparece como "Atenção" até ser revalidado.
