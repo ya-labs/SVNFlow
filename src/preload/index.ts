@@ -38,6 +38,8 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('svn:discard', { environmentId, paths }),
   setIgnoreOnCommit: (environmentId, path, ignore, recursive) =>
     ipcRenderer.invoke('svn:ignore-on-commit', { environmentId, path, ignore, recursive }),
+  setSyncExclusion: (environmentId, path, exclude) =>
+    ipcRenderer.invoke('sync:set-exclusion', { environmentId, path, exclude }),
   addToSvnIgnore: (environmentId, path, mode) =>
     ipcRenderer.invoke('svn:svn-ignore', { environmentId, path, mode }),
   openInEditor: (environmentId, which, path) =>

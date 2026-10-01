@@ -50,6 +50,7 @@ export interface SavedEnvironmentChanges {
 	svnRevision?: string;
 	lastValidatedAt?: string;
 	lastValidationStatus?: Exclude<SavedEnvironmentValidationStatus, 'pending'>;
+	syncExclusions?: string[];
 }
 
 const STORAGE_FILE_NAME = 'saved-environments.json';
@@ -107,6 +108,15 @@ function createSuccess(
 	};
 }
 
+function normalizeExclusions(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) {
+		return undefined;
+	}
+
+	const rules = value.filter((item): item is string => typeof item === 'string').map(normalizeText).filter(Boolean);
+	return rules.length > 0 ? [...new Set(rules)].sort() : undefined;
+}
+
 function sanitizeSavedEnvironment(environment: SavedEnvironment): SavedEnvironment {
 	return {
 		id: normalizeText(environment.id),
@@ -119,7 +129,8 @@ function sanitizeSavedEnvironment(environment: SavedEnvironment): SavedEnvironme
 		svnCheckoutRoot: normalizeOptionalText(environment.svnCheckoutRoot),
 		svnRevision: normalizeOptionalText(environment.svnRevision),
 		lastValidatedAt: normalizeOptionalText(environment.lastValidatedAt),
-		lastValidationStatus: environment.lastValidationStatus
+		lastValidationStatus: environment.lastValidationStatus,
+		syncExclusions: normalizeExclusions(environment.syncExclusions)
 	};
 }
 

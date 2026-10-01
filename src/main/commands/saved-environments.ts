@@ -12,6 +12,8 @@ export interface SavedEnvironment {
   svnRevision?: string;
   lastValidatedAt?: string;
   lastValidationStatus?: Exclude<SavedEnvironmentValidationStatus, 'pending'>;
+  // Caminhos relativos (arquivo ou pasta) que a sincronização Git → SVN não copia.
+  syncExclusions?: string[];
 }
 
 export interface SavedEnvironmentListItem extends Omit<SavedEnvironment, 'lastValidationStatus'> {
@@ -45,6 +47,7 @@ export interface SelectedEnvironment {
   svnCheckoutPath: string;
   baseBranch?: string;
   lastSyncedGitCommit?: string;
+  syncExclusions?: string[];
 }
 
 export interface SelectSavedEnvironmentResult {
@@ -150,7 +153,8 @@ export function selectSavedEnvironment(input: SelectSavedEnvironmentInput): Sele
       gitWorkspacePath: selected.gitWorkspacePath,
       svnCheckoutPath: selected.svnCheckoutPath,
       baseBranch: selected.baseBranch,
-      lastSyncedGitCommit: selected.lastSyncedGitCommit
+      lastSyncedGitCommit: selected.lastSyncedGitCommit,
+      syncExclusions: selected.syncExclusions
     },
     lastValidationStatus: selected.lastValidationStatus,
     needsRevalidation: true,

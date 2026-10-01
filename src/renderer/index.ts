@@ -1520,8 +1520,17 @@ function renderSidebar(): void {
       ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-copy-step">← Voltar às ${desktop.screen!.plan!.changes.length} diferença(s) do Git</button></div>`
       : '';
 
+  const exclusions = desktop.screen?.plan?.exclusions ?? [];
+  const exclusionGroup = exclusions.length > 0
+    ? `<div class="list-group" title="Regras deste projeto: estes caminhos não são copiados nem removidos do Git para o SVN.">Não copiados para o SVN (${exclusions.length})</div>${exclusions.map((rule) => `
+        <div class="exclusion-row">
+          <span class="exclusion-path" title="${escapeHtml(rule)}">${escapeHtml(rule)}</span>
+          <button type="button" class="link-button" data-role="include-sync" data-rule="${escapeHtml(rule)}">Voltar a copiar</button>
+        </div>`).join('')}`
+    : '';
+
   if (items.length === 0) {
-    list.innerHTML = `${switcher}<p class="list-empty">Nenhuma alteração.</p>`;
+    list.innerHTML = `${switcher}<p class="list-empty">Nenhuma alteração.</p>${exclusionGroup}`;
     return;
   }
 
@@ -1549,7 +1558,7 @@ function renderSidebar(): void {
 
   list.innerHTML = `${header}${regular.map(renderChangeRow).join('')}${ignored.length > 0
     ? `<div class="list-group" title="Arquivos no changelist ignore-on-commit: continuam no SVN, mas vêm desmarcados.">Ignorados no commit (${ignored.length})</div>${ignored.map(renderChangeRow).join('')}`
-    : ''}`;
+    : ''}${exclusionGroup}`;
 
   const selectAll = query<HTMLInputElement>('[data-role="select-all"]', list);
   if (selectAll && checkedItems().length > 0 && !selectAll.checked) {
@@ -1652,8 +1661,23 @@ function copyStepContextEntries(item: ChangeItem): ContextMenuEntry[] {
   const inGit = item.kind !== 'deleted';
   const inSvn = item.kind !== 'added';
   const later = 'Copie para o SVN ou use "Ver alterações do checkout SVN" para descartar e ignorar.';
+  const parts = item.path.split('/');
+  // Pasta do arquivo e, se for outra, a pasta de primeiro nível (ex.: .idea).
+  const folders = [...new Set([parts.slice(0, -1).join('/'), parts[0]])].filter((folder) => folder && folder !== item.path);
+  const exclude = (target: string): Promise<void> => runWorkingCopyAction(() => api().setSyncExclusion(state.selectedEnvironmentId, target, true));
 
   return [
+    {
+      label: 'Não copiar para o SVN',
+      title: 'Este arquivo deixa de ser copiado (ou removido) do Git para o SVN neste projeto.',
+      action: () => exclude(item.path)
+    },
+    ...folders.map((folder): ContextMenuEntry => ({
+      label: `Não copiar a pasta "${folder}"`,
+      title: 'Nada dentro desta pasta é copiado (ou removido) do Git para o SVN neste projeto.',
+      action: () => exclude(folder)
+    })),
+    'separator',
     { label: 'Abrir no VS Code (Git)', disabled: !inGit, action: () => openInEditor('git', item.path) },
     { label: 'Abrir no VS Code (SVN)', disabled: !inSvn, action: () => openInEditor('svn', item.path) },
     { label: 'Mostrar na pasta do SVN', disabled: !inSvn, action: () => api().showItemInFolder(state.selectedEnvironmentId, item.path) },
@@ -1759,6 +1783,11 @@ function bindSidebar(): void {
 
     if (target.matches('[data-role="discard-selected"]')) {
       void discardItems(checkedItems());
+      return;
+    }
+
+    if (target.matches('[data-role="include-sync"]')) {
+      void runWorkingCopyAction(() => api().setSyncExclusion(state.selectedEnvironmentId, target.dataset.rule ?? '', false));
       return;
     }
 
