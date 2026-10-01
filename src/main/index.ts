@@ -13,6 +13,7 @@ import type {
   EnvironmentVisualStatus,
   ExecuteApplyResponse,
   CheckoutRequest,
+  CommitSelectedRequest,
   CheckoutResponse,
   ExportPackageRequest,
   LinkGitResponse,
@@ -23,13 +24,13 @@ import type {
   RegisterEnvironmentResponse,
   ScreenBlocker,
   ScreenWorkspaceFile,
-  SyncCommitResponse,
   SyncExecuteResponse,
   SyncScreenState,
   WorkspaceScreenState
 } from '../shared/ipc-types.js';
 import { isAppTheme, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
 import { checkoutProject } from './commands/svn-checkout.js';
+import { commitSelected, readWorkingCopyDiff, readWorkingCopyStatus, type CommitSelectedResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
 import type { SvnCredentials } from './commands/svn-client.js';
 import { listRemote, type RemoteListing } from './commands/svn-repository-browser.js';
 import { validateCommitPreConditions } from './commands/commit-validator.js';
@@ -246,53 +247,58 @@ async function executeSyncForEnvironment(environmentId?: string): Promise<SyncEx
   return { result, screen: await buildSyncScreenState(selected.id, result.message) };
 }
 
-async function commitSyncForEnvironment(environmentId: string | undefined, message: string): Promise<SyncCommitResponse> {
-  const selected = await resolveSelectedEnvironmentById(environmentId);
-  const screen = await buildSyncScreenState(environmentId);
-  const trimmed = message.trim();
+async function commitSelectedForEnvironment(request: CommitSelectedRequest): Promise<CommitSelectedResult> {
+  const selected = await resolveSelectedEnvironmentById(request?.environmentId);
+  const paths = Array.isArray(request?.paths) ? request.paths.filter((item): item is string => typeof item === 'string') : [];
+  const message = typeof request?.message === 'string' ? request.message : '';
 
-  if (!selected || !screen.plan?.source || !screen.canCommit) {
-    return {
-      result: {
-        status: 'failed',
-        message: screen.plan?.status === 'ready'
-          ? 'O checkout ainda não está igual ao Git. Sincronize antes de commitar.'
-          : screen.message,
-        errorCode: 'PRECONDITIONS_NOT_MET'
-      },
-      screen
-    };
+  if (!selected) {
+    return { ok: false, message: 'Nenhum projeto selecionado.', committed: [], errorCode: 'INVALID_SELECTION' };
   }
 
-  if (!trimmed) {
-    return {
-      result: { status: 'failed', message: 'Informe a mensagem do commit SVN.', errorCode: 'INVALID_INPUT' },
-      screen
-    };
+  if (hasGit(selected) && (await buildSyncScreenState(selected.id)).plan?.status === 'ready') {
+    return { ok: false, message: 'O checkout ainda não está igual ao Git. Copie os arquivos do Git antes de commitar.', committed: [], errorCode: 'INVALID_SELECTION' };
   }
 
-  const result = executeCommit({ checkoutPath: selected.svnCheckoutPath, title: trimmed });
+  const result = await commitSelected({
+    checkoutPath: selected.svnCheckoutPath,
+    paths,
+    message,
+    credentials: sanitizeCredentials(request.credentials)
+  });
 
-  if (result.status === 'success') {
-    await updateSavedEnvironment({
-      environmentId: selected.id,
-      changes: { lastSyncedGitCommit: screen.plan.source.commit }
-    });
-    await appendPackageHistory({
-      entry: {
-        kind: 'committed',
-        packageId: result.revision ? `r${result.revision}` : 'svn-commit',
-        packagePath: '',
-        environmentName: selected.name,
-        baseBranch: screen.plan.source.branch ?? screen.plan.source.shortCommit,
-        totalAffectedFiles: result.filesCommitted ?? 0,
-        generatedAt: new Date().toISOString(),
-        detail: `${trimmed.split('\n')[0]} (Git ${screen.plan.source.shortCommit})`
-      }
-    });
+  if (!result.ok) {
+    return result;
   }
 
-  return { result, screen: await buildSyncScreenState(selected.id, result.message) };
+  let gitDetail = '';
+
+  if (hasGit(selected)) {
+    const screen = await buildSyncScreenState(selected.id);
+    const source = screen.plan?.source;
+
+    // Só marca o commit Git como publicado quando o checkout ficou limpo.
+    if (source && screen.plan?.status === 'up-to-date' && screen.plan.pendingSvnChanges === 0) {
+      await updateSavedEnvironment({ environmentId: selected.id, changes: { lastSyncedGitCommit: source.commit } });
+    }
+
+    gitDetail = source ? ` (Git ${source.shortCommit})` : '';
+  }
+
+  await appendPackageHistory({
+    entry: {
+      kind: 'committed',
+      packageId: result.revision ? `r${result.revision}` : 'svn-commit',
+      packagePath: '',
+      environmentName: selected.name,
+      baseBranch: selected.baseBranch ?? '',
+      totalAffectedFiles: result.committed.length,
+      generatedAt: new Date().toISOString(),
+      detail: `${message.trim().split('\n')[0]}${gitDetail}`
+    }
+  });
+
+  return result;
 }
 
 async function buildPackagesScreenState(environmentId?: string): Promise<PackagesScreenState> {
@@ -661,6 +667,10 @@ async function showOpenDialog(event: IpcMainInvokeEvent, options: OpenDialogOpti
   return result.canceled ? undefined : result.filePaths[0];
 }
 
+function isSafeRelativePath(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && !path.isAbsolute(value) && !value.split(/[\\/]/).includes('..');
+}
+
 function sanitizeCredentials(value: unknown): SvnCredentials | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
@@ -724,8 +734,28 @@ function registerIpcHandlers(): void {
     executeSyncForEnvironment(payload?.environmentId)
   );
 
-  ipcMain.handle('sync:commit', async (_event, payload: { environmentId?: string; message: string }) =>
-    commitSyncForEnvironment(payload.environmentId, payload.message ?? '')
+  ipcMain.handle('svn:wc-status', async (_event, payload: { environmentId?: string }): Promise<WorkingCopyStatus> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected) {
+      return { ok: false, message: 'Nenhum projeto selecionado.', changes: [], conflicts: 0 };
+    }
+
+    return readWorkingCopyStatus(selected.svnCheckoutPath);
+  });
+
+  ipcMain.handle('svn:wc-diff', async (_event, payload: { environmentId?: string; filePath: string }): Promise<SyncFileDiff | undefined> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected || !isSafeRelativePath(payload?.filePath)) {
+      return undefined;
+    }
+
+    return readWorkingCopyDiff(selected.svnCheckoutPath, payload.filePath);
+  });
+
+  ipcMain.handle('svn:commit-selected', async (_event, payload: CommitSelectedRequest): Promise<CommitSelectedResult> =>
+    commitSelectedForEnvironment(payload)
   );
 
   ipcMain.handle('project:link-git', async (_event, payload: { environmentId: string; gitWorkspacePath: string; baseBranch?: string }): Promise<LinkGitResponse> => {

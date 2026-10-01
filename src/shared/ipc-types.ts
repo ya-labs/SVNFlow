@@ -13,6 +13,7 @@ import type { RepositoryRoot } from '../main/commands/app-settings.js';
 import type { CheckoutResult } from '../main/commands/svn-checkout.js';
 import type { SvnCredentials } from '../main/commands/svn-client.js';
 import type { RemoteEntry, RemoteListing } from '../main/commands/svn-repository-browser.js';
+import type { CommitSelectedResult, WorkingCopyChange, WorkingCopyStatus } from '../main/commands/svn-working-copy.js';
 import type { GitBranch, GitBranchList, SwitchGitBranchResult } from '../main/commands/git-branches.js';
 import type { ExecuteSyncResult, SvnRevisionLog, SyncFileDiff, SyncPlan } from '../main/commands/git-svn-sync.js';
 
@@ -29,6 +30,7 @@ export type {
   PackageHistoryResult,
   PackageLibraryResult,
   CheckoutResult,
+  CommitSelectedResult,
   RegisterSavedEnvironmentResult,
   RemoteEntry,
   RemoteListing,
@@ -37,7 +39,9 @@ export type {
   SvnRevisionLog,
   SwitchGitBranchResult,
   SyncFileDiff,
-  SyncPlan
+  SyncPlan,
+  WorkingCopyChange,
+  WorkingCopyStatus
 };
 
 export type EnvironmentVisualStatus = 'ready' | 'attention' | 'blocked' | 'error' | 'pending';
@@ -217,9 +221,11 @@ export interface SyncExecuteResponse {
   screen: SyncScreenState;
 }
 
-export interface SyncCommitResponse {
-  result: ExecuteCommitResult;
-  screen: SyncScreenState;
+export interface CommitSelectedRequest {
+  environmentId?: string;
+  paths: string[];
+  message: string;
+  credentials?: SvnCredentials;
 }
 
 export type AppTheme = 'system' | 'light' | 'dark';
@@ -266,7 +272,9 @@ export interface SvnflowDesktopApi {
   selectPackageFile: (defaultPath?: string) => Promise<string | undefined>;
   getSyncScreenState: (environmentId?: string) => Promise<SyncScreenState>;
   executeSync: (environmentId?: string) => Promise<SyncExecuteResponse>;
-  commitSync: (environmentId: string | undefined, message: string) => Promise<SyncCommitResponse>;
+  getWorkingCopyStatus: (environmentId: string | undefined) => Promise<WorkingCopyStatus>;
+  getWorkingCopyDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
+  commitSelected: (request: CommitSelectedRequest) => Promise<CommitSelectedResult>;
   getSyncFileDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   getSvnRevisionLog: (environmentId: string | undefined, revision: string) => Promise<SvnRevisionLog>;
   openEnvironmentFolder: (environmentId: string | undefined, which: 'git' | 'svn') => Promise<void>;
