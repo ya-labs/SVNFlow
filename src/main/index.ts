@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,7 +27,7 @@ import { readAppSettings, updateAppSettings } from './commands/app-settings.js';
 import { validateCommitPreConditions } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { generateGitPatch, readGitAuthor } from './commands/git-patch.js';
-import { buildSyncPlan, executeSync, suggestSyncCommitMessage } from './commands/git-svn-sync.js';
+import { buildFileDiff, buildSyncPlan, executeSync, readSvnRevisionLog, suggestSyncCommitMessage, type SvnRevisionLog, type SyncFileDiff } from './commands/git-svn-sync.js';
 import { buildMiniPrMarkdown, normalizeMiniPrDraft } from './commands/mini-pr.js';
 import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
 import { appendPackageHistory, readPackageHistory, type PackageHistoryResult } from './commands/package-history.js';
@@ -683,6 +683,38 @@ function registerIpcHandlers(): void {
   ipcMain.handle('sync:commit', async (_event, payload: { environmentId?: string; message: string }) =>
     commitSyncForEnvironment(payload.environmentId, payload.message ?? '')
   );
+
+  ipcMain.handle('sync:file-diff', async (_event, payload: { environmentId?: string; filePath: string }): Promise<SyncFileDiff | undefined> => {
+    const selected = await resolveSelectedEnvironmentById(payload.environmentId);
+
+    if (!selected || !payload.filePath || path.isAbsolute(payload.filePath) || payload.filePath.split(/[\\/]/).includes('..')) {
+      return undefined;
+    }
+
+    return buildFileDiff({
+      gitWorkspacePath: selected.gitWorkspacePath,
+      svnCheckoutPath: selected.svnCheckoutPath,
+      filePath: payload.filePath
+    });
+  });
+
+  ipcMain.handle('sync:revision-log', async (_event, payload: { environmentId?: string; revision: string }): Promise<SvnRevisionLog> => {
+    const selected = await resolveSelectedEnvironmentById(payload.environmentId);
+
+    if (!selected) {
+      return { ok: false, message: 'Nenhum ambiente selecionado.', revision: payload.revision, paths: [] };
+    }
+
+    return readSvnRevisionLog(selected.svnCheckoutPath, payload.revision);
+  });
+
+  ipcMain.handle('shell:open-environment-folder', async (_event, payload: { environmentId?: string; which: 'git' | 'svn' }) => {
+    const selected = await resolveSelectedEnvironmentById(payload.environmentId);
+
+    if (selected) {
+      await shell.openPath(payload.which === 'git' ? selected.gitWorkspacePath : selected.svnCheckoutPath);
+    }
+  });
 
   ipcMain.handle('workspace:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildWorkspaceRendererState(payload?.environmentId)

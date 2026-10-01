@@ -25,7 +25,7 @@ declare global {
   }
 }
 
-type StageKey = 'environment' | 'sync' | 'workspace' | 'preview' | 'packages' | 'apply' | 'commit' | 'history';
+type StageKey = 'environment' | 'workspace' | 'preview' | 'packages' | 'apply' | 'commit' | 'history';
 
 interface StageDefinition {
   key: StageKey;
@@ -41,12 +41,6 @@ const STAGES: StageDefinition[] = [
     label: 'Ambiente',
     description: 'Cadastre, selecione e valide o par workspace Git e checkout SVN usado no fluxo.',
     helper: 'Cadastro e validação local.'
-  },
-  {
-    key: 'sync',
-    label: 'Sincronizar',
-    description: 'Deixa o checkout SVN igual ao último commit do Git e publica com um commit SVN.',
-    helper: 'Git → checkout SVN → commit.'
   },
   {
     key: 'history',
@@ -121,7 +115,6 @@ interface AppState {
   lastApplyResult?: ExecuteApplyResult;
   suggestedCommitTitle?: string;
   showAdvanced: boolean;
-  syncCommitDraft?: { commit: string; message: string };
 }
 
 const state: AppState = {
@@ -427,7 +420,7 @@ function renderEnvironmentStage(screen: EnvironmentScreenState): void {
     ${details}
     <div class="stage-actions">
       <button class="action-button" data-role="revalidate-action" ${screen.selectedEnvironmentId ? '' : 'disabled'}>Validar ou revalidar ambiente</button>
-      <button class="action-button secondary" data-role="next-stage">Seguir para Sincronizar</button>
+      <button class="action-button secondary" data-role="next-stage">Voltar para a sincronização</button>
       <button class="action-button secondary" data-role="new-environment">Cadastrar outro ambiente</button>
       <button class="action-button danger" data-role="remove-environment" ${screen.selectedEnvironmentId ? '' : 'disabled'}>Remover da lista</button>
     </div>
@@ -445,7 +438,7 @@ function renderEnvironmentStage(screen: EnvironmentScreenState): void {
     renderEnvironmentStage(await api().revalidateEnvironment(state.selectedEnvironmentId));
   });
 
-  bindClick(body, '[data-role="next-stage"]', () => goToStage('sync'));
+  bindClick(body, '[data-role="next-stage"]', () => showDesktopView());
 
   bindClick(body, '[data-role="new-environment"]', async () => {
     state.showEnvironmentForm = true;
@@ -1148,227 +1141,892 @@ function renderCommitStage(commit: CommitScreenState): void {
 }
 
 // ---------------------------------------------------------------------------
-// Sincronizar
+// Visão principal (no estilo do GitHub Desktop)
 
-const MAX_SYNC_ROWS = 400;
+type DesktopTab = 'changes' | 'history';
+type ChangeKind = 'added' | 'modified' | 'deleted';
 
-function renderSyncChanges(plan: SyncPlan): string {
-  const labels: Record<string, { label: string; kind: EnvironmentVisualStatus }> = {
-    added: { label: 'Criar', kind: 'ready' },
-    modified: { label: 'Atualizar', kind: 'attention' },
-    deleted: { label: 'Remover', kind: 'error' }
-  };
-  const rows = plan.changes
-    .slice(0, MAX_SYNC_ROWS)
-    .map((change) => `<li class="preview-row">${badge(labels[change.kind].kind, labels[change.kind].label)}<span>${escapeHtml(change.path)}</span></li>`)
-    .join('');
-  const hidden = plan.changes.length - MAX_SYNC_ROWS;
-
-  return `<ul class="preview-files">${rows}</ul>${hidden > 0 ? `<p class="hint">E mais ${hidden} arquivo(s).</p>` : ''}`;
+interface ChangeItem {
+  path: string;
+  kind: ChangeKind;
 }
 
-function renderSyncWarnings(plan: SyncPlan): string {
-  if (plan.warnings.length === 0) {
-    return '';
-  }
-
-  return `<div class="notice" data-tone="attention"><p class="card-label">Atenção</p><ul class="preview-list">${plan.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul></div>`;
+interface CommitDraft {
+  commit: string;
+  summary: string;
+  description: string;
 }
 
-function renderSyncCommitForm(screen: SyncScreenState): string {
-  const plan = screen.plan!;
-  const commit = plan.source!.commit;
+interface DesktopState {
+  tab: DesktopTab;
+  environments?: EnvironmentScreenState;
+  screen?: SyncScreenState;
+  history?: PackageHistoryResult;
+  selectedPath?: string;
+  selectedRevision?: string;
+  commitDraft?: CommitDraft;
+  banner?: { tone: 'success' | 'warning' | 'error'; html: string };
+  requestId: number;
+}
 
-  if (state.syncCommitDraft?.commit !== commit) {
-    state.syncCommitDraft = { commit, message: screen.suggestedCommitMessage ?? '' };
+const desktop: DesktopState = { tab: 'changes', requestId: 0 };
+
+const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', modified: '•', deleted: '−' };
+const CHANGE_LABELS: Record<ChangeKind, string> = { added: 'Criado', modified: 'Modificado', deleted: 'Removido' };
+
+function pendingKind(item: string): ChangeKind {
+  if (item === 'added') return 'added';
+  if (item === 'deleted' || item === 'missing') return 'deleted';
+  return 'modified';
+}
+
+function currentChangeItems(): ChangeItem[] {
+  const plan = desktop.screen?.plan;
+
+  if (!plan) {
+    return [];
   }
+
+  if (plan.status === 'ready') {
+    return plan.changes.map((change) => ({ path: change.path, kind: change.kind }));
+  }
+
+  if (desktop.screen?.canCommit) {
+    return plan.pending.map((change) => ({ path: change.path, kind: pendingKind(change.item) }));
+  }
+
+  return [];
+}
+
+interface CommittedEntry {
+  revision: string;
+  title: string;
+  recordedAt: string;
+}
+
+function committedEntries(): CommittedEntry[] {
+  const environmentName = desktop.screen?.environment?.name;
+
+  return (desktop.history?.entries ?? [])
+    .filter((entry) => entry.kind === 'committed' && /^r\d+$/.test(entry.packageId))
+    .filter((entry) => !environmentName || entry.environmentName === environmentName)
+    .map((entry) => ({
+      revision: entry.packageId.slice(1),
+      title: entry.detail ?? `Revisão ${entry.packageId.slice(1)}`,
+      recordedAt: entry.recordedAt
+    }));
+}
+
+function splitSuggestedMessage(message: string): { summary: string; description: string } {
+  const [summary, ...rest] = message.split('\n');
+  return { summary: summary.trim(), description: rest.join('\n').trim() };
+}
+
+function ensureCommitDraft(): CommitDraft | undefined {
+  const source = desktop.screen?.plan?.source;
+
+  if (!source) {
+    return undefined;
+  }
+
+  if (desktop.commitDraft?.commit !== source.commit) {
+    desktop.commitDraft = { commit: source.commit, ...splitSuggestedMessage(desktop.screen?.suggestedCommitMessage ?? '') };
+  }
+
+  return desktop.commitDraft;
+}
+
+// Toolbar ------------------------------------------------------------------
+
+function setText(role: string, value: string): void {
+  const element = query<HTMLElement>(`[data-role="${role}"]`);
+
+  if (element) {
+    element.textContent = value;
+    element.title = value;
+  }
+}
+
+function renderToolbar(): void {
+  const screen = desktop.screen;
+  const plan = screen?.plan;
+  const source = plan?.source;
+
+  setText('environment-name', desktop.environments?.selected?.name ?? 'Nenhum ambiente');
+  setText('git-branch', source ? `${source.branch ?? 'HEAD'} · ${source.shortCommit}` : '-');
+
+  if (plan?.status === 'ready') {
+    setText('refresh-label', 'Diferenças com o Git');
+    setText('refresh-value', `${plan.changes.length} arquivo(s) a copiar`);
+  } else if (screen?.canCommit) {
+    setText('refresh-label', 'Pronto para commit');
+    setText('refresh-value', `${plan?.pendingSvnChanges ?? 0} alteração(ões) no SVN`);
+  } else if (plan?.status === 'up-to-date') {
+    setText('refresh-label', 'Verificar alterações');
+    setText('refresh-value', 'SVN igual ao Git');
+  } else {
+    setText('refresh-label', 'Verificar alterações');
+    setText('refresh-value', 'Comparar Git com o SVN');
+  }
+
+  query<HTMLElement>('[data-role="toggle-advanced"]')?.setAttribute('aria-pressed', String(state.showAdvanced));
+}
+
+// Lista lateral -------------------------------------------------------------
+
+function renderChangeRow(item: ChangeItem): string {
+  const slash = item.path.lastIndexOf('/');
+  const directory = slash >= 0 ? item.path.slice(0, slash + 1) : '';
+  const fileName = item.path.slice(slash + 1);
 
   return `
-    <div class="notice" data-tone="ready">
-      <p class="card-label">Pronto para commit SVN</p>
-      <p class="context-line">O checkout está igual ao commit <strong>${escapeHtml(plan.source!.shortCommit)}</strong>, com <strong>${plan.pendingSvnChanges}</strong> alteração(ões) aguardando publicação.</p>
-    </div>
-    ${renderSyncWarnings(plan)}
-    <form class="form-grid" data-role="sync-commit-form">
-      <label class="field">
-        <span>Mensagem do commit SVN (sugerida a partir dos commits Git — edite à vontade)</span>
-        <textarea class="form-input commit-message" name="message" rows="8">${escapeHtml(state.syncCommitDraft.message)}</textarea>
-      </label>
-      <p class="feedback" data-role="sync-commit-feedback"></p>
-      <div class="stage-actions">
-        <button class="action-button secondary" type="button" data-role="reset-message">Restaurar sugestão</button>
-      </div>
-      <label class="checkbox-row">
-        <input type="checkbox" name="confirm" />
-        Confirmo a publicação oficial destas alterações no repositório SVN.
-      </label>
-      <div class="stage-actions">
-        <button class="action-button" type="submit" disabled>Commitar no SVN</button>
-      </div>
-      <div data-role="sync-commit-result"></div>
-    </form>
+    <button type="button" class="change-row" data-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedPath}" title="${escapeHtml(`${CHANGE_LABELS[item.kind]}: ${item.path}`)}">
+      <span class="change-path"><bdi><span class="change-dir">${escapeHtml(directory)}</span>${escapeHtml(fileName)}</bdi></span>
+      <span class="change-icon" data-kind="${item.kind}" aria-label="${CHANGE_LABELS[item.kind]}">${CHANGE_ICONS[item.kind]}</span>
+    </button>
   `;
 }
 
-function bindSyncCommitForm(root: HTMLElement, screen: SyncScreenState): void {
-  const form = query<HTMLFormElement>('[data-role="sync-commit-form"]', root);
+function renderSidebar(): void {
+  const list = query<HTMLElement>('[data-role="sidebar-list"]');
+  const counter = query<HTMLElement>('[data-role="changes-counter"]');
+  const items = currentChangeItems();
 
-  if (!form) {
+  document.querySelectorAll<HTMLButtonElement>('.tab').forEach((tab) => {
+    tab.setAttribute('aria-selected', String(tab.dataset.tab === desktop.tab));
+  });
+
+  if (counter) {
+    counter.textContent = String(items.length);
+  }
+
+  if (!list) {
     return;
   }
 
-  const textarea = form.elements.namedItem('message') as HTMLTextAreaElement;
-  const confirmBox = form.elements.namedItem('confirm') as HTMLInputElement;
-  const submit = query<HTMLButtonElement>('button[type="submit"]', form)!;
-  const feedback = query<HTMLElement>('[data-role="sync-commit-feedback"]', form)!;
-  const resultContainer = query<HTMLElement>('[data-role="sync-commit-result"]', form)!;
+  if (!desktop.screen?.environment) {
+    list.innerHTML = '<p class="list-empty">Nenhum ambiente selecionado.</p>';
+    return;
+  }
+
+  if (desktop.tab === 'history') {
+    const entries = committedEntries();
+    list.innerHTML = entries.length === 0
+      ? '<p class="list-empty">Nenhuma sincronização publicada ainda.</p>'
+      : entries.map((entry) => `
+        <button type="button" class="history-row" data-revision="${escapeHtml(entry.revision)}" aria-selected="${entry.revision === desktop.selectedRevision}">
+          <span class="history-title">${escapeHtml(entry.title)}</span>
+          <span class="history-meta">r${escapeHtml(entry.revision)} · ${escapeHtml(formatDate(entry.recordedAt))}</span>
+        </button>
+      `).join('');
+    return;
+  }
+
+  if (items.length === 0) {
+    list.innerHTML = '<p class="list-empty">Nenhuma alteração.</p>';
+    return;
+  }
+
+  const header = desktop.screen.plan?.status === 'ready'
+    ? `${items.length} arquivo(s) diferentes do Git`
+    : `${items.length} alteração(ões) para publicar no SVN`;
+
+  list.innerHTML = `<div class="list-header">${escapeHtml(header)}</div>${items.map(renderChangeRow).join('')}`;
+}
+
+function selectSidebarItem(element: HTMLElement): void {
+  if (element.dataset.path) {
+    desktop.selectedPath = element.dataset.path;
+  } else if (element.dataset.revision) {
+    desktop.selectedRevision = element.dataset.revision;
+  } else {
+    return;
+  }
+
+  renderSidebar();
+  query<HTMLElement>(`[aria-selected="true"]`, query<HTMLElement>('[data-role="sidebar-list"]')!)?.focus();
+  void renderDetail();
+}
+
+function bindSidebar(): void {
+  const list = query<HTMLElement>('[data-role="sidebar-list"]');
+
+  list?.addEventListener('click', (event) => {
+    const row = (event.target as HTMLElement).closest<HTMLElement>('.change-row, .history-row');
+    if (row) {
+      selectSidebarItem(row);
+    }
+  });
+
+  list?.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+      return;
+    }
+
+    const rows = Array.from(list.querySelectorAll<HTMLElement>('.change-row, .history-row'));
+    const current = rows.findIndex((row) => row.getAttribute('aria-selected') === 'true');
+    const next = rows[Math.min(rows.length - 1, Math.max(0, current + (event.key === 'ArrowDown' ? 1 : -1)))];
+
+    if (next) {
+      event.preventDefault();
+      selectSidebarItem(next);
+    }
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      desktop.tab = tab.dataset.tab === 'history' ? 'history' : 'changes';
+
+      if (desktop.tab === 'history' && !desktop.selectedRevision) {
+        desktop.selectedRevision = committedEntries()[0]?.revision;
+      }
+
+      renderDesktop();
+    });
+  });
+}
+
+// Caixa de commit -----------------------------------------------------------
+
+function renderCommitBox(): void {
+  const box = query<HTMLElement>('[data-role="commit-box"]');
+  const screen = desktop.screen;
+  const plan = screen?.plan;
+
+  if (!box) {
+    return;
+  }
+
+  if (desktop.tab !== 'changes' || !screen || !plan?.source) {
+    box.innerHTML = '';
+    return;
+  }
+
+  if (plan.status === 'ready') {
+    box.innerHTML = `
+      <p class="commit-box-hint">O checkout SVN será atualizado para o commit <strong>${escapeHtml(plan.source.shortCommit)}</strong>. Nada é publicado nesta etapa.</p>
+      <button type="button" class="button primary block" data-role="copy-to-svn">Copiar ${plan.changes.length} arquivo(s) para o SVN</button>
+    `;
+    bindClick(box, '[data-role="copy-to-svn"]', copyToSvn);
+    return;
+  }
+
+  if (!screen.canCommit) {
+    box.innerHTML = '';
+    return;
+  }
+
+  const draft = ensureCommitDraft()!;
+
+  box.innerHTML = `
+    <input class="input" data-role="commit-summary" type="text" placeholder="Resumo (obrigatório)" value="${escapeHtml(draft.summary)}" aria-label="Resumo do commit SVN" />
+    <textarea class="input" data-role="commit-description" placeholder="Descrição" aria-label="Descrição do commit SVN">${escapeHtml(draft.description)}</textarea>
+    <button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>
+    <button type="button" class="button primary block" data-role="commit-svn">Commit para o SVN</button>
+  `;
+
+  const summary = query<HTMLInputElement>('[data-role="commit-summary"]', box)!;
+  const description = query<HTMLTextAreaElement>('[data-role="commit-description"]', box)!;
+  const submit = query<HTMLButtonElement>('[data-role="commit-svn"]', box)!;
 
   const refresh = () => {
-    const message = textarea.value.trim();
-    if (state.syncCommitDraft) {
-      state.syncCommitDraft.message = textarea.value;
-    }
-    feedback.textContent = message ? '' : 'A mensagem do commit não pode ficar vazia.';
-    feedback.className = message ? 'feedback' : 'feedback invalid';
-    submit.disabled = !message || !confirmBox.checked;
+    draft.summary = summary.value;
+    draft.description = description.value;
+    submit.disabled = summary.value.trim().length === 0;
   };
 
-  textarea.addEventListener('input', refresh);
-  confirmBox.addEventListener('change', refresh);
+  summary.addEventListener('input', refresh);
+  description.addEventListener('input', refresh);
+  summary.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !submit.disabled) {
+      submit.click();
+    }
+  });
   refresh();
 
-  bindClick(form, '[data-role="reset-message"]', () => {
-    textarea.value = screen.suggestedCommitMessage ?? '';
-    refresh();
+  bindClick(box, '[data-role="reset-message"]', () => {
+    desktop.commitDraft = undefined;
+    renderCommitBox();
   });
+  bindClick(box, '[data-role="commit-svn"]', commitToSvn);
+}
+
+async function copyToSvn(): Promise<void> {
+  const plan = desktop.screen?.plan;
+
+  if (!plan?.source) {
+    return;
+  }
+
+  const confirmed = await confirmModal({
+    title: 'Atualizar checkout SVN',
+    message: `${plan.totals.added} arquivo(s) serão criados, ${plan.totals.modified} atualizados e ${plan.totals.deleted} removidos em ${plan.svnCheckoutPath}, para ficar igual ao commit ${plan.source.shortCommit}. Nada será publicado no SVN ainda.`,
+    confirmLabel: 'Copiar arquivos'
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  setStatusMessage('Copiando arquivos do Git para o checkout SVN...');
+  const response = await api().executeSync(state.selectedEnvironmentId);
+  const errors = response.result?.errors ?? [];
+
+  desktop.banner = errors.length > 0
+    ? { tone: 'error', html: `<p><strong>Erros ao atualizar o checkout</strong></p><ul>${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join('')}</ul>` }
+    : undefined;
+  desktop.screen = response.screen;
+  desktop.selectedPath = undefined;
+  setStatusMessage(response.result?.message ?? response.screen.message);
+  renderDesktop();
+}
+
+async function commitToSvn(): Promise<void> {
+  const draft = desktop.commitDraft;
+  const plan = desktop.screen?.plan;
+
+  if (!draft || !plan) {
+    return;
+  }
+
+  const message = draft.description.trim() ? `${draft.summary.trim()}\n\n${draft.description.trim()}` : draft.summary.trim();
+  const confirmed = await confirmModal({
+    title: 'Publicar no SVN',
+    message: `${plan.pendingSvnChanges} alteração(ões) serão publicadas oficialmente a partir de ${plan.svnCheckoutPath}.`,
+    detail: message,
+    confirmLabel: 'Commit para o SVN'
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  setStatusMessage('Executando svn commit...');
+  const response = await api().commitSync(state.selectedEnvironmentId, message);
+
+  if (response.result.status === 'success') {
+    desktop.commitDraft = undefined;
+    desktop.banner = {
+      tone: 'success',
+      html: `<p><strong>Revisão ${escapeHtml(response.result.revision ?? '?')} publicada no SVN</strong> · ${escapeHtml(response.result.filesCommitted ?? 0)} caminho(s)</p>`
+    };
+    desktop.selectedRevision = response.result.revision;
+    desktop.history = await api().readPackageHistory();
+  } else {
+    desktop.banner = {
+      tone: 'error',
+      html: `<p><strong>${response.result.status === 'conflict' ? 'Conflito no commit' : 'Commit não realizado'}</strong></p><p>${escapeHtml(response.result.message)}</p>${response.result.error ? `<pre class="review-markdown">${escapeHtml(response.result.error)}</pre>` : ''}`
+    };
+  }
+
+  desktop.screen = response.screen;
+  desktop.selectedPath = undefined;
+  setStatusMessage(response.result.message);
+  renderDesktop();
+}
+
+// Painel de detalhe ---------------------------------------------------------
+
+function renderBanner(): string {
+  return desktop.banner ? `<div class="banner" data-tone="${desktop.banner.tone}">${desktop.banner.html}</div>` : '';
+}
+
+function renderWarnings(plan: SyncPlan | undefined): string {
+  if (!plan || plan.warnings.length === 0) {
+    return '';
+  }
+
+  return `<div class="banner" data-tone="warning"><ul>${plan.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul></div>`;
+}
+
+function renderDiffTable(lines: string[]): string {
+  let oldLine = 0;
+  let newLine = 0;
+  const rows: string[] = [];
+
+  for (const line of lines) {
+    const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+
+    if (hunk) {
+      oldLine = Number(hunk[1]);
+      newLine = Number(hunk[2]);
+      rows.push(`<tr class="hunk"><td class="ln"></td><td class="ln"></td><td class="code">${escapeHtml(line)}</td></tr>`);
+    } else if (line.startsWith('+')) {
+      rows.push(`<tr class="add"><td class="ln"></td><td class="ln">${newLine++}</td><td class="code">${escapeHtml(line)}</td></tr>`);
+    } else if (line.startsWith('-')) {
+      rows.push(`<tr class="del"><td class="ln">${oldLine++}</td><td class="ln"></td><td class="code">${escapeHtml(line)}</td></tr>`);
+    } else if (line.startsWith('\\')) {
+      rows.push(`<tr class="hunk"><td class="ln"></td><td class="ln"></td><td class="code">${escapeHtml(line)}</td></tr>`);
+    } else {
+      rows.push(`<tr><td class="ln">${oldLine++}</td><td class="ln">${newLine++}</td><td class="code">${escapeHtml(line)}</td></tr>`);
+    }
+  }
+
+  return `<table class="diff"><tbody>${rows.join('')}</tbody></table>`;
+}
+
+function blankSlate(title: string, message: string, extra = ''): string {
+  return `<div class="blank-slate"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p>${extra}</div>`;
+}
+
+function suggestion(title: string, description: string, role: string, label: string): string {
+  return `
+    <div class="suggestion">
+      <span class="suggestion-text"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span></span>
+      <button type="button" class="button" data-role="${role}">${escapeHtml(label)}</button>
+    </div>
+  `;
+}
+
+function bindDetailActions(detail: HTMLElement): void {
+  bindClick(detail, '[data-role="add-environment"]', () => openAddEnvironmentModal());
+  bindClick(detail, '[data-role="open-svn"]', () => api().openEnvironmentFolder(state.selectedEnvironmentId, 'svn'));
+  bindClick(detail, '[data-role="open-git"]', () => api().openEnvironmentFolder(state.selectedEnvironmentId, 'git'));
+  bindClick(detail, '[data-role="refresh-detail"]', () => loadDesktop());
+  bindClick(detail, '[data-role="open-advanced"]', () => showAdvancedView('environment'));
+}
+
+async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId: number): Promise<void> {
+  detail.innerHTML = `${renderBanner()}<div class="diff-header">${escapeHtml(item.path)}</div><p class="list-empty">Carregando diff...</p>`;
+  const diff = await api().getSyncFileDiff(state.selectedEnvironmentId, item.path);
+
+  if (requestId !== desktop.requestId) {
+    return;
+  }
+
+  const sourceLabel = diff?.source === 'svn-pending' ? 'Será publicado no SVN' : 'Git → checkout SVN';
+  const header = `<div class="diff-header"><span class="change-icon" data-kind="${item.kind}">${CHANGE_ICONS[item.kind]}</span>${escapeHtml(item.path)}<span class="diff-header-source">${escapeHtml(sourceLabel)}</span></div>`;
+  let body: string;
+
+  if (!diff || diff.kind === 'empty') {
+    body = blankSlate('Sem diferença de conteúdo', item.kind === 'deleted' ? 'O arquivo será removido do SVN.' : 'Não há diferença textual para mostrar.');
+  } else if (diff.kind === 'binary') {
+    body = blankSlate('Arquivo binário', 'O conteúdo binário não pode ser exibido como diff.');
+  } else if (diff.kind === 'directory') {
+    body = blankSlate('Pasta', item.kind === 'deleted' ? 'A pasta e todo o conteúdo dela serão removidos do SVN.' : 'A pasta será adicionada ao SVN.');
+  } else if (diff.kind === 'too-large') {
+    body = blankSlate('Arquivo muito grande', 'O diff não é exibido para arquivos acima de 5 MB.');
+  } else {
+    body = `${renderDiffTable(diff.lines)}${diff.truncated ? '<p class="list-empty">Diff truncado para exibição.</p>' : ''}`;
+  }
+
+  detail.innerHTML = `${renderBanner()}${header}${body}`;
+}
+
+async function renderRevisionDetail(detail: HTMLElement, revision: string, requestId: number): Promise<void> {
+  detail.innerHTML = '<p class="list-empty">Carregando revisão...</p>';
+  const log = await api().getSvnRevisionLog(state.selectedEnvironmentId, revision);
+
+  if (requestId !== desktop.requestId) {
+    return;
+  }
+
+  if (!log.ok) {
+    detail.innerHTML = `${renderBanner()}${blankSlate(`Revisão ${revision}`, log.message)}`;
+    return;
+  }
+
+  const [title, ...rest] = (log.logMessage ?? '').split('\n');
+  const actionKind: Record<string, ChangeKind> = { A: 'added', D: 'deleted', M: 'modified', R: 'modified' };
+
+  detail.innerHTML = `
+    ${renderBanner()}
+    <div class="detail-section">
+      <h2>${escapeHtml(title || `Revisão ${revision}`)}</h2>
+      <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(log.author ?? 'autor desconhecido')} · ${escapeHtml(formatDate(log.date))} · ${log.paths.length} caminho(s)</p>
+      ${rest.join('\n').trim() ? `<p class="commit-message-view">${escapeHtml(rest.join('\n').trim())}</p>` : ''}
+    </div>
+    <ul class="path-list">
+      ${log.paths.map((entry) => {
+        const kind = actionKind[entry.action] ?? 'modified';
+        return `<li><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${escapeHtml(entry.path)}</li>`;
+      }).join('')}
+    </ul>
+  `;
+}
+
+async function renderDetail(): Promise<void> {
+  const detail = query<HTMLElement>('[data-role="detail"]');
+  const requestId = ++desktop.requestId;
+
+  if (!detail) {
+    return;
+  }
+
+  if (!desktop.environments || desktop.environments.items.length === 0) {
+    detail.innerHTML = blankSlate(
+      'Comece adicionando um ambiente',
+      'Um ambiente liga a pasta do seu repositório Git à pasta do checkout SVN que recebe o código.',
+      `<div class="suggestions">${suggestion('Adicionar ambiente', 'Escolha o repositório Git e o checkout SVN.', 'add-environment', 'Adicionar…')}</div>`
+    );
+    bindDetailActions(detail);
+    return;
+  }
+
+  const plan = desktop.screen?.plan;
+
+  if (desktop.tab === 'history') {
+    if (desktop.selectedRevision) {
+      await renderRevisionDetail(detail, desktop.selectedRevision, requestId);
+    } else {
+      detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', committedEntries().length > 0 ? 'Selecione uma sincronização para ver os arquivos publicados.' : 'As sincronizações publicadas aparecem aqui.')}`;
+    }
+    return;
+  }
+
+  if (!plan || plan.status === 'blocked') {
+    detail.innerHTML = `
+      ${renderBanner()}
+      ${blankSlate(
+        'Sincronização bloqueada',
+        desktop.screen?.message ?? 'Não foi possível ler o ambiente.',
+        `<div class="banner" data-tone="error"><ul>${(plan?.blockers ?? []).map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join('')}</ul></div>
+         <div class="suggestions">
+           ${suggestion('Abrir checkout SVN', 'Resolva conflitos ou problemas direto na pasta.', 'open-svn', 'Abrir pasta')}
+           ${suggestion('Revisar ambiente', 'Confira os caminhos e valide o ambiente no modo avançado.', 'open-advanced', 'Abrir')}
+         </div>`
+      )}
+    `;
+    bindDetailActions(detail);
+    return;
+  }
+
+  const items = currentChangeItems();
+  const selected = items.find((item) => item.path === desktop.selectedPath);
+
+  if (selected) {
+    await renderDiffDetail(detail, selected, requestId);
+    return;
+  }
+
+  const title = items.length > 0
+    ? (plan.status === 'ready' ? `${items.length} arquivo(s) diferentes do Git` : 'Pronto para commit')
+    : 'Nenhuma alteração';
+
+  detail.innerHTML = `
+    ${renderBanner()}
+    ${renderWarnings(plan)}
+    ${blankSlate(
+      title,
+      items.length > 0 ? 'Selecione um arquivo para ver o diff.' : plan.message,
+      `<div class="suggestions">
+        ${suggestion('Abrir checkout SVN', plan.svnCheckoutPath, 'open-svn', 'Abrir pasta')}
+        ${suggestion('Abrir repositório Git', plan.gitWorkspacePath, 'open-git', 'Abrir pasta')}
+        ${items.length === 0 ? suggestion('Verificar novamente', 'Depois de um novo commit no Git, compare de novo.', 'refresh-detail', 'Verificar') : ''}
+      </div>`
+    )}
+  `;
+  bindDetailActions(detail);
+}
+
+function renderDesktop(): void {
+  renderToolbar();
+  renderSidebar();
+  renderCommitBox();
+  void renderDetail();
+}
+
+async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
+  if (!options.quiet) {
+    setStatusMessage('Comparando Git com o checkout SVN...');
+  }
+  const refresh = query<HTMLButtonElement>('[data-role="refresh"]');
+
+  if (refresh) {
+    refresh.disabled = true;
+  }
+
+  try {
+    desktop.environments = await api().getEnvironmentScreenState(state.selectedEnvironmentId);
+    state.selectedEnvironmentId = desktop.environments.selectedEnvironmentId;
+
+    const hasEnvironment = desktop.environments.items.length > 0;
+    [desktop.screen, desktop.history] = await Promise.all([
+      hasEnvironment ? api().getSyncScreenState(state.selectedEnvironmentId) : Promise.resolve(undefined),
+      api().readPackageHistory()
+    ]);
+
+    if (!currentChangeItems().some((item) => item.path === desktop.selectedPath)) {
+      desktop.selectedPath = undefined;
+    }
+
+    if (!options.quiet) {
+      setStatusMessage(desktop.screen?.message ?? 'Adicione um ambiente para começar.');
+    }
+  } catch (error) {
+    setStatusMessage(`Falha ao carregar: ${error instanceof Error ? error.message : 'erro desconhecido'}`);
+  } finally {
+    if (refresh) {
+      refresh.disabled = false;
+    }
+  }
+
+  renderDesktop();
+}
+
+// Menu de ambientes ---------------------------------------------------------
+
+function closeEnvironmentMenu(): void {
+  query<HTMLElement>('[data-role="environment-menu"]')?.setAttribute('hidden', '');
+  query<HTMLElement>('[data-role="environment-picker"]')?.setAttribute('aria-expanded', 'false');
+}
+
+function toggleEnvironmentMenu(): void {
+  const menu = query<HTMLElement>('[data-role="environment-menu"]');
+  const picker = query<HTMLElement>('[data-role="environment-picker"]');
+
+  if (!menu || !picker) {
+    return;
+  }
+
+  if (!menu.hidden) {
+    closeEnvironmentMenu();
+    return;
+  }
+
+  const environments = desktop.environments;
+  const items = (environments?.items ?? []).map((item) => `
+    <li>
+      <button type="button" class="dropdown-item" data-environment-id="${escapeHtml(item.id)}" aria-current="${item.id === environments?.selectedEnvironmentId}">
+        <span class="dropdown-item-text"><span>${escapeHtml(item.name)}</span></span>
+      </button>
+    </li>
+  `).join('');
+
+  menu.innerHTML = `
+    <div class="dropdown-header">Ambientes</div>
+    <ul class="dropdown-list">${items || '<li class="list-empty">Nenhum ambiente cadastrado.</li>'}</ul>
+    <div class="dropdown-footer">
+      <button type="button" class="button primary" data-role="menu-add">Adicionar ambiente…</button>
+      ${environments?.selected ? `<button type="button" class="button danger" data-role="menu-remove">Remover da lista</button>` : ''}
+    </div>
+  `;
+  menu.hidden = false;
+  picker.setAttribute('aria-expanded', 'true');
+
+  bindClick(menu, '[data-environment-id]', async (button) => {
+    closeEnvironmentMenu();
+    state.selectedEnvironmentId = button.dataset.environmentId;
+    desktop.selectedPath = undefined;
+    desktop.selectedRevision = undefined;
+    desktop.commitDraft = undefined;
+    desktop.banner = undefined;
+    await loadDesktop({ quiet: state.showAdvanced });
+
+    if (state.showAdvanced) {
+      await renderActiveStage();
+    }
+  });
+
+  bindClick(menu, '[data-role="menu-add"]', () => {
+    closeEnvironmentMenu();
+    openAddEnvironmentModal();
+  });
+
+  bindClick(menu, '[data-role="menu-remove"]', async () => {
+    closeEnvironmentMenu();
+    const selected = desktop.environments?.selected;
+
+    if (!selected || !(await confirmModal({
+      title: 'Remover ambiente',
+      message: `Remover "${selected.name}" da lista? As pastas do Git e do SVN não serão apagadas.`,
+      confirmLabel: 'Remover',
+      danger: true
+    }))) {
+      return;
+    }
+
+    await api().removeEnvironment(selected.id);
+    state.selectedEnvironmentId = undefined;
+    desktop.banner = undefined;
+    await loadDesktop();
+  });
+}
+
+// Modais --------------------------------------------------------------------
+
+let closeActiveModal: (() => void) | undefined;
+
+function openModal(html: string): HTMLElement {
+  const backdrop = query<HTMLElement>('[data-role="modal"]')!;
+  backdrop.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  backdrop.hidden = false;
+  return query<HTMLElement>('.modal', backdrop)!;
+}
+
+function closeModal(): void {
+  const backdrop = query<HTMLElement>('[data-role="modal"]');
+
+  if (backdrop) {
+    backdrop.hidden = true;
+    backdrop.innerHTML = '';
+  }
+
+  closeActiveModal = undefined;
+}
+
+function confirmModal(options: { title: string; message: string; detail?: string; confirmLabel: string; danger?: boolean }): Promise<boolean> {
+  return new Promise((resolve) => {
+    const modal = openModal(`
+      <div class="modal-header">${escapeHtml(options.title)}</div>
+      <div class="modal-body">
+        <p>${escapeHtml(options.message)}</p>
+        ${options.detail ? `<pre class="review-markdown">${escapeHtml(options.detail)}</pre>` : ''}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button" data-role="modal-cancel">Cancelar</button>
+        <button type="button" class="button ${options.danger ? 'danger' : 'primary'}" data-role="modal-confirm">${escapeHtml(options.confirmLabel)}</button>
+      </div>
+    `);
+    const finish = (value: boolean) => {
+      closeModal();
+      resolve(value);
+    };
+
+    closeActiveModal = () => finish(false);
+    bindClick(modal, '[data-role="modal-cancel"]', () => finish(false));
+    bindClick(modal, '[data-role="modal-confirm"]', () => finish(true));
+    query<HTMLButtonElement>('[data-role="modal-confirm"]', modal)?.focus();
+  });
+}
+
+function openAddEnvironmentModal(): void {
+  const modal = openModal(`
+    <form data-role="add-environment-form">
+      <div class="modal-header">Adicionar ambiente</div>
+      <div class="modal-body">
+        <label class="modal-field">Repositório Git
+          <span class="input-row">
+            <input class="input" name="gitWorkspacePath" type="text" placeholder="Pasta do repositório Git local" required />
+            <button type="button" class="button" data-role="pick-git">Escolher…</button>
+          </span>
+        </label>
+        <label class="modal-field">Checkout SVN
+          <span class="input-row">
+            <input class="input" name="svnCheckoutPath" type="text" placeholder="Pasta do checkout SVN" required />
+            <button type="button" class="button" data-role="pick-svn">Escolher…</button>
+          </span>
+          <small>Faça o checkout uma vez com svn checkout; o SVNFlow mantém essa pasta igual ao Git.</small>
+        </label>
+        <label class="modal-field">Nome
+          <input class="input" name="name" type="text" placeholder="Usa o nome da pasta Git quando vazio" />
+        </label>
+        <p class="modal-error" data-role="add-environment-error" hidden></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button" data-role="modal-cancel">Cancelar</button>
+        <button type="submit" class="button primary">Adicionar ambiente</button>
+      </div>
+    </form>
+  `);
+  const form = query<HTMLFormElement>('form', modal)!;
+  const input = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
+  const error = query<HTMLElement>('[data-role="add-environment-error"]', modal)!;
+
+  closeActiveModal = closeModal;
+  bindClick(modal, '[data-role="modal-cancel"]', closeModal);
+  bindClick(modal, '[data-role="pick-git"]', async () => {
+    const selected = await api().selectDirectory('Selecionar repositório Git', input('gitWorkspacePath').value || undefined);
+    if (selected) input('gitWorkspacePath').value = selected;
+  });
+  bindClick(modal, '[data-role="pick-svn"]', async () => {
+    const selected = await api().selectDirectory('Selecionar checkout SVN', input('svnCheckoutPath').value || undefined);
+    if (selected) input('svnCheckoutPath').value = selected;
+  });
+  input('gitWorkspacePath').focus();
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     void (async () => {
+      const submit = query<HTMLButtonElement>('button[type="submit"]', form)!;
       submit.disabled = true;
-      submit.textContent = 'Publicando...';
-      setStatusMessage('Executando svn commit...');
+      setStatusMessage('Validando repositório Git e checkout SVN...');
 
-      const response = await api().commitSync(state.selectedEnvironmentId, textarea.value);
+      const response = await api().registerEnvironment({
+        name: input('name').value,
+        gitWorkspacePath: input('gitWorkspacePath').value,
+        svnCheckoutPath: input('svnCheckoutPath').value
+      });
 
-      if (response.result.status === 'success') {
-        state.syncCommitDraft = undefined;
-        renderSyncStage(response.screen, `
-          <div class="notice" data-tone="ready">
-            <p class="card-label">Commit SVN publicado</p>
-            <p class="context-line">Revisão <strong>${escapeHtml(response.result.revision ?? '?')}</strong> · ${escapeHtml(response.result.filesCommitted ?? 0)} caminho(s)</p>
-          </div>
-        `);
+      if (!response.registration.canSave) {
+        error.textContent = [response.registration.message, ...response.registration.blockers.map((blocker) => blocker.message)].join(' ');
+        error.hidden = false;
+        submit.disabled = false;
+        setStatusMessage(response.registration.message);
         return;
       }
 
-      submit.textContent = 'Commitar no SVN';
-      resultContainer.innerHTML = `
-        <div class="notice" data-tone="blocked">
-          <p class="card-label">${response.result.status === 'conflict' ? 'Conflito no commit' : 'Commit não realizado'}</p>
-          <p class="context-line">${escapeHtml(response.result.message)}</p>
-          ${response.result.error ? `<pre class="review-markdown">${escapeHtml(response.result.error)}</pre>` : ''}
-        </div>
-      `;
-      setStatusMessage(response.result.message);
-      refresh();
+      closeModal();
+      state.selectedEnvironmentId = response.registration.savedEnvironment?.id;
+      desktop.selectedPath = undefined;
+      desktop.commitDraft = undefined;
+      desktop.banner = undefined;
+      await loadDesktop();
     })();
   });
 }
 
-function renderSyncStage(screen: SyncScreenState, banner = ''): void {
-  const body = stageBody();
-  const plan = screen.plan;
-  setStatusMessage(screen.message);
+// Troca de visão ------------------------------------------------------------
 
-  if (!screen.environment || !plan) {
-    body.innerHTML = `
-      <p class="empty-state">${escapeHtml(screen.message)}</p>
-      <div class="stage-actions"><button class="action-button" data-role="go-environment">Cadastrar ambiente</button></div>
-    `;
-    bindClick(body, '[data-role="go-environment"]', () => goToStage('environment'));
-    return;
-  }
+function showDesktopView(): void {
+  state.showAdvanced = false;
+  writeShowAdvanced(false);
+  query<HTMLElement>('[data-role="desktop-view"]')!.hidden = false;
+  query<HTMLElement>('[data-role="advanced-view"]')!.hidden = true;
+  void loadDesktop();
+}
 
-  updateContext({
-    status: plan.status === 'ready' ? 'Diferenças encontradas' : plan.status === 'up-to-date' ? 'Sincronizado' : 'Bloqueado',
-    git: screen.environment.gitWorkspacePath,
-    svn: screen.environment.svnCheckoutPath,
-    base: plan.source ? `${plan.source.branch ?? 'HEAD'} @ ${plan.source.shortCommit}` : '-',
-    guard: plan.canSync ? 'Atualizar o checkout exige confirmação' : screen.canCommit ? 'Commit exige confirmação' : 'Nada pendente'
+function showAdvancedView(stage: StageKey = state.activeStage): void {
+  state.showAdvanced = true;
+  writeShowAdvanced(true);
+  state.activeStage = stage;
+  closeEnvironmentMenu();
+  query<HTMLElement>('[data-role="desktop-view"]')!.hidden = true;
+  query<HTMLElement>('[data-role="advanced-view"]')!.hidden = false;
+  renderToolbar();
+  renderNavigation();
+  void renderActiveStage();
+  // Mantém a barra superior atualizada também no modo avançado.
+  void loadDesktop({ quiet: true });
+}
+
+function bindDesktopShell(): void {
+  bindSidebar();
+
+  query<HTMLButtonElement>('[data-role="environment-picker"]')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    toggleEnvironmentMenu();
   });
 
-  const source = plan.source
-    ? `
-      <div class="preview-summary">
-        <p class="context-line">Git: <strong>${escapeHtml(plan.source.branch ?? 'HEAD')}</strong> @ <strong>${escapeHtml(plan.source.shortCommit)}</strong> — ${escapeHtml(plan.source.subject)}</p>
-        <p class="context-line">Checkout SVN: <strong>${escapeHtml(screen.environment.svnCheckoutPath)}</strong></p>
-        <p class="context-line">Última sincronização publicada: <strong>${escapeHtml(screen.lastSyncedCommit ? screen.lastSyncedCommit.slice(0, 7) : 'nenhuma ainda')}</strong></p>
-      </div>
-    `
-    : '';
-
-  let content = '';
-
-  if (plan.status === 'blocked') {
-    content = `<div class="notice" data-tone="blocked"><p class="card-label">Sincronização bloqueada</p><ul class="preview-list">${plan.blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join('')}</ul></div>`;
-  } else if (plan.status === 'ready') {
-    content = `
-      <p class="context-line">Para o checkout ficar igual ao Git: <strong>${plan.totals.added}</strong> a criar, <strong>${plan.totals.modified}</strong> a atualizar, <strong>${plan.totals.deleted}</strong> a remover.</p>
-      ${renderSyncChanges(plan)}
-      ${renderSyncWarnings(plan)}
-      ${plan.pendingSvnChanges > 0 ? `<p class="hint">O checkout já tinha ${plan.pendingSvnChanges} alteração(ões) não commitada(s); arquivos que existem no Git serão sobrescritos.</p>` : ''}
-      <label class="checkbox-row">
-        <input type="checkbox" data-role="confirm-sync" />
-        Copiar o commit ${escapeHtml(plan.source?.shortCommit)} para o checkout SVN local. Nada é publicado nesta etapa.
-      </label>
-      <div class="stage-actions">
-        <button class="action-button" data-role="execute-sync" disabled>Atualizar checkout SVN</button>
-      </div>
-    `;
-  } else if (screen.canCommit) {
-    content = renderSyncCommitForm(screen);
-  } else {
-    content = `
-      <div class="notice" data-tone="ready">
-        <p class="card-label">Tudo sincronizado</p>
-        <p class="context-line">${escapeHtml(plan.message)}</p>
-      </div>
-      ${renderSyncWarnings(plan)}
-    `;
-  }
-
-  body.innerHTML = `
-    ${banner}
-    ${source}
-    ${content}
-    <div class="stage-actions"><button class="action-button secondary" data-role="refresh-sync">Verificar novamente</button></div>
-  `;
-
-  bindClick(body, '[data-role="refresh-sync"]', () => renderActiveStage());
-  bindSyncCommitForm(body, screen);
-
-  const confirmBox = query<HTMLInputElement>('[data-role="confirm-sync"]', body);
-  const executeButton = query<HTMLButtonElement>('[data-role="execute-sync"]', body);
-
-  confirmBox?.addEventListener('change', () => {
-    if (executeButton) {
-      executeButton.disabled = !confirmBox.checked;
+  query<HTMLButtonElement>('[data-role="refresh"]')?.addEventListener('click', () => {
+    desktop.banner = undefined;
+    if (state.showAdvanced) {
+      void renderActiveStage();
+    } else {
+      void loadDesktop();
     }
   });
 
-  executeButton?.addEventListener('click', () => {
-    void (async () => {
-      executeButton.disabled = true;
-      executeButton.textContent = 'Copiando arquivos...';
-      setStatusMessage('Atualizando checkout SVN com o commit Git...');
+  query<HTMLButtonElement>('[data-role="toggle-advanced"]')?.addEventListener('click', () => {
+    if (state.showAdvanced) {
+      showDesktopView();
+    } else {
+      showAdvancedView('environment');
+    }
+  });
 
-      const response = await api().executeSync(state.selectedEnvironmentId);
-      const errors = response.result?.errors ?? [];
-      renderSyncStage(response.screen, errors.length > 0
-        ? `<div class="notice" data-tone="blocked"><p class="card-label">Erros ao atualizar o checkout</p><ul class="preview-list">${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join('')}</ul></div>`
-        : '');
-    })();
+  document.addEventListener('click', (event) => {
+    const menu = query<HTMLElement>('[data-role="environment-menu"]');
+    if (menu && !menu.hidden && !menu.contains(event.target as Node)) {
+      closeEnvironmentMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeEnvironmentMenu();
+      closeActiveModal?.();
+    }
   });
 }
 
@@ -1431,25 +2089,23 @@ async function renderActiveStage(): Promise<void> {
   body.innerHTML = '<p class="empty-state">Carregando...</p>';
 
   try {
-    const desktop = api();
+    const desktopApi = api();
     const environmentId = state.selectedEnvironmentId;
 
     if (stage.key === 'environment') {
-      renderEnvironmentStage(await desktop.getEnvironmentScreenState(environmentId));
-    } else if (stage.key === 'sync') {
-      renderSyncStage(await desktop.getSyncScreenState(environmentId));
+      renderEnvironmentStage(await desktopApi.getEnvironmentScreenState(environmentId));
     } else if (stage.key === 'workspace') {
-      renderWorkspaceStage(await desktop.getWorkspaceScreenState(environmentId));
+      renderWorkspaceStage(await desktopApi.getWorkspaceScreenState(environmentId));
     } else if (stage.key === 'preview') {
-      renderPreviewStage(await desktop.getPreviewScreenState(environmentId));
+      renderPreviewStage(await desktopApi.getPreviewScreenState(environmentId));
     } else if (stage.key === 'packages') {
-      renderPackagesStage(await desktop.getPackagesScreenState(environmentId));
+      renderPackagesStage(await desktopApi.getPackagesScreenState(environmentId));
     } else if (stage.key === 'apply') {
       await renderApplyStage();
     } else if (stage.key === 'commit') {
-      renderCommitStage(await desktop.getCommitScreenState(environmentId));
+      renderCommitStage(await desktopApi.getCommitScreenState(environmentId));
     } else {
-      renderHistoryStage(await desktop.readPackageHistory());
+      renderHistoryStage(await desktopApi.readPackageHistory());
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro desconhecido.';
@@ -1467,69 +2123,40 @@ function renderNavigation(): void {
 
   stageList.innerHTML = '';
 
-  const visible = STAGES.filter((stage) => !stage.advanced || state.showAdvanced);
-
-  visible.forEach((stage) => {
+  for (const stage of STAGES) {
     const li = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'stage-button';
     button.dataset.state = stage.key === state.activeStage ? 'active' : 'available';
-    button.innerHTML = `${escapeHtml(stage.label)}<small>${escapeHtml(stage.advanced ? `Avançado · ${stage.helper}` : stage.helper)}</small>`;
+    button.innerHTML = `${escapeHtml(stage.label)}<small>${escapeHtml(stage.helper)}</small>`;
     button.addEventListener('click', () => {
       void goToStage(stage.key);
     });
 
     li.appendChild(button);
     stageList.appendChild(li);
-  });
-
-  const toggleItem = document.createElement('li');
-  const toggle = document.createElement('button');
-  toggle.type = 'button';
-  toggle.className = 'advanced-toggle';
-  toggle.textContent = state.showAdvanced ? 'Ocultar modo avançado' : 'Modo avançado (patch e pacotes .svnflow)';
-  toggle.addEventListener('click', () => {
-    state.showAdvanced = !state.showAdvanced;
-    writeShowAdvanced(state.showAdvanced);
-
-    if (!state.showAdvanced && STAGES.find((stage) => stage.key === state.activeStage)?.advanced) {
-      void goToStage('sync');
-      return;
-    }
-
-    renderNavigation();
-  });
-  toggleItem.appendChild(toggle);
-  stageList.appendChild(toggleItem);
+  }
 }
 
-async function renderAppBootstrap(): Promise<void> {
-  const title = query<HTMLElement>('[data-role="app-title"]');
-  const subtitle = query<HTMLElement>('[data-role="app-subtitle"]');
+function renderAppBootstrap(): void {
+  const version = query<HTMLElement>('[data-role="app-version"]');
 
-  if (title) {
-    title.textContent = window.svnflowDesktop?.appName ?? 'SVNFlow';
+  if (version) {
+    version.textContent = `SVNFlow ${window.svnflowDesktop?.appVersion ?? 'dev'}`;
   }
 
-  if (subtitle) {
-    subtitle.textContent = `Do Git para o SVN · versão ${window.svnflowDesktop?.appVersion ?? 'dev'}`;
-  }
+  bindDesktopShell();
 
-  try {
-    const environments = await api().getEnvironmentScreenState();
-    state.selectedEnvironmentId = environments.selectedEnvironmentId;
-    state.activeStage = environments.items.length > 0 ? 'sync' : 'environment';
-  } catch {
-    state.activeStage = 'environment';
+  if (state.showAdvanced) {
+    showAdvancedView('environment');
+  } else {
+    showDesktopView();
   }
-
-  renderNavigation();
-  await renderActiveStage();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  void renderAppBootstrap();
+  renderAppBootstrap();
 });
 
 export {};

@@ -28,6 +28,12 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('sync:execute', { environmentId }),
   commitSync: (environmentId, message) =>
     ipcRenderer.invoke('sync:commit', { environmentId, message }),
+  getSyncFileDiff: (environmentId, filePath) =>
+    ipcRenderer.invoke('sync:file-diff', { environmentId, filePath }),
+  getSvnRevisionLog: (environmentId, revision) =>
+    ipcRenderer.invoke('sync:revision-log', { environmentId, revision }),
+  openEnvironmentFolder: (environmentId, which) =>
+    ipcRenderer.invoke('shell:open-environment-folder', { environmentId, which }),
   getWorkspaceScreenState: (environmentId) =>
     ipcRenderer.invoke('workspace:get-screen-state', { environmentId }),
   getPreviewScreenState: (environmentId) =>

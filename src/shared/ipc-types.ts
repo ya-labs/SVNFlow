@@ -9,7 +9,7 @@ import type { PackageLibraryResult } from '../main/commands/package-library.js';
 import type { RegisterSavedEnvironmentResult } from '../main/commands/register-saved-environment.js';
 import type { SavedEnvironmentValidationStatus } from '../main/commands/saved-environments.js';
 import type { ApplyPlan, ExecuteApplyResult } from '../main/commands/svn-apply-flow.js';
-import type { ExecuteSyncResult, SyncPlan } from '../main/commands/git-svn-sync.js';
+import type { ExecuteSyncResult, SvnRevisionLog, SyncFileDiff, SyncPlan } from '../main/commands/git-svn-sync.js';
 
 export type {
   ApplyPlan,
@@ -22,6 +22,8 @@ export type {
   PackageHistoryResult,
   PackageLibraryResult,
   RegisterSavedEnvironmentResult,
+  SvnRevisionLog,
+  SyncFileDiff,
   SyncPlan
 };
 
@@ -219,6 +221,9 @@ export interface SvnflowDesktopApi {
   getSyncScreenState: (environmentId?: string) => Promise<SyncScreenState>;
   executeSync: (environmentId?: string) => Promise<SyncExecuteResponse>;
   commitSync: (environmentId: string | undefined, message: string) => Promise<SyncCommitResponse>;
+  getSyncFileDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
+  getSvnRevisionLog: (environmentId: string | undefined, revision: string) => Promise<SvnRevisionLog>;
+  openEnvironmentFolder: (environmentId: string | undefined, which: 'git' | 'svn') => Promise<void>;
   getWorkspaceScreenState: (environmentId?: string) => Promise<WorkspaceScreenState>;
   getPreviewScreenState: (environmentId?: string) => Promise<PreviewScreenState>;
   getPackagesScreenState: (environmentId?: string) => Promise<PackagesScreenState>;
