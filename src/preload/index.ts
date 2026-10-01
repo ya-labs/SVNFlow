@@ -34,6 +34,8 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('sync:revision-log', { environmentId, revision }),
   openEnvironmentFolder: (environmentId, which) =>
     ipcRenderer.invoke('shell:open-environment-folder', { environmentId, which }),
+  linkGit: (environmentId, gitWorkspacePath, baseBranch) =>
+    ipcRenderer.invoke('project:link-git', { environmentId, gitWorkspacePath, baseBranch }),
   listGitBranches: (environmentId) =>
     ipcRenderer.invoke('git:list-branches', { environmentId }),
   switchGitBranch: (environmentId, branch, kind) =>

@@ -6,6 +6,7 @@ import path from 'path';
 
 import { readUncommittedChanges } from './git-patch.js';
 import { validateSvnCheckout } from './svn.js';
+import { parseLogXml, parseStatusXml } from './svn-xml.js';
 
 export interface SyncFileChange {
   path: string;
@@ -129,26 +130,17 @@ export function readGitTree(gitWorkspacePath: string): Map<string, GitTreeEntry>
   return entries;
 }
 
-function decodeXmlAttribute(value: string): string {
-  return value
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
-}
 
 // Lê os itens conhecidos pelo SVN no checkout, sem acessar o servidor.
 export function readSvnEntries(svnCheckoutPath: string): Map<string, SvnEntry> {
   const xml = svn(svnCheckoutPath, ['status', '-v', '--xml', '.']);
   const entries = new Map<string, SvnEntry>();
-  const pattern = /<entry\s+path="([^"]*)"\s*>\s*<wc-status\b[^>]*\bitem="([^"]+)"/g;
 
-  for (const match of xml.matchAll(pattern)) {
-    const entryPath = decodeXmlAttribute(match[1]).split(path.sep).join('/');
+  for (const entry of parseStatusXml(xml)) {
+    const entryPath = entry.path.split(path.sep).join('/');
 
     if (entryPath !== '.') {
-      entries.set(entryPath, { item: match[2] });
+      entries.set(entryPath, { item: entry.item });
     }
   }
 
@@ -589,22 +581,18 @@ export function readSvnRevisionLog(svnCheckoutPath: string, revision: string): S
   }
 
   try {
-    const xml = svn(svnCheckoutPath, ['log', '-v', '--xml', '-r', revision, '.']);
-    const author = xml.match(/<author>([^<]*)<\/author>/)?.[1];
-    const date = xml.match(/<date>([^<]*)<\/date>/)?.[1];
-    const logMessage = xml.match(/<msg>([\s\S]*?)<\/msg>/)?.[1];
-    const paths = [...xml.matchAll(/<path\b([^>]*)>([^<]*)<\/path>/g)]
-      .filter((match) => !/\bkind="dir"/.test(match[1]) || /\baction="D"/.test(match[1]))
-      .map((match) => ({ action: match[1].match(/\baction="([A-Z])"/)?.[1] ?? 'M', path: decodeXmlAttribute(match[2]) }));
+    const entry = parseLogXml(svn(svnCheckoutPath, ['log', '-v', '--xml', '-r', revision, '.']))[0];
 
     return {
       ok: true,
       message: `Revisão ${revision}`,
       revision,
-      author: author ? decodeXmlAttribute(author) : undefined,
-      date,
-      logMessage: logMessage ? decodeXmlAttribute(logMessage) : undefined,
-      paths
+      author: entry?.author,
+      date: entry?.date,
+      logMessage: entry?.message,
+      paths: (entry?.paths ?? [])
+        .filter((item) => item.kind !== 'dir' || item.action === 'D')
+        .map((item) => ({ action: item.action, path: item.path }))
     };
   } catch (error) {
     return { ok: false, message: `Não foi possível ler a revisão ${revision}: ${errorMessage(error)}`, revision, paths: [] };

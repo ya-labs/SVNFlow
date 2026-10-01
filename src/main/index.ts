@@ -12,6 +12,7 @@ import type {
   EnvironmentVisualStatus,
   ExecuteApplyResponse,
   ExportPackageRequest,
+  LinkGitResponse,
   PackagesScreenState,
   PreviewScreenState,
   RegisterEnvironmentInput,
@@ -36,7 +37,7 @@ import { importAndValidateSvnflowPackage, readValidatedPackagePatch, type Import
 import { listPackageLibrary } from './commands/package-library.js';
 import { buildPreviewContext } from './commands/preview.js';
 import { buildPreviewScreenState } from './commands/preview-screen.js';
-import { registerSavedEnvironmentFromLocalPaths } from './commands/register-saved-environment.js';
+import { linkGitToSavedEnvironment, registerSavedEnvironmentFromLocalPaths } from './commands/register-saved-environment.js';
 import { revalidateEnvironment } from './commands/revalidate-environment.js';
 import {
   readSavedEnvironments,
@@ -58,6 +59,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DEFAULT_BASE_BRANCH = 'main';
+const GIT_NOT_LINKED_MESSAGE = 'Este projeto não tem repositório Git vinculado.';
+
+type GitLinkedEnvironment = SelectedEnvironment & { gitWorkspacePath: string };
+
+function hasGit(environment: SelectedEnvironment | undefined): environment is GitLinkedEnvironment {
+  return Boolean(environment?.gitWorkspacePath);
+}
 
 async function resolveSelectedEnvironmentById(environmentId?: string): Promise<SelectedEnvironment | undefined> {
   const storagePath = resolveSavedEnvironmentStoragePath();
@@ -176,6 +184,18 @@ async function buildSyncScreenState(environmentId?: string, messageOverride?: st
     };
   }
 
+  if (!hasGit(selected)) {
+    return {
+      message: `${GIT_NOT_LINKED_MESSAGE} A sincronização Git → SVN fica disponível ao vincular um Git.`,
+      environment: {
+        id: selected.id,
+        name: selected.name,
+        svnCheckoutPath: selected.svnCheckoutPath
+      },
+      canCommit: false
+    };
+  }
+
   const plan = buildSyncPlan({
     gitWorkspacePath: selected.gitWorkspacePath,
     svnCheckoutPath: selected.svnCheckoutPath
@@ -206,7 +226,7 @@ async function buildSyncScreenState(environmentId?: string, messageOverride?: st
 async function executeSyncForEnvironment(environmentId?: string): Promise<SyncExecuteResponse> {
   const selected = await resolveSelectedEnvironmentById(environmentId);
 
-  if (!selected) {
+  if (!hasGit(selected)) {
     return { screen: await buildSyncScreenState(environmentId) };
   }
 
@@ -283,7 +303,7 @@ async function buildPackagesScreenState(environmentId?: string): Promise<Package
   return {
     packagesDirectory: settings.packagesDirectory,
     preview,
-    author: selected ? readGitAuthor(selected.gitWorkspacePath) : undefined,
+    author: hasGit(selected) ? readGitAuthor(selected.gitWorkspacePath) : undefined,
     library
   };
 }
@@ -292,7 +312,7 @@ async function exportPackageFromPreview(request: ExportPackageRequest): Promise<
   const selected = await resolveSelectedEnvironmentById(request.environmentId);
   const preview = await buildPreviewRendererState(request.environmentId);
 
-  if (!selected || !preview.environment || !preview.workspace || !preview.canExportPackage) {
+  if (!hasGit(selected) || !preview.environment || !preview.workspace || !preview.canExportPackage) {
     return {
       ok: false,
       message: preview.blockers[0]?.message ?? 'Preview indisponível ou bloqueado para exportação de pacote.',
@@ -316,7 +336,7 @@ async function exportPackageFromPreview(request: ExportPackageRequest): Promise<
   const settings = await readAppSettings();
   const exportResult = await exportSvnflowPackage({
     preview: {
-      environment: preview.environment,
+      environment: { ...preview.environment, gitWorkspacePath: selected.gitWorkspacePath },
       workspace: preview.workspace,
       blockers: preview.blockers,
       alerts: preview.alerts
@@ -378,6 +398,10 @@ async function resolveApplyInput(environmentId: string | undefined, source: Appl
         }
       }
     };
+  }
+
+  if (!hasGit(selected)) {
+    return { ok: false, message: GIT_NOT_LINKED_MESSAGE };
   }
 
   const preview = await buildPreviewRendererState(environmentId);
@@ -685,11 +709,23 @@ function registerIpcHandlers(): void {
     commitSyncForEnvironment(payload.environmentId, payload.message ?? '')
   );
 
+  ipcMain.handle('project:link-git', async (_event, payload: { environmentId: string; gitWorkspacePath: string; baseBranch?: string }): Promise<LinkGitResponse> => {
+    if (typeof payload?.environmentId !== 'string' || typeof payload.gitWorkspacePath !== 'string') {
+      return { ok: false, message: 'Projeto ou caminho inválidos.', blockers: [] };
+    }
+
+    return linkGitToSavedEnvironment({
+      environmentId: payload.environmentId,
+      gitWorkspacePath: payload.gitWorkspacePath,
+      baseBranch: payload.baseBranch
+    });
+  });
+
   ipcMain.handle('git:list-branches', async (_event, payload: { environmentId?: string }): Promise<GitBranchList> => {
     const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
 
-    if (!selected) {
-      return { ok: false, message: 'Nenhum ambiente selecionado.', detached: false, local: [], remote: [] };
+    if (!hasGit(selected)) {
+      return { ok: false, message: selected ? GIT_NOT_LINKED_MESSAGE : 'Nenhum ambiente selecionado.', detached: false, local: [], remote: [] };
     }
 
     return listGitBranches(selected.gitWorkspacePath);
@@ -700,7 +736,7 @@ function registerIpcHandlers(): void {
     async (_event, payload: { environmentId?: string; branch: string; kind: 'local' | 'remote' }): Promise<SwitchGitBranchResult> => {
       const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
 
-      if (!selected || typeof payload?.branch !== 'string' || (payload.kind !== 'local' && payload.kind !== 'remote')) {
+      if (!hasGit(selected) || typeof payload?.branch !== 'string' || (payload.kind !== 'local' && payload.kind !== 'remote')) {
         return { ok: false, message: 'Ambiente ou branch inválidos.', errorCode: 'BRANCH_NOT_FOUND' };
       }
 
@@ -722,7 +758,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('sync:file-diff', async (_event, payload: { environmentId?: string; filePath: string }): Promise<SyncFileDiff | undefined> => {
     const selected = await resolveSelectedEnvironmentById(payload.environmentId);
 
-    if (!selected || !payload.filePath || path.isAbsolute(payload.filePath) || payload.filePath.split(/[\\/]/).includes('..')) {
+    if (!hasGit(selected) || !payload.filePath || path.isAbsolute(payload.filePath) || payload.filePath.split(/[\\/]/).includes('..')) {
       return undefined;
     }
 
@@ -746,8 +782,10 @@ function registerIpcHandlers(): void {
   ipcMain.handle('shell:open-environment-folder', async (_event, payload: { environmentId?: string; which: 'git' | 'svn' }) => {
     const selected = await resolveSelectedEnvironmentById(payload.environmentId);
 
-    if (selected) {
-      await shell.openPath(payload.which === 'git' ? selected.gitWorkspacePath : selected.svnCheckoutPath);
+    const folder = payload.which === 'git' ? selected?.gitWorkspacePath : selected?.svnCheckoutPath;
+
+    if (folder) {
+      await shell.openPath(folder);
     }
   });
 
@@ -778,7 +816,7 @@ function registerIpcHandlers(): void {
       environmentName: preview.environment?.environmentName ?? 'não identificado',
       branch: preview.workspace?.branch,
       baseBranch: preview.workspace?.baseBranch ?? DEFAULT_BASE_BRANCH,
-      author: selected ? readGitAuthor(selected.gitWorkspacePath) : undefined,
+      author: hasGit(selected) ? readGitAuthor(selected.gitWorkspacePath) : undefined,
       generatedAt: new Date().toISOString(),
       files: preview.workspace?.files ?? []
     });

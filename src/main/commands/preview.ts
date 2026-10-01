@@ -230,8 +230,19 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
     };
   }
 
+  const gitWorkspacePath = input.selectedEnvironment.gitWorkspacePath;
+
+  if (!gitWorkspacePath) {
+    return {
+      status: 'blocked',
+      canPreview: false,
+      message: 'Este projeto não tem repositório Git vinculado. Vincule um Git para usar esta etapa.',
+      blockers: [{ code: 'GIT_NOT_LINKED', message: 'Vincule um repositório Git ao projeto para usar o modo avançado.' }]
+    };
+  }
+
   const state = validateEnvironmentState({
-    gitRepositoryPath: input.selectedEnvironment.gitWorkspacePath,
+    gitRepositoryPath: gitWorkspacePath,
     svnCheckoutPath: input.selectedEnvironment.svnCheckoutPath,
     baseBranch: input.baseBranch ?? input.selectedEnvironment.baseBranch
   });
@@ -289,7 +300,7 @@ export function buildPreviewContext(input: PreviewContextInput): PreviewContextR
     });
   }
 
-  const uncommitted = readUncommittedChanges(input.selectedEnvironment.gitWorkspacePath);
+  const uncommitted = readUncommittedChanges(gitWorkspacePath);
 
   if (uncommitted.count > 0) {
     alerts.push({

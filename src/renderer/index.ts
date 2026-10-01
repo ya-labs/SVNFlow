@@ -1254,11 +1254,15 @@ function renderToolbar(): void {
   const plan = screen?.plan;
   const source = plan?.source;
 
-  setText('environment-name', desktop.environments?.selected?.name ?? 'Nenhum ambiente');
+  setText('environment-name', desktop.environments?.selected?.name ?? 'Nenhum projeto');
   setText('git-branch', source ? `${source.branch ?? 'HEAD'} · ${source.shortCommit}` : '-');
   const branchPicker = query<HTMLButtonElement>('[data-role="branch-picker"]');
+  const gitLinked = Boolean(desktop.environments?.selected?.gitWorkspacePath);
   if (branchPicker) {
-    branchPicker.disabled = !desktop.screen?.environment;
+    branchPicker.disabled = !gitLinked;
+  }
+  if (desktop.screen?.environment && !gitLinked) {
+    setText('git-branch', 'Sem Git vinculado');
   }
 
   if (plan?.status === 'ready') {
@@ -1311,7 +1315,7 @@ function renderSidebar(): void {
   }
 
   if (!desktop.screen?.environment) {
-    list.innerHTML = '<p class="list-empty">Nenhum ambiente selecionado.</p>';
+    list.innerHTML = '<p class="list-empty">Nenhum projeto selecionado.</p>';
     return;
   }
 
@@ -1590,6 +1594,7 @@ function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="open-git"]', () => api().openEnvironmentFolder(state.selectedEnvironmentId, 'git'));
   bindClick(detail, '[data-role="refresh-detail"]', () => loadDesktop());
   bindClick(detail, '[data-role="open-advanced"]', () => showAdvancedView('environment'));
+  bindClick(detail, '[data-role="link-git"]', () => openLinkGitModal());
 }
 
 async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId: number): Promise<void> {
@@ -1661,9 +1666,9 @@ async function renderDetail(): Promise<void> {
 
   if (!desktop.environments || desktop.environments.items.length === 0) {
     detail.innerHTML = blankSlate(
-      'Comece adicionando um ambiente',
-      'Um ambiente liga a pasta do seu repositório Git à pasta do checkout SVN que recebe o código.',
-      `<div class="suggestions">${suggestion('Adicionar ambiente', 'Escolha o repositório Git e o checkout SVN.', 'add-environment', 'Adicionar…')}</div>`
+      'Comece adicionando um projeto',
+      'Um projeto é uma pasta de checkout SVN. Opcionalmente, você vincula um repositório Git para sincronizar o código dele com o SVN.',
+      `<div class="suggestions">${suggestion('Adicionar projeto', 'Escolha a pasta de um checkout SVN que você já tem.', 'add-environment', 'Adicionar…')}</div>`
     );
     bindDetailActions(detail);
     return;
@@ -1680,16 +1685,32 @@ async function renderDetail(): Promise<void> {
     return;
   }
 
+  if (desktop.screen?.environment && !desktop.environments?.selected?.gitWorkspacePath && !plan) {
+    detail.innerHTML = `
+      ${renderBanner()}
+      ${blankSlate(
+        'Projeto SVN',
+        'Este projeto ainda não tem repositório Git vinculado.',
+        `<div class="suggestions">
+          ${suggestion('Abrir checkout SVN', desktop.screen.environment.svnCheckoutPath, 'open-svn', 'Abrir pasta')}
+          ${suggestion('Vincular repositório Git', 'Sincronize o último commit de um repositório Git com este checkout.', 'link-git', 'Vincular…')}
+        </div>`
+      )}
+    `;
+    bindDetailActions(detail);
+    return;
+  }
+
   if (!plan || plan.status === 'blocked') {
     detail.innerHTML = `
       ${renderBanner()}
       ${blankSlate(
         'Sincronização bloqueada',
-        desktop.screen?.message ?? 'Não foi possível ler o ambiente.',
+        desktop.screen?.message ?? 'Não foi possível ler o projeto.',
         `<div class="banner" data-tone="error"><ul>${(plan?.blockers ?? []).map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join('')}</ul></div>
          <div class="suggestions">
            ${suggestion('Abrir checkout SVN', 'Resolva conflitos ou problemas direto na pasta.', 'open-svn', 'Abrir pasta')}
-           ${suggestion('Revisar ambiente', 'Confira os caminhos e valide o ambiente no modo avançado.', 'open-advanced', 'Abrir')}
+           ${suggestion('Revisar projeto', 'Confira os caminhos e valide o projeto no modo avançado.', 'open-advanced', 'Abrir')}
          </div>`
       )}
     `;
@@ -1757,7 +1778,7 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
     }
 
     if (!options.quiet) {
-      setStatusMessage(desktop.screen?.message ?? 'Adicione um ambiente para começar.');
+      setStatusMessage(desktop.screen?.message ?? 'Adicione um projeto para começar.');
     }
   } catch (error) {
     setStatusMessage(`Falha ao carregar: ${error instanceof Error ? error.message : 'erro desconhecido'}`);
@@ -1770,7 +1791,7 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
   renderDesktop();
 }
 
-// Menu de ambientes ---------------------------------------------------------
+// Menu de projetos ---------------------------------------------------------
 
 function closeMenus(): void {
   for (const [menu, picker] of [['environment-menu', 'environment-picker'], ['branch-menu', 'branch-picker']]) {
@@ -1803,10 +1824,11 @@ function toggleEnvironmentMenu(): void {
   `).join('');
 
   menu.innerHTML = `
-    <div class="dropdown-header">Ambientes</div>
-    <ul class="dropdown-list">${items || '<li class="list-empty">Nenhum ambiente cadastrado.</li>'}</ul>
+    <div class="dropdown-header">Projetos</div>
+    <ul class="dropdown-list">${items || '<li class="list-empty">Nenhum projeto cadastrado.</li>'}</ul>
     <div class="dropdown-footer">
-      <button type="button" class="button primary" data-role="menu-add">Adicionar ambiente…</button>
+      <button type="button" class="button primary" data-role="menu-add">Adicionar projeto…</button>
+      ${environments?.selected ? `<button type="button" class="button" data-role="menu-link-git">${environments.selected.gitWorkspacePath ? 'Git vinculado…' : 'Vincular Git…'}</button>` : ''}
       ${environments?.selected ? `<button type="button" class="button danger" data-role="menu-remove">Remover da lista</button>` : ''}
     </div>
   `;
@@ -1827,6 +1849,11 @@ function toggleEnvironmentMenu(): void {
     }
   });
 
+  bindClick(menu, '[data-role="menu-link-git"]', () => {
+    closeMenus();
+    openLinkGitModal();
+  });
+
   bindClick(menu, '[data-role="menu-add"]', () => {
     closeMenus();
     openAddEnvironmentModal();
@@ -1837,7 +1864,7 @@ function toggleEnvironmentMenu(): void {
     const selected = desktop.environments?.selected;
 
     if (!selected || !(await confirmModal({
-      title: 'Remover ambiente',
+      title: 'Remover projeto',
       message: `Remover "${selected.name}" da lista? As pastas do Git e do SVN não serão apagadas.`,
       confirmLabel: 'Remover',
       danger: true
@@ -2007,29 +2034,29 @@ function confirmModal(options: { title: string; message: string; detail?: string
 function openAddEnvironmentModal(): void {
   const modal = openModal(`
     <form data-role="add-environment-form">
-      <div class="modal-header">Adicionar ambiente</div>
+      <div class="modal-header">Adicionar projeto</div>
       <div class="modal-body">
-        <label class="modal-field">Repositório Git
-          <span class="input-row">
-            <input class="input" name="gitWorkspacePath" type="text" placeholder="Pasta do repositório Git local" required />
-            <button type="button" class="button" data-role="pick-git">Escolher…</button>
-          </span>
-        </label>
         <label class="modal-field">Checkout SVN
           <span class="input-row">
-            <input class="input" name="svnCheckoutPath" type="text" placeholder="Pasta do checkout SVN" required />
+            <input class="input" name="svnCheckoutPath" type="text" placeholder="Pasta de um checkout SVN existente" required />
             <button type="button" class="button" data-role="pick-svn">Escolher…</button>
           </span>
-          <small>Faça o checkout uma vez com svn checkout; o SVNFlow mantém essa pasta igual ao Git.</small>
+        </label>
+        <label class="modal-field">Repositório Git <small>(opcional)</small>
+          <span class="input-row">
+            <input class="input" name="gitWorkspacePath" type="text" placeholder="Vincule para sincronizar o código do Git com o SVN" />
+            <button type="button" class="button" data-role="pick-git">Escolher…</button>
+          </span>
+          <small>Sem Git, o projeto funciona como cliente SVN: alterações, commit, histórico e atualização.</small>
         </label>
         <label class="modal-field">Nome
-          <input class="input" name="name" type="text" placeholder="Usa o nome da pasta Git quando vazio" />
+          <input class="input" name="name" type="text" placeholder="Usa o nome da pasta quando vazio" />
         </label>
         <p class="modal-error" data-role="add-environment-error" hidden></p>
       </div>
       <div class="modal-footer">
         <button type="button" class="button" data-role="modal-cancel">Cancelar</button>
-        <button type="submit" class="button primary">Adicionar ambiente</button>
+        <button type="submit" class="button primary">Adicionar projeto</button>
       </div>
     </form>
   `);
@@ -2047,14 +2074,14 @@ function openAddEnvironmentModal(): void {
     const selected = await api().selectDirectory('Selecionar checkout SVN', input('svnCheckoutPath').value || undefined);
     if (selected) input('svnCheckoutPath').value = selected;
   });
-  input('gitWorkspacePath').focus();
+  input('svnCheckoutPath').focus();
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     void (async () => {
       const submit = query<HTMLButtonElement>('button[type="submit"]', form)!;
       submit.disabled = true;
-      setStatusMessage('Validando repositório Git e checkout SVN...');
+      setStatusMessage('Validando o projeto...');
 
       const response = await api().registerEnvironment({
         name: input('name').value,
@@ -2118,6 +2145,67 @@ async function openAppearanceModal(): Promise<void> {
     });
   });
   query<HTMLButtonElement>('[data-role="modal-cancel"]', modal)?.focus();
+}
+
+function openLinkGitModal(): void {
+  const selected = desktop.environments?.selected;
+
+  if (!selected) {
+    return;
+  }
+
+  const modal = openModal(`
+    <form data-role="link-git-form">
+      <div class="modal-header">Repositório Git de "${escapeHtml(selected.name)}"</div>
+      <div class="modal-body">
+        <p>Com um Git vinculado, a aba Alterações copia o último commit da branch atual para o checkout SVN antes do commit.</p>
+        <label class="modal-field">Repositório Git
+          <span class="input-row">
+            <input class="input" name="gitWorkspacePath" type="text" placeholder="Pasta do repositório Git local" value="${escapeHtml(selected.gitWorkspacePath ?? '')}" required />
+            <button type="button" class="button" data-role="pick-git">Escolher…</button>
+          </span>
+        </label>
+        <p class="modal-error" data-role="link-git-error" hidden></p>
+      </div>
+      <div class="modal-footer">
+        ${selected.gitWorkspacePath ? '<button type="button" class="button danger" data-role="unlink-git">Desvincular</button>' : ''}
+        <button type="button" class="button" data-role="modal-cancel">Cancelar</button>
+        <button type="submit" class="button primary">Vincular</button>
+      </div>
+    </form>
+  `);
+  const form = query<HTMLFormElement>('form', modal)!;
+  const gitInput = form.elements.namedItem('gitWorkspacePath') as HTMLInputElement;
+  const error = query<HTMLElement>('[data-role="link-git-error"]', modal)!;
+
+  const save = async (gitWorkspacePath: string) => {
+    const response = await api().linkGit(selected.id, gitWorkspacePath);
+
+    if (!response.ok) {
+      error.textContent = [response.message, ...response.blockers.map((blocker) => blocker.message)].join(' ');
+      error.hidden = false;
+      return;
+    }
+
+    closeModal();
+    desktop.selectedPath = undefined;
+    desktop.commitDraft = undefined;
+    desktop.banner = { tone: 'success', html: `<p><strong>${escapeHtml(response.message)}</strong></p>` };
+    await loadDesktop();
+  };
+
+  closeActiveModal = closeModal;
+  bindClick(modal, '[data-role="modal-cancel"]', closeModal);
+  bindClick(modal, '[data-role="pick-git"]', async () => {
+    const picked = await api().selectDirectory('Selecionar repositório Git', gitInput.value || undefined);
+    if (picked) gitInput.value = picked;
+  });
+  bindClick(modal, '[data-role="unlink-git"]', () => save(''));
+  gitInput.focus();
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void save(gitInput.value);
+  });
 }
 
 // Troca de visão ------------------------------------------------------------

@@ -14,7 +14,7 @@ export interface PreviewScreenActions {
 
 export interface PreviewScreenEnvironmentSection {
   environmentName: string;
-  gitWorkspacePath: string;
+  gitWorkspacePath?: string;
   svnCheckoutPath: string;
   svnCheckoutRoot?: string;
 }

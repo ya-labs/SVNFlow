@@ -1,3 +1,4 @@
+import { validateSvnAvailability, validateSvnCheckout } from './svn.js';
 import { validateEnvironmentState, type EnvironmentStateInput, type EnvironmentStateStatus } from './environment.js';
 import type { SavedEnvironment } from './saved-environments.js';
 
@@ -9,7 +10,7 @@ export interface RevalidationBlocker {
 export interface RevalidatedEnvironment {
   id: string;
   name: string;
-  gitWorkspacePath: string;
+  gitWorkspacePath?: string;
   svnCheckoutPath: string;
   currentValidationStatus: EnvironmentStateStatus;
   isValid: boolean;
@@ -81,9 +82,27 @@ function extractBlockers(status: EnvironmentStateStatus, message: string): Reval
   return blockers.length > 0 ? blockers : [];
 }
 
+// Projeto só SVN: valida o cliente svn e o checkout, sem exigir Git.
+function validateSvnOnly(svnCheckoutPath: string): { status: EnvironmentStateStatus; message: string } {
+  const availability = validateSvnAvailability();
+
+  if (!availability.available) {
+    return { status: availability.error === 'ENOENT' ? 'blocked' : 'error', message: availability.message };
+  }
+
+  const checkout = validateSvnCheckout(svnCheckoutPath);
+
+  if (!checkout.valid) {
+    return { status: checkout.error === 'ETIMEDOUT' ? 'error' : 'blocked', message: checkout.message };
+  }
+
+  return { status: 'ready', message: 'Checkout SVN pronto.' };
+}
+
 export function revalidateEnvironment(input: RevalidateEnvironmentInput): RevalidateEnvironmentResult {
-  const validation = validateEnvironmentState({
-    gitRepositoryPath: input.environment.gitWorkspacePath,
+  const gitWorkspacePath = input.environment.gitWorkspacePath;
+  const validation = !gitWorkspacePath ? validateSvnOnly(input.environment.svnCheckoutPath) : validateEnvironmentState({
+    gitRepositoryPath: gitWorkspacePath,
     svnCheckoutPath: input.environment.svnCheckoutPath,
     baseBranch: input.baseBranch
   });
