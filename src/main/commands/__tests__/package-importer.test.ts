@@ -21,12 +21,55 @@ function stableStringify(value: unknown): string {
   return `{${serialized.join(',')}}`;
 }
 
+const SAMPLE_PATCH = [
+  'diff --git a/src/a.ts b/src/a.ts',
+  'index 1111111..2222222 100644',
+  '--- a/src/a.ts',
+  '+++ b/src/a.ts',
+  '@@ -1 +1 @@',
+  '-export const a = 1;',
+  '+export const a = 2;',
+  ''
+].join('\n');
+
+const SAMPLE_MINI_PR = {
+  title: 'Ajusta constante do modulo A',
+  context: 'Valor anterior estava incorreto.',
+  whatChanged: 'Atualiza constante a para 2.',
+  notes: ''
+};
+
+const SAMPLE_PREVIEW = {
+  environment: {
+    environmentName: 'Ambiente Teste',
+    gitWorkspacePath: '/tmp/git',
+    svnCheckoutPath: '/tmp/svn'
+  },
+  workspace: {
+    branch: 'feat/teste',
+    baseBranch: 'main',
+    totalAffectedFiles: 1,
+    files: [
+      {
+        path: 'src/a.ts',
+        status: 'Modificado',
+        description: 'Modificado: src/a.ts',
+        rawStatus: 'M'
+      }
+    ]
+  },
+  blockers: [],
+  alerts: []
+};
+
 describe('package-importer', () => {
   it('valida pacote .svnflow gerado pelo exportador', async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'svnflow-importer-'));
 
     const exported = await exportSvnflowPackage({
       outputDirectory: tempDir,
+      patchContent: SAMPLE_PATCH,
+      miniPr: SAMPLE_MINI_PR,
       preview: {
         environment: {
           environmentName: 'Ambiente Teste',
@@ -67,6 +110,8 @@ describe('package-importer', () => {
 
     const exported = await exportSvnflowPackage({
       outputDirectory: tempDir,
+      patchContent: SAMPLE_PATCH,
+      miniPr: SAMPLE_MINI_PR,
       preview: {
         environment: {
           environmentName: 'Ambiente Teste',
@@ -126,6 +171,8 @@ describe('package-importer', () => {
 
     const exported = await exportSvnflowPackage({
       outputDirectory: tempDir,
+      patchContent: SAMPLE_PATCH,
+      miniPr: SAMPLE_MINI_PR,
       preview: {
         environment: {
           environmentName: 'Ambiente Teste',
@@ -161,6 +208,8 @@ describe('package-importer', () => {
 
     const exported = await exportSvnflowPackage({
       outputDirectory: tempDir,
+      patchContent: SAMPLE_PATCH,
+      miniPr: SAMPLE_MINI_PR,
       preview: {
         environment: {
           environmentName: 'Ambiente Teste',
@@ -197,5 +246,87 @@ describe('package-importer', () => {
 
     expect(result.ok).toBe(false);
     expect(result.errors.some((e) => e.code === 'REVIEW_WHAT_CHANGED_REQUIRED' && e.category === 'artifact')).toBe(true);
+  });
+
+  it('bloqueia exportacao quando campos obrigatorios da mini PR estao vazios', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'svnflow-importer-'));
+
+    const exported = await exportSvnflowPackage({
+      outputDirectory: tempDir,
+      patchContent: SAMPLE_PATCH,
+      miniPr: { title: 'Titulo', context: ' ', whatChanged: '', notes: '' },
+      preview: SAMPLE_PREVIEW
+    });
+
+    expect(exported.ok).toBe(false);
+    expect(exported.errorCode).toBe('INVALID_MINI_PR');
+    expect(exported.pendingRequiredFields).toEqual(['context', 'whatChanged']);
+  });
+
+  it('bloqueia exportacao sem patch', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'svnflow-importer-'));
+
+    const exported = await exportSvnflowPackage({
+      outputDirectory: tempDir,
+      patchContent: '  ',
+      miniPr: SAMPLE_MINI_PR,
+      preview: SAMPLE_PREVIEW
+    });
+
+    expect(exported.ok).toBe(false);
+    expect(exported.errorCode).toBe('INVALID_PATCH');
+  });
+
+  it('renderiza revisao a partir da mini PR e libera aplicacao com patch', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'svnflow-importer-'));
+
+    const exported = await exportSvnflowPackage({
+      outputDirectory: tempDir,
+      patchContent: SAMPLE_PATCH,
+      miniPr: SAMPLE_MINI_PR,
+      author: 'Pessoa Teste',
+      preview: SAMPLE_PREVIEW
+    });
+
+    expect(exported.manifest?.formatVersion).toBe('1.1.0');
+    expect(path.basename(exported.packagePath!)).toMatch(/ajusta-constante-do-modulo-a\.svnflow$/);
+
+    const result = await importAndValidateSvnflowPackage(exported.packagePath!);
+
+    expect(result.ok).toBe(true);
+    expect(result.canApply).toBe(true);
+    expect(result.patchFiles).toEqual(['src/a.ts']);
+    expect(result.review?.title).toBe('Ajusta constante do modulo A');
+    expect(result.review?.context).toBe('Valor anterior estava incorreto.');
+    expect(result.review?.author).toBe('Pessoa Teste');
+    expect(result.review?.whatChanged).toEqual(['Atualiza constante a para 2.']);
+    expect(result.review?.missingOptionalFields).toEqual(['observações']);
+  });
+
+  it('aceita pacote legado 1.0.0 apenas para revisao', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'svnflow-importer-'));
+    const artifacts = {
+      'preview.json': SAMPLE_PREVIEW,
+      'pr.md': '# Revisao de Pacote SVNFlow\n\n- Ambiente: Ambiente Teste\n- Base: main\n\n## O que mudou\n- **Modificado** src/a.ts'
+    };
+    const packagePath = path.join(tempDir, 'legado.svnflow');
+    await writeFile(packagePath, JSON.stringify({
+      manifest: {
+        formatVersion: '1.0.0',
+        packageId: 'pacote-legado',
+        generatedAt: '2026-01-01T00:00:00.000Z',
+        checksumAlgorithm: 'sha256',
+        checksum: createHash('sha256').update(stableStringify(artifacts), 'utf8').digest('hex'),
+        requiredFields: ['manifest.packageId', 'artifacts.pr.md'],
+        artifacts: { previewJson: 'preview.json', prMarkdown: 'pr.md' }
+      },
+      artifacts
+    }), 'utf8');
+
+    const result = await importAndValidateSvnflowPackage(packagePath);
+
+    expect(result.ok).toBe(true);
+    expect(result.canApply).toBe(false);
+    expect(result.applyBlockReason).toContain('1.0.0');
   });
 });

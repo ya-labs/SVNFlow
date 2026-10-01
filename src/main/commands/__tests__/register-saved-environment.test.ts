@@ -4,10 +4,12 @@ import { validateGitRepository } from '../git';
 import { registerSavedEnvironmentFromLocalPaths } from '../register-saved-environment';
 import { saveSavedEnvironment } from '../saved-environment-store';
 import { validateSvnCheckout } from '../svn';
+import { validateGitComparisonBase } from '../workspace';
 
 jest.mock('../git');
 jest.mock('../svn');
 jest.mock('../saved-environment-store');
+jest.mock('../workspace');
 jest.mock('node:child_process', () => ({
   execSync: jest.fn()
 }));
@@ -16,10 +18,43 @@ const mockValidateGitRepository = validateGitRepository as jest.MockedFunction<t
 const mockValidateSvnCheckout = validateSvnCheckout as jest.MockedFunction<typeof validateSvnCheckout>;
 const mockSaveSavedEnvironment = saveSavedEnvironment as jest.MockedFunction<typeof saveSavedEnvironment>;
 const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+const mockValidateGitComparisonBase = validateGitComparisonBase as jest.MockedFunction<typeof validateGitComparisonBase>;
 
 describe('registerSavedEnvironmentFromLocalPaths', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockValidateGitComparisonBase.mockReturnValue({
+      status: 'ready',
+      valid: true,
+      message: 'Base de comparação main encontrada.',
+      path: '/repo/git',
+      baseBranch: 'main'
+    });
+  });
+
+  it('bloqueia cadastro quando a base de comparação não existe', async () => {
+    mockValidateGitRepository.mockReturnValue({
+      valid: true,
+      message: 'Repositório Git válido.'
+    });
+    mockValidateGitComparisonBase.mockReturnValue({
+      status: 'blocked',
+      valid: false,
+      message: 'Base de comparação develop não encontrada no repositório Git local.',
+      path: '/repo/git',
+      baseBranch: 'develop',
+      error: 'BASE_NOT_FOUND'
+    });
+
+    const result = await registerSavedEnvironmentFromLocalPaths({
+      gitWorkspacePath: '/repo/git',
+      svnCheckoutPath: '/repo/svn',
+      baseBranch: 'develop'
+    });
+
+    expect(result.canSave).toBe(false);
+    expect(result.blockers[0].code).toBe('INVALID_BASE_BRANCH');
+    expect(mockSaveSavedEnvironment).not.toHaveBeenCalled();
   });
 
   it('bloqueia cadastro quando workspace Git é inválido', async () => {

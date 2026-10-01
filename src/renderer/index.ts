@@ -1,198 +1,33 @@
+import type {
+  ApplyPlan,
+  ApplySourceRequest,
+  CommitScreenState,
+  EnvironmentScreenState,
+  EnvironmentVisualStatus,
+  ExecuteApplyResult,
+  ImportPackageResult,
+  MiniPrDraft,
+  PackageHistoryResult,
+  PackagesScreenState,
+  PreviewScreenState,
+  ScreenAlert,
+  ScreenBlocker,
+  ScreenWorkspaceFile,
+  SvnflowDesktopApi,
+  WorkspaceScreenState
+} from '../shared/ipc-types.js';
+
 declare global {
   interface Window {
-    svnflowDesktop?: {
-      appName: string;
-      shellStatus: string;
-      getEnvironmentScreenState?: (environmentId?: string) => Promise<EnvironmentScreenState>;
-      revalidateEnvironment?: (environmentId?: string) => Promise<EnvironmentScreenState>;
-      getPreviewScreenState?: (environmentId?: string) => Promise<PreviewScreenState>;
-      getWorkspaceScreenState?: (environmentId?: string) => Promise<WorkspaceScreenState>;
-      getCommitScreenState?: (environmentId?: string) => Promise<CommitScreenState>;
-      executeCommit?: (environmentId: string, title: string, description?: string) => Promise<ExecuteCommitResult>;
-      exportPackageFromPreview?: (environmentId?: string) => Promise<ExportPackageResult>;
-      importAndValidatePackage?: (packagePath: string) => Promise<ImportPackageResult>;
-      readPackageHistory?: () => Promise<PackageHistoryResult>;
-    };
+    svnflowDesktop?: SvnflowDesktopApi;
   }
 }
 
-type EnvironmentVisualStatus = 'ready' | 'attention' | 'blocked' | 'error' | 'pending';
-
-interface EnvironmentScreenState {
-  message: string;
-  items: Array<{
-    id: string;
-    name: string;
-    needsRevalidation: boolean;
-    visualStatus: EnvironmentVisualStatus;
-  }>;
-  selectedEnvironmentId?: string;
-  selected?: {
-    id: string;
-    name: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    visualStatus: EnvironmentVisualStatus;
-  };
-  emptyState: boolean;
-  canAdvanceToSensitiveOperations: boolean;
-}
-
-interface PreviewScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    svnCheckoutRoot?: string;
-  };
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: Array<{
-      path: string;
-      previousPath?: string;
-      status: string;
-      description: string;
-      rawStatus: string;
-    }>;
-  };
-  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
-  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
-  canExportPackage: boolean;
-  canApplyInSvn: boolean;
-}
-
-interface WorkspaceScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    svnCheckoutRoot?: string;
-  };
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: Array<{
-      path: string;
-      previousPath?: string;
-      status: string;
-      description: string;
-      rawStatus: string;
-    }>;
-    totals: {
-      added: number;
-      modified: number;
-      deleted: number;
-      renamed: number;
-      copied: number;
-      unknown: number;
-    };
-  };
-  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
-  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
-  hasChanges: boolean;
-  canAdvanceToPreview: boolean;
-}
-
-interface ExportPackageResult {
-  ok: boolean;
-  message: string;
-  packagePath?: string;
-  manifest?: {
-    formatVersion: '1.0.0';
-    packageId: string;
-    generatedAt: string;
-    checksumAlgorithm: 'sha256';
-    checksum: string;
-  };
-  errorCode?: 'INVALID_PREVIEW' | 'WRITE_FAILED';
-}
-
-type ImportPackageErrorCategory = 'io' | 'schema' | 'integrity' | 'artifact';
-
-interface ImportPackageValidationError {
-  code: string;
-  category: ImportPackageErrorCategory;
-  message: string;
-  path?: string;
-}
-
-interface ImportPackageResult {
-  ok: boolean;
-  status: 'valid' | 'invalid';
-  message: string;
-  packagePath: string;
-  manifest?: {
-    formatVersion: '1.0.0';
-    packageId: string;
-    generatedAt: string;
-    checksumAlgorithm: 'sha256';
-    checksum: string;
-  };
-  summary?: {
-    packageId: string;
-    generatedAt: string;
-    environmentName: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-  };
-  review?: {
-    title: string;
-    environmentName: string;
-    branch: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    generatedAt: string;
-    whatChanged: string[];
-    notes: string;
-    markdown: string;
-  };
-  errors: ImportPackageValidationError[];
-}
-
-interface CommitScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    svnCheckoutPath: string;
-  };
-  commitValidation?: {
-    hasChanges: boolean;
-    affectedFilesCount: number;
-    blockers: Array<{ code: string; message: string }>;
-    canCommit: boolean;
-  };
-  canExecuteCommit: boolean;
-}
-
-interface ExecuteCommitResult {
-  status: 'success' | 'failed' | 'cancelled' | 'conflict';
-  message: string;
-  revision?: string;
-  filesCommitted?: number;
-  conflicts?: Array<{ file: string; reason: string }>;
-  errorCode?: string;
-  error?: string;
-}
-
-type StageKey = 'environment' | 'workspace' | 'preview' | 'apply' | 'commit' | 'packages' | 'history';
-
-type StageMode = 'available' | 'placeholder' | 'blocked';
+type StageKey = 'environment' | 'workspace' | 'preview' | 'packages' | 'apply' | 'commit' | 'history';
 
 interface StageDefinition {
   key: StageKey;
   label: string;
-  mode: StageMode;
   description: string;
   helper: string;
 }
@@ -201,59 +36,93 @@ const STAGES: StageDefinition[] = [
   {
     key: 'environment',
     label: 'Ambiente',
-    mode: 'available',
-    description: 'Selecione, valide e revalide o ambiente local para iniciar o fluxo com segurança.',
-    helper: 'Etapa disponível para navegação visual nesta entrega.'
+    description: 'Cadastre, selecione e valide o par workspace Git e checkout SVN usado no fluxo.',
+    helper: 'Cadastro e validação local.'
   },
   {
     key: 'workspace',
     label: 'Workspace Git',
-    mode: 'available',
-    description: 'Inspeção do workspace Git com branch, base, arquivos alterados e sinais de bloqueio.',
-    helper: 'Revise o estado do Git antes de seguir para o preview.'
+    description: 'Estado do workspace Git: branch atual, base de comparação e arquivos alterados.',
+    helper: 'Leitura do Git local.'
   },
   {
     key: 'preview',
     label: 'Preview',
-    mode: 'available',
-    description: 'Visualização das alterações Git antes de qualquer aplicação no checkout SVN.',
-    helper: 'Exibe arquivos afetados, riscos e bloqueios do preview.'
-  },
-  {
-    key: 'apply',
-    label: 'Aplicação SVN',
-    mode: 'blocked',
-    description: 'Aplicação SVN só será habilitada após etapa de preview concluída com segurança.',
-    helper: 'Bloqueado até etapas anteriores concluídas.'
-  },
-  {
-    key: 'commit',
-    label: 'Commit SVN',
-    mode: 'available',
-    description: 'Commit protegido permanece indisponível até confirmação da aplicação no checkout SVN.',
-    helper: 'Validações e execução protegida de commit SVN.'
+    description: 'Revisão técnica da alteração antes de aplicar no SVN ou gerar pacote. Nada é alterado nesta etapa.',
+    helper: 'Revisão técnica do workspace.'
   },
   {
     key: 'packages',
     label: 'Pacotes',
-    mode: 'available',
-    description: 'Importação e validação de pacote .svnflow com erros por categoria.',
-    helper: 'Validação do contrato de pacote e checksum.'
+    description: 'Crie pacotes .svnflow com mini PR, liste a pasta local e abra pacotes recebidos para revisão.',
+    helper: 'Exportar, listar e importar.'
+  },
+  {
+    key: 'apply',
+    label: 'Aplicação SVN',
+    description: 'Aplica o patch no checkout SVN local após pré-validação e confirmação. Não publica commit.',
+    helper: 'Altera arquivos locais.'
+  },
+  {
+    key: 'commit',
+    label: 'Commit SVN',
+    description: 'Publicação oficial no SVN com validação e confirmação explícita.',
+    helper: 'Publicação protegida.'
   },
   {
     key: 'history',
     label: 'Histórico',
-    mode: 'available',
-    description: 'Histórico local de exportações e importações de pacotes .svnflow.',
-    helper: 'Eventos de pacote registrados localmente.'
+    description: 'Eventos locais de exportação, importação, aplicação e commit.',
+    helper: 'Registro local.'
   }
 ];
 
-let activeStage: StageKey = 'environment';
-let selectedEnvironmentId: string | undefined;
+const STATUS_LABELS: Record<EnvironmentVisualStatus, string> = {
+  ready: 'Pronto',
+  attention: 'Atenção',
+  blocked: 'Bloqueado',
+  error: 'Erro',
+  pending: 'Pendente'
+};
 
-function escapeHtml(value: string): string {
-  return value
+const HISTORY_KIND_LABELS: Record<string, { label: string; kind: EnvironmentVisualStatus }> = {
+  exported: { label: 'Exportado', kind: 'ready' },
+  imported: { label: 'Importado', kind: 'pending' },
+  invalid: { label: 'Inválido', kind: 'error' },
+  applied: { label: 'Aplicado', kind: 'attention' },
+  committed: { label: 'Commitado', kind: 'ready' },
+  unknown: { label: 'Sem registro', kind: 'blocked' }
+};
+
+interface AppState {
+  activeStage: StageKey;
+  selectedEnvironmentId?: string;
+  showEnvironmentForm: boolean;
+  miniPr: MiniPrDraft;
+  importedPackage?: ImportPackageResult;
+  lastExportedPackagePath?: string;
+  applySource: ApplySourceRequest;
+  lastApplyResult?: ExecuteApplyResult;
+  suggestedCommitTitle?: string;
+}
+
+const state: AppState = {
+  activeStage: 'environment',
+  showEnvironmentForm: false,
+  miniPr: { title: '', context: '', whatChanged: '', notes: '' },
+  applySource: { kind: 'workspace' }
+};
+
+function api(): SvnflowDesktopApi {
+  if (!window.svnflowDesktop) {
+    throw new Error('Integração com o processo principal indisponível no preload.');
+  }
+
+  return window.svnflowDesktop;
+}
+
+function escapeHtml(value: string | number | undefined): string {
+  return String(value ?? '')
     .split('&').join('&amp;')
     .split('<').join('&lt;')
     .split('>').join('&gt;')
@@ -261,778 +130,1074 @@ function escapeHtml(value: string): string {
     .split("'").join('&#39;');
 }
 
-function getVisualStatusLabel(status: EnvironmentVisualStatus): string {
-  if (status === 'ready') {
-    return 'Pronto';
+function query<T extends HTMLElement>(selector: string, root: ParentNode = document): T | null {
+  return root.querySelector<T>(selector);
+}
+
+function stageBody(): HTMLElement {
+  const body = query<HTMLElement>('[data-role="stage-body"]');
+
+  if (!body) {
+    throw new Error('Área principal não encontrada.');
   }
 
-  if (status === 'attention') {
-    return 'Atenção';
-  }
-
-  if (status === 'blocked') {
-    return 'Bloqueado';
-  }
-
-  if (status === 'error') {
-    return 'Erro';
-  }
-
-  return 'Pendente';
+  return body;
 }
 
 function setStatusMessage(message: string): void {
-  const status = document.querySelector<HTMLElement>('[data-role="app-status"]');
+  const status = query<HTMLElement>('[data-role="app-status"]');
 
   if (status) {
     status.textContent = message;
   }
 }
 
-function renderEmptyEnvironmentState(message: string): void {
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
-  const environmentGit = document.querySelector<HTMLElement>('[data-role="environment-git"]');
-  const environmentSvn = document.querySelector<HTMLElement>('[data-role="environment-svn"]');
-  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
+function updateContext(values: { status?: string; git?: string; svn?: string; base?: string; guard?: string }): void {
+  const fields: Array<[string, string | undefined]> = [
+    ['environment-status', values.status],
+    ['environment-git', values.git],
+    ['environment-svn', values.svn],
+    ['environment-base', values.base],
+    ['advance-guard', values.guard]
+  ];
 
-  if (stageBody) {
-    stageBody.innerHTML = `<p class="empty-state">${message}</p>`;
-  }
+  for (const [role, value] of fields) {
+    const element = query<HTMLElement>(`[data-role="${role}"]`);
 
-  if (environmentStatus) {
-    environmentStatus.textContent = 'Pendente';
-  }
-
-  if (environmentGit) {
-    environmentGit.textContent = 'Aguardando ambiente salvo';
-  }
-
-  if (environmentSvn) {
-    environmentSvn.textContent = 'Aguardando ambiente salvo';
-  }
-
-  if (advanceGuard) {
-    advanceGuard.textContent = 'Operações sensíveis bloqueadas';
-  }
-}
-
-function renderEnvironmentStage(screen: EnvironmentScreenState): void {
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
-  const environmentGit = document.querySelector<HTMLElement>('[data-role="environment-git"]');
-  const environmentSvn = document.querySelector<HTMLElement>('[data-role="environment-svn"]');
-  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
-
-  setStatusMessage(screen.message);
-
-  if (screen.emptyState || screen.items.length === 0) {
-    renderEmptyEnvironmentState('Nenhum ambiente salvo encontrado. Cadastre um ambiente para continuar.');
-    return;
-  }
-
-  if (environmentStatus) {
-    environmentStatus.textContent = getVisualStatusLabel(screen.selected?.visualStatus ?? 'pending');
-  }
-
-  if (environmentGit) {
-    environmentGit.textContent = screen.selected?.gitWorkspacePath ?? 'Não informado';
-  }
-
-  if (environmentSvn) {
-    environmentSvn.textContent = screen.selected?.svnCheckoutPath ?? 'Não informado';
-  }
-
-  if (advanceGuard) {
-    advanceGuard.textContent = screen.canAdvanceToSensitiveOperations
-      ? 'Ambiente válido para avanço controlado'
-      : 'Operações sensíveis bloqueadas até validação';
-  }
-
-  if (!stageBody) {
-    return;
-  }
-
-  const listItems = screen.items.map((item) => {
-    const statusLabel = getVisualStatusLabel(item.visualStatus);
-    const needsRevalidation = item.needsRevalidation ? 'Revalidação necessária' : 'Validação atualizada';
-
-    return `
-      <li>
-        <button class="environment-item" data-role="environment-item" data-environment-id="${item.id}" data-selected="${item.id === screen.selectedEnvironmentId}">
-          <span>
-            <span class="environment-name">${item.name}</span>
-            <span class="environment-meta">${needsRevalidation}</span>
-          </span>
-          <span class="status-badge" data-kind="${item.visualStatus}">${statusLabel}</span>
-        </button>
-      </li>
-    `;
-  }).join('');
-
-  stageBody.innerHTML = `
-    <ul class="environment-list">${listItems}</ul>
-    <div class="stage-actions">
-      <button class="action-button" data-role="revalidate-action" ${screen.selectedEnvironmentId ? '' : 'disabled'}>
-        Validar ou revalidar ambiente selecionado
-      </button>
-    </div>
-  `;
-
-  const itemButtons = stageBody.querySelectorAll<HTMLButtonElement>('[data-role="environment-item"]');
-
-  itemButtons.forEach((button) => {
-    button.addEventListener('click', async () => {
-      const environmentId = button.dataset.environmentId;
-
-      if (!environmentId || !window.svnflowDesktop?.getEnvironmentScreenState) {
-        return;
-      }
-
-      selectedEnvironmentId = environmentId;
-      setStatusMessage('Carregando dados do ambiente selecionado...');
-      const updated = await window.svnflowDesktop.getEnvironmentScreenState(environmentId);
-      selectedEnvironmentId = updated.selectedEnvironmentId;
-      renderEnvironmentStage(updated);
-    });
-  });
-
-  const revalidateButton = stageBody.querySelector<HTMLButtonElement>('[data-role="revalidate-action"]');
-
-  revalidateButton?.addEventListener('click', async () => {
-    if (!selectedEnvironmentId || !window.svnflowDesktop?.revalidateEnvironment) {
-      return;
+    if (element && value !== undefined) {
+      element.textContent = value;
+      element.title = value;
     }
-
-    setStatusMessage('Executando validação do ambiente...');
-    const updated = await window.svnflowDesktop.revalidateEnvironment(selectedEnvironmentId);
-    selectedEnvironmentId = updated.selectedEnvironmentId;
-    renderEnvironmentStage(updated);
-  });
+  }
 }
 
-function renderPreviewStage(preview: PreviewScreenState): void {
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
-  const environmentGit = document.querySelector<HTMLElement>('[data-role="environment-git"]');
-  const environmentSvn = document.querySelector<HTMLElement>('[data-role="environment-svn"]');
-  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
+function badge(kind: EnvironmentVisualStatus, label: string): string {
+  return `<span class="status-badge" data-kind="${kind}">${escapeHtml(label)}</span>`;
+}
 
-  setStatusMessage(preview.message);
-
-  if (environmentStatus) {
-    environmentStatus.textContent = preview.status === 'ready' ? 'Pronto' : 'Bloqueado';
+function renderMessages(title: string, items: Array<ScreenBlocker | ScreenAlert>, tone: 'blocked' | 'attention'): string {
+  if (items.length === 0) {
+    return '';
   }
 
-  if (environmentGit) {
-    environmentGit.textContent = preview.environment?.gitWorkspacePath ?? 'Não disponível';
-  }
+  const rows = items.map((item) => `<li>${escapeHtml(item.message)}</li>`).join('');
+  return `<div class="notice" data-tone="${tone}"><p class="card-label">${escapeHtml(title)}</p><ul class="preview-list">${rows}</ul></div>`;
+}
 
-  if (environmentSvn) {
-    environmentSvn.textContent = preview.environment?.svnCheckoutPath ?? 'Não disponível';
-  }
-
-  if (advanceGuard) {
-    advanceGuard.textContent = preview.canApplyInSvn
-      ? 'Preview válido para próxima etapa'
-      : 'Continuidade bloqueada até preview válido';
-  }
-
-  if (!stageBody) {
-    return;
-  }
-
-  const blockers = preview.blockers
-    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
-    .join('');
-  const alerts = preview.alerts
-    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
-    .join('');
-
-  if (!preview.workspace || preview.workspace.files.length === 0) {
-    stageBody.innerHTML = `
-      <p class="empty-state">Nenhum arquivo afetado disponível para preview.</p>
-      ${blockers ? `<ul class="preview-list">${blockers}</ul>` : ''}
-      ${alerts ? `<ul class="preview-list">${alerts}</ul>` : ''}
-    `;
-    return;
-  }
-
-  const summary = `
-    <div class="preview-summary">
-      <p class="context-line">Branch: <strong>${escapeHtml(preview.workspace.branch ?? 'não identificado')}</strong></p>
-      <p class="context-line">Base: <strong>${escapeHtml(preview.workspace.baseBranch)}</strong></p>
-      <p class="context-line">Arquivos afetados: <strong>${preview.workspace.totalAffectedFiles}</strong></p>
-    </div>
-  `;
-
-  const files = preview.workspace.files
+function renderFileRows(files: ScreenWorkspaceFile[]): string {
+  return files
     .map((file) => `
       <li class="preview-row">
-        <span class="status-badge" data-kind="${preview.status === 'ready' ? 'ready' : 'attention'}">${escapeHtml(file.status)}</span>
-        <span>${escapeHtml(file.path)}</span>
-      </li>
-    `)
-    .join('');
-
-  stageBody.innerHTML = `
-    ${summary}
-    <ul class="preview-files">${files}</ul>
-    ${blockers ? `<p class="card-label">Bloqueios</p><ul class="preview-list">${blockers}</ul>` : ''}
-    ${alerts ? `<p class="card-label">Alertas</p><ul class="preview-list">${alerts}</ul>` : ''}
-    <div class="stage-actions">
-      <button class="action-button" data-role="export-package-action" ${preview.canExportPackage ? '' : 'disabled'}>
-        Exportar pacote .svnflow
-      </button>
-    </div>
-  `;
-
-  const exportButton = stageBody.querySelector<HTMLButtonElement>('[data-role="export-package-action"]');
-
-  exportButton?.addEventListener('click', async () => {
-    if (!window.svnflowDesktop?.exportPackageFromPreview) {
-      setStatusMessage('Integração de exportação de pacote indisponível.');
-      return;
-    }
-
-    setStatusMessage('Exportando pacote .svnflow...');
-    exportButton.disabled = true;
-
-    const result = await window.svnflowDesktop.exportPackageFromPreview(selectedEnvironmentId);
-
-    if (result.ok) {
-      setStatusMessage(`Pacote exportado com sucesso em: ${result.packagePath}`);
-      alert(`Pacote .svnflow exportado!\n\nArquivo: ${result.packagePath}\nChecksum: ${result.manifest?.checksum}`);
-    } else {
-      setStatusMessage(`Falha ao exportar pacote: ${result.message}`);
-      alert(`Falha ao exportar pacote .svnflow:\n\n${result.message}`);
-      exportButton.disabled = false;
-    }
-  });
-}
-
-function renderWorkspaceStage(workspaceState: WorkspaceScreenState): void {
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
-  const environmentGit = document.querySelector<HTMLElement>('[data-role="environment-git"]');
-  const environmentSvn = document.querySelector<HTMLElement>('[data-role="environment-svn"]');
-  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
-
-  setStatusMessage(workspaceState.message);
-
-  if (environmentStatus) {
-    environmentStatus.textContent = workspaceState.status === 'ready' ? 'Pronto' : 'Bloqueado';
-  }
-
-  if (environmentGit) {
-    environmentGit.textContent = workspaceState.environment?.gitWorkspacePath ?? 'Não disponível';
-  }
-
-  if (environmentSvn) {
-    environmentSvn.textContent = workspaceState.environment?.svnCheckoutPath ?? 'Não disponível';
-  }
-
-  if (advanceGuard) {
-    advanceGuard.textContent = workspaceState.canAdvanceToPreview
-      ? 'Workspace Git pronto para seguir ao preview.'
-      : 'Revise bloqueios ou ausência de alterações antes de seguir.';
-  }
-
-  if (!stageBody) {
-    return;
-  }
-
-  const blockers = workspaceState.blockers
-    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
-    .join('');
-  const alerts = workspaceState.alerts
-    .map((item) => `<li>${escapeHtml(item.message)}</li>`)
-    .join('');
-
-  if (!workspaceState.workspace) {
-    stageBody.innerHTML = `
-      <p class="empty-state">Nenhum workspace Git disponível para inspeção.</p>
-      ${blockers ? `<ul class="preview-list">${blockers}</ul>` : ''}
-    `;
-    return;
-  }
-
-  const summary = `
-    <div class="preview-summary">
-      <p class="context-line">Branch atual: <strong>${escapeHtml(workspaceState.workspace.branch ?? 'não identificado')}</strong></p>
-      <p class="context-line">Base de comparação: <strong>${escapeHtml(workspaceState.workspace.baseBranch)}</strong></p>
-      <p class="context-line">Situação do repositório: <strong>${workspaceState.hasChanges ? 'Com alterações detectadas' : 'Sem alterações detectadas'}</strong></p>
-      <p class="context-line">Arquivos afetados: <strong>${workspaceState.workspace.totalAffectedFiles}</strong></p>
-      <p class="context-line">Resumo: <strong>${workspaceState.workspace.totals.added}</strong> criados, <strong>${workspaceState.workspace.totals.modified}</strong> modificados, <strong>${workspaceState.workspace.totals.deleted}</strong> removidos</p>
-    </div>
-  `;
-
-  const files = workspaceState.workspace.files
-    .map((file) => `
-      <li class="preview-row">
-        <span class="status-badge" data-kind="${workspaceState.status === 'ready' ? 'ready' : 'attention'}">${escapeHtml(file.status)}</span>
+        ${badge(file.rawStatus.startsWith('D') ? 'error' : file.rawStatus.startsWith('A') ? 'ready' : 'attention', file.status)}
         <span title="${escapeHtml(file.description)}">${escapeHtml(file.path)}</span>
       </li>
     `)
     .join('');
-
-  stageBody.innerHTML = `
-    ${summary}
-    ${files ? `<ul class="preview-files">${files}</ul>` : '<p class="empty-state">Nenhum arquivo alterado foi detectado.</p>'}
-    ${blockers ? `<p class="card-label">Bloqueios</p><ul class="preview-list">${blockers}</ul>` : ''}
-    ${alerts ? `<p class="card-label">Alertas</p><ul class="preview-list">${alerts}</ul>` : ''}
-  `;
 }
 
-function renderCommitStage(commit: CommitScreenState): void {
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
-  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
-
-  setStatusMessage(commit.message);
-
-  if (environmentStatus) {
-    environmentStatus.textContent = commit.status === 'ready' ? 'Pronto' : 'Bloqueado';
+function relativeToCheckout(checkoutPath: string | undefined, filePath: string): string {
+  if (!checkoutPath) {
+    return filePath;
   }
 
-  if (advanceGuard) {
-    advanceGuard.textContent = commit.canExecuteCommit
-      ? 'Commit validado e pronto para execução'
-      : 'Commit bloqueado por validações pendentes';
-  }
-
-  if (!stageBody) {
-    return;
-  }
-
-  const blockers = commit.commitValidation?.blockers
-    ?.map((item) => `<li>${escapeHtml(item.message)}</li>`)
-    .join('') ?? '';
-
-  if (commit.status === 'blocked' || !commit.canExecuteCommit) {
-    stageBody.innerHTML = `
-      <p class="empty-state">${commit.message}</p>
-      ${blockers ? `<p class="card-label">Bloqueios</p><ul class="preview-list">${blockers}</ul>` : ''}
-    `;
-    return;
-  }
-
-  const affectedFilesInfo = commit.commitValidation
-    ? `<p class="context-line">Arquivos afetados: <strong>${commit.commitValidation.affectedFilesCount}</strong></p>`
-    : '';
-
-  stageBody.innerHTML = `
-    <div class="commit-form">
-      <p class="card-label">Mensagem de Commit SVN Protegido</p>
-      <textarea id="commit-title" class="form-input" placeholder="Título descritivo (mínimo 10 caracteres)" maxlength="72" rows="2"></textarea>
-      <div id="title-feedback" class="feedback"></div>
-      <textarea id="commit-description" class="form-input" placeholder="Descrição opcional (até 500 caracteres)" maxlength="500" rows="4"></textarea>
-      <div id="description-feedback" class="feedback"></div>
-      <div class="commit-context">
-        ${affectedFilesInfo}
-      </div>
-      ${blockers ? `<p class="card-label">Validação</p><ul class="preview-list">${blockers}</ul>` : ''}
-      <button id="execute-commit" class="action-button" disabled>Executar Commit SVN</button>
-    </div>
-  `;
-
-  const titleInput = stageBody.querySelector<HTMLTextAreaElement>('#commit-title');
-  const descriptionInput = stageBody.querySelector<HTMLTextAreaElement>('#commit-description');
-  const executeButton = stageBody.querySelector<HTMLButtonElement>('#execute-commit');
-
-  if (titleInput) {
-    titleInput.addEventListener('input', () => {
-      const feedback = stageBody.querySelector<HTMLElement>('#title-feedback');
-      if (feedback) {
-        const titleLength = titleInput.value.length;
-        if (titleLength < 10) {
-          feedback.textContent = 'Título deve ter no mínimo 10 caracteres.';
-          feedback.className = 'feedback invalid';
-        } else if (!/^[A-Z]/.test(titleInput.value)) {
-          feedback.textContent = 'Título deve começar com letra maiúscula.';
-          feedback.className = 'feedback invalid';
-        } else {
-          feedback.textContent = 'Título válido para commit.';
-          feedback.className = 'feedback valid';
-        }
-      }
-      updateExecuteButtonState();
-    });
-  }
-
-  if (descriptionInput) {
-    descriptionInput.addEventListener('input', () => {
-      const feedback = stageBody.querySelector<HTMLElement>('#description-feedback');
-      if (feedback) {
-        const desc = descriptionInput.value.trim();
-        if (desc.length > 0 && desc.length < 20) {
-          feedback.textContent = 'Descrição opcional: mínimo de 20 caracteres quando preenchida.';
-          feedback.className = 'feedback invalid';
-        } else {
-          feedback.textContent = '';
-          feedback.className = 'feedback';
-        }
-      }
-      updateExecuteButtonState();
-    });
-  }
-
-  function updateExecuteButtonState() {
-    if (!executeButton) return;
-    const title = titleInput?.value ?? '';
-    const desc = descriptionInput?.value?.trim() ?? '';
-    const titleValid = title.length >= 10 && /^[A-Z]/.test(title);
-    const descriptionValid = desc.length === 0 || desc.length >= 20;
-    executeButton.disabled = !titleValid || !descriptionValid || !commit.canExecuteCommit;
-  }
-
-  if (executeButton && commit.canExecuteCommit) {
-    executeButton.addEventListener('click', async () => {
-      const title = titleInput?.value?.trim() ?? '';
-      const description = descriptionInput?.value?.trim() ?? '';
-
-      if (title.length < 10) {
-        alert('Título deve ter no mínimo 10 caracteres');
-        return;
-      }
-
-      if (!/^[A-Z]/.test(title)) {
-        alert('Título deve começar com letra maiúscula');
-        return;
-      }
-
-      setStatusMessage('Executando commit SVN...');
-      executeButton.disabled = true;
-      executeButton.textContent = 'Processando...';
-
-      if (!window.svnflowDesktop?.executeCommit || !selectedEnvironmentId) {
-        alert('Integração de execução indisponível ou ambiente não selecionado.');
-        executeButton.disabled = false;
-        executeButton.textContent = 'Executar Commit SVN';
-        setStatusMessage('Falha ao executar commit.');
-        return;
-      }
-
-      const result = await window.svnflowDesktop.executeCommit(selectedEnvironmentId, title, description);
-
-      if (result.status === 'success') {
-        setStatusMessage(`Commit executado com sucesso (revisão ${result.revision}). ${result.filesCommitted} arquivo(s) commitado(s).`);
-        if (titleInput) titleInput.value = '';
-        if (descriptionInput) descriptionInput.value = '';
-        executeButton.textContent = 'Executar Commit SVN';
-        setTimeout(() => {
-          alert(`Commit SVN executado com sucesso!\n\nRevisão: ${result.revision}\nArquivos: ${result.filesCommitted}\n\nMensagem: ${result.message}`);
-        }, 500);
-      } else if (result.status === 'cancelled') {
-        setStatusMessage(result.message);
-        executeButton.disabled = false;
-        executeButton.textContent = 'Executar Commit SVN';
-      } else if (result.status === 'conflict') {
-        setStatusMessage(`Conflito durante commit: ${result.message}`);
-        alert(`Conflito SVN: ${result.message}\n\nDetalhes: ${result.error}`);
-        executeButton.disabled = false;
-        executeButton.textContent = 'Executar Commit SVN';
-      } else {
-        setStatusMessage(`Erro ao executar commit: ${result.message}`);
-        alert(`Erro ao executar commit SVN:\n\n${result.message}\n\nCódigo: ${result.errorCode}`);
-        executeButton.disabled = false;
-        executeButton.textContent = 'Executar Commit SVN';
-      }
-    });
-  }
+  const root = checkoutPath.replace(/[\\/]+$/, '');
+  return filePath.startsWith(`${root}/`) || filePath.startsWith(`${root}\\`)
+    ? filePath.slice(root.length + 1)
+    : filePath;
 }
 
-function renderPackagesStage(): void {
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-  const advanceGuard = document.querySelector<HTMLElement>('[data-role="advance-guard"]');
-
-  if (!stageBody) {
-    return;
+function formatDate(value: string | undefined): string {
+  if (!value) {
+    return '-';
   }
 
-  if (advanceGuard) {
-    advanceGuard.textContent = 'Pacotes: validação por contrato e integridade.';
-  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('pt-BR');
+}
 
-  stageBody.innerHTML = `
-    <div class="commit-form">
-      <p class="card-label">Importar e validar pacote .svnflow</p>
-      <input id="package-path" class="form-input" type="text" placeholder="/caminho/completo/arquivo.svnflow" />
-      <div id="package-feedback" class="feedback"></div>
-      <div class="stage-actions">
-        <button id="validate-package" class="action-button">Validar pacote</button>
-      </div>
-      <div id="package-result" class="commit-context"></div>
-    </div>
-  `;
+async function goToStage(key: StageKey): Promise<void> {
+  state.activeStage = key;
+  renderNavigation();
+  await renderActiveStage();
+}
 
-  const pathInput = stageBody.querySelector<HTMLInputElement>('#package-path');
-  const validateButton = stageBody.querySelector<HTMLButtonElement>('#validate-package');
-  const feedback = stageBody.querySelector<HTMLElement>('#package-feedback');
-  const resultContainer = stageBody.querySelector<HTMLElement>('#package-result');
-
-  validateButton?.addEventListener('click', async () => {
-    const packagePath = pathInput?.value?.trim() ?? '';
-
-    if (!packagePath) {
-      if (feedback) {
-        feedback.textContent = 'Informe o caminho completo do pacote .svnflow.';
-        feedback.className = 'feedback invalid';
-      }
-      return;
-    }
-
-    if (!window.svnflowDesktop?.importAndValidatePackage) {
-      setStatusMessage('Integração de importação de pacote indisponível.');
-      return;
-    }
-
-    setStatusMessage('Importando e validando pacote .svnflow...');
-    validateButton.disabled = true;
-
-    const result = await window.svnflowDesktop.importAndValidatePackage(packagePath);
-
-    if (!resultContainer) {
-      return;
-    }
-
-    if (result.ok) {
-      if (feedback) {
-        feedback.textContent = 'Pacote válido.';
-        feedback.className = 'feedback valid';
-      }
-
-      const review = result.review;
-      const reviewWhatChanged = review?.whatChanged ?? [];
-      const reviewRows = reviewWhatChanged
-        .map((item) => `<li>${escapeHtml(item)}</li>`)
-        .join('');
-
-      const reviewCard = review
-        ? `
-          <p class="card-label">Revisão do pr.md</p>
-          <p class="context-line"><strong>Título:</strong> ${escapeHtml(review.title)}</p>
-          <p class="context-line"><strong>Ambiente:</strong> ${escapeHtml(review.environmentName)}</p>
-          <p class="context-line"><strong>Branch:</strong> ${escapeHtml(review.branch)}</p>
-          <p class="context-line"><strong>Base:</strong> ${escapeHtml(review.baseBranch)}</p>
-          <p class="context-line"><strong>Arquivos afetados:</strong> ${review.totalAffectedFiles}</p>
-          <p class="context-line"><strong>Gerado em:</strong> ${escapeHtml(review.generatedAt)}</p>
-          <p class="context-line"><strong>Notas:</strong> ${escapeHtml(review.notes)}</p>
-          <p class="card-label">O que mudou</p>
-          ${reviewRows ? `<ul class="preview-list">${reviewRows}</ul>` : '<p class="empty-state">Sem itens listados.</p>'}
-          <p class="card-label">Markdown original</p>
-          <pre class="review-markdown">${escapeHtml(review.markdown)}</pre>
-        `
-        : '<p class="empty-state">Revisão indisponível para este pacote.</p>';
-
-      resultContainer.innerHTML = `
-        <p class="context-line"><strong>Status:</strong> válido</p>
-        <p class="context-line"><strong>Package ID:</strong> ${escapeHtml(result.summary?.packageId ?? '-')}</p>
-        <p class="context-line"><strong>Ambiente:</strong> ${escapeHtml(result.summary?.environmentName ?? '-')}</p>
-        <p class="context-line"><strong>Base:</strong> ${escapeHtml(result.summary?.baseBranch ?? '-')}</p>
-        <p class="context-line"><strong>Arquivos:</strong> ${result.summary?.totalAffectedFiles ?? 0}</p>
-        <p class="context-line"><strong>Checksum:</strong> ${escapeHtml(result.manifest?.checksum ?? '-')}</p>
-        ${reviewCard}
-      `;
-      setStatusMessage('Pacote .svnflow validado com sucesso.');
-    } else {
-      if (feedback) {
-        feedback.textContent = 'Pacote inválido. Verifique os erros abaixo.';
-        feedback.className = 'feedback invalid';
-      }
-
-      const errors = result.errors
-        .map((error) => `<li>[${escapeHtml(error.category)}:${escapeHtml(error.code)}] ${escapeHtml(error.message)}</li>`)
-        .join('');
-
-      resultContainer.innerHTML = `
-        <p class="context-line"><strong>Status:</strong> inválido</p>
-        <p class="context-line"><strong>Mensagem:</strong> ${escapeHtml(result.message)}</p>
-        <p class="card-label">Erros</p>
-        <ul class="preview-list">${errors}</ul>
-      `;
-      setStatusMessage('Falha na validação do pacote .svnflow.');
-    }
-
-    validateButton.disabled = false;
+function bindClick(root: ParentNode, selector: string, handler: (button: HTMLButtonElement) => void | Promise<void>): void {
+  root.querySelectorAll<HTMLButtonElement>(selector).forEach((button) => {
+    button.addEventListener('click', () => {
+      void handler(button);
+    });
   });
 }
 
-type PackageHistoryEventKind = 'exported' | 'imported' | 'invalid';
+// ---------------------------------------------------------------------------
+// Ambiente
 
-interface PackageHistoryEntry {
-  id: string;
-  kind: PackageHistoryEventKind;
-  packageId: string;
-  packagePath: string;
-  environmentName: string;
-  baseBranch: string;
-  totalAffectedFiles: number;
-  generatedAt: string;
-  recordedAt: string;
-}
-
-interface PackageHistoryResult {
-  ok: boolean;
-  entries: PackageHistoryEntry[];
-  storagePath: string;
-  message: string;
-}
-
-async function renderHistoryStage(): Promise<void> {
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-
-  if (!stageBody) {
-    return;
-  }
-
-  stageBody.innerHTML = '<p class="empty-state">Carregando histórico...</p>';
-  setStatusMessage('Carregando histórico de pacotes...');
-
-  if (!window.svnflowDesktop?.readPackageHistory) {
-    stageBody.innerHTML = '<p class="empty-state">Integração de histórico indisponível no preload.</p>';
-    setStatusMessage('Falha ao carregar integração de histórico.');
-    return;
-  }
-
-  const result: PackageHistoryResult = await window.svnflowDesktop.readPackageHistory();
-
-  if (!result.ok || result.entries.length === 0) {
-    stageBody.innerHTML = `
-      <div class="card-group">
-        <p class="empty-state">Nenhum evento registrado ainda.</p>
-        <small>O histórico será preenchido após exportar ou importar pacotes.</small>
+function renderEnvironmentForm(): string {
+  return `
+    <form class="form-grid" data-role="environment-form">
+      <p class="card-label">Cadastrar ambiente</p>
+      <label class="field">
+        <span>Nome amigável (opcional)</span>
+        <input class="form-input" name="name" type="text" placeholder="Usa o nome da pasta Git quando vazio" />
+      </label>
+      <label class="field">
+        <span>Workspace Git</span>
+        <span class="inline-row">
+          <input class="form-input" name="gitWorkspacePath" type="text" placeholder="Pasta do repositório Git local" required />
+          <button class="action-button secondary" type="button" data-role="pick-git">Escolher pasta</button>
+        </span>
+      </label>
+      <label class="field">
+        <span>Checkout SVN</span>
+        <span class="inline-row">
+          <input class="form-input" name="svnCheckoutPath" type="text" placeholder="Pasta do checkout SVN de destino" required />
+          <button class="action-button secondary" type="button" data-role="pick-svn">Escolher pasta</button>
+        </span>
+      </label>
+      <label class="field">
+        <span>Base de comparação Git</span>
+        <input class="form-input" name="baseBranch" type="text" value="main" />
+      </label>
+      <p class="feedback" data-role="environment-form-feedback"></p>
+      <div class="stage-actions">
+        <button class="action-button" type="submit">Validar e salvar ambiente</button>
+        ${state.showEnvironmentForm ? '<button class="action-button secondary" type="button" data-role="cancel-form">Cancelar</button>' : ''}
       </div>
-    `;
-    setStatusMessage('Histórico de pacotes vazio.');
+    </form>
+  `;
+}
+
+function bindEnvironmentForm(root: HTMLElement): void {
+  const form = query<HTMLFormElement>('[data-role="environment-form"]', root);
+
+  if (!form) {
     return;
   }
 
-  const kindLabel: Record<PackageHistoryEventKind, string> = {
-    exported: 'Exportado',
-    imported: 'Importado',
-    invalid: 'Inválido'
-  };
+  const input = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
+  const feedback = query<HTMLElement>('[data-role="environment-form-feedback"]', form);
 
-  const rows = result.entries.map(entry => `
-    <tr>
-      <td>${kindLabel[entry.kind] ?? entry.kind}</td>
-      <td>${escapeHtml(entry.environmentName)}</td>
-      <td>${escapeHtml(entry.baseBranch)}</td>
-      <td>${entry.totalAffectedFiles}</td>
-      <td title="${escapeHtml(entry.packagePath)}">${escapeHtml(entry.packageId)}</td>
-      <td>${escapeHtml(new Date(entry.recordedAt).toLocaleString('pt-BR'))}</td>
-    </tr>
+  bindClick(form, '[data-role="pick-git"]', async () => {
+    const selected = await api().selectDirectory('Selecionar workspace Git', input('gitWorkspacePath').value || undefined);
+    if (selected) {
+      input('gitWorkspacePath').value = selected;
+    }
+  });
+
+  bindClick(form, '[data-role="pick-svn"]', async () => {
+    const selected = await api().selectDirectory('Selecionar checkout SVN', input('svnCheckoutPath').value || undefined);
+    if (selected) {
+      input('svnCheckoutPath').value = selected;
+    }
+  });
+
+  bindClick(form, '[data-role="cancel-form"]', async () => {
+    state.showEnvironmentForm = false;
+    await renderActiveStage();
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      const submit = query<HTMLButtonElement>('button[type="submit"]', form);
+      if (submit) {
+        submit.disabled = true;
+      }
+      setStatusMessage('Validando Git, SVN e base de comparação...');
+
+      const response = await api().registerEnvironment({
+        name: input('name').value,
+        gitWorkspacePath: input('gitWorkspacePath').value,
+        svnCheckoutPath: input('svnCheckoutPath').value,
+        baseBranch: input('baseBranch').value
+      });
+
+      if (!response.registration.canSave) {
+        if (feedback) {
+          const details = response.registration.blockers.map((blocker) => blocker.message).join(' ');
+          feedback.textContent = `${response.registration.message} ${details}`.trim();
+          feedback.className = 'feedback invalid';
+        }
+        setStatusMessage(response.registration.message);
+        if (submit) {
+          submit.disabled = false;
+        }
+        return;
+      }
+
+      state.showEnvironmentForm = false;
+      state.selectedEnvironmentId = response.registration.savedEnvironment?.id;
+      renderEnvironmentStage(response.screen);
+    })();
+  });
+}
+
+function renderEnvironmentStage(screen: EnvironmentScreenState): void {
+  const body = stageBody();
+  state.selectedEnvironmentId = screen.selectedEnvironmentId;
+  setStatusMessage(screen.message);
+
+  if (screen.emptyState || screen.items.length === 0) {
+    updateContext({
+      status: 'Pendente',
+      git: 'Nenhum ambiente cadastrado',
+      svn: 'Nenhum ambiente cadastrado',
+      base: '-',
+      guard: 'Operações sensíveis bloqueadas'
+    });
+    body.innerHTML = `
+      <p class="empty-state">Nenhum ambiente salvo. Informe o workspace Git e o checkout SVN que recebem a alteração.</p>
+      ${renderEnvironmentForm()}
+    `;
+    bindEnvironmentForm(body);
+    return;
+  }
+
+  const selected = screen.selected;
+  updateContext({
+    status: STATUS_LABELS[selected?.visualStatus ?? 'pending'],
+    git: selected?.gitWorkspacePath ?? 'Não informado',
+    svn: selected?.svnCheckoutPath ?? 'Não informado',
+    base: selected?.baseBranch ?? '-',
+    guard: screen.canAdvanceToSensitiveOperations
+      ? 'Ambiente validado para avanço controlado'
+      : 'Valide o ambiente antes de aplicar ou commitar'
+  });
+
+  const items = screen.items.map((item) => `
+    <li>
+      <button class="environment-item" data-role="environment-item" data-environment-id="${escapeHtml(item.id)}" data-selected="${item.id === screen.selectedEnvironmentId}">
+        <span>
+          <span class="environment-name">${escapeHtml(item.name)}</span>
+          <span class="environment-meta">${item.needsRevalidation ? 'Revalidação necessária' : 'Validação atualizada'}</span>
+        </span>
+        ${badge(item.visualStatus, STATUS_LABELS[item.visualStatus])}
+      </button>
+    </li>
   `).join('');
 
-  stageBody.innerHTML = `
-    <div class="card-group">
-      <p class="card-label">${result.entries.length} registro(s)</p>
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>Ação</th>
-            <th>Ambiente</th>
-            <th>Branch base</th>
-            <th>Arquivos</th>
-            <th>Pacote ID</th>
-            <th>Registrado em</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+  const details = selected
+    ? `
+      <div class="commit-context">
+        <p class="card-label">Ambiente selecionado</p>
+        <p class="context-line">Workspace Git: <strong>${escapeHtml(selected.gitWorkspacePath)}</strong></p>
+        <p class="context-line">Checkout SVN: <strong>${escapeHtml(selected.svnCheckoutPath)}</strong></p>
+        <p class="context-line">Base de comparação: <strong>${escapeHtml(selected.baseBranch)}</strong></p>
+      </div>
+    `
+    : '';
+
+  body.innerHTML = `
+    <ul class="environment-list">${items}</ul>
+    ${details}
+    <div class="stage-actions">
+      <button class="action-button" data-role="revalidate-action" ${screen.selectedEnvironmentId ? '' : 'disabled'}>Validar ou revalidar ambiente</button>
+      <button class="action-button secondary" data-role="next-stage">Seguir para Workspace Git</button>
+      <button class="action-button secondary" data-role="new-environment">Cadastrar outro ambiente</button>
+      <button class="action-button danger" data-role="remove-environment" ${screen.selectedEnvironmentId ? '' : 'disabled'}>Remover da lista</button>
+    </div>
+    ${state.showEnvironmentForm ? renderEnvironmentForm() : ''}
+  `;
+
+  bindClick(body, '[data-role="environment-item"]', async (button) => {
+    setStatusMessage('Carregando ambiente selecionado...');
+    renderEnvironmentStage(await api().getEnvironmentScreenState(button.dataset.environmentId));
+  });
+
+  bindClick(body, '[data-role="revalidate-action"]', async (button) => {
+    button.disabled = true;
+    setStatusMessage('Executando validação do ambiente...');
+    renderEnvironmentStage(await api().revalidateEnvironment(state.selectedEnvironmentId));
+  });
+
+  bindClick(body, '[data-role="next-stage"]', () => goToStage('workspace'));
+
+  bindClick(body, '[data-role="new-environment"]', async () => {
+    state.showEnvironmentForm = true;
+    renderEnvironmentStage(screen);
+  });
+
+  bindClick(body, '[data-role="remove-environment"]', async () => {
+    if (!state.selectedEnvironmentId || !selected) {
+      return;
+    }
+
+    if (!window.confirm(`Remover "${selected.name}" da lista? As pastas locais não serão apagadas.`)) {
+      return;
+    }
+
+    renderEnvironmentStage(await api().removeEnvironment(state.selectedEnvironmentId));
+  });
+
+  bindEnvironmentForm(body);
+}
+
+// ---------------------------------------------------------------------------
+// Workspace Git e Preview
+
+function renderWorkspaceStage(workspaceState: WorkspaceScreenState): void {
+  const body = stageBody();
+  setStatusMessage(workspaceState.message);
+  updateContext({
+    status: workspaceState.status === 'ready' ? 'Pronto' : 'Bloqueado',
+    git: workspaceState.environment?.gitWorkspacePath ?? 'Não disponível',
+    svn: workspaceState.environment?.svnCheckoutPath ?? 'Não disponível',
+    base: workspaceState.workspace?.baseBranch ?? '-',
+    guard: workspaceState.canAdvanceToPreview
+      ? 'Workspace Git pronto para o preview'
+      : 'Revise bloqueios ou ausência de alterações'
+  });
+
+  if (!workspaceState.workspace) {
+    body.innerHTML = `
+      <p class="empty-state">Nenhum workspace Git disponível para inspeção. Cadastre ou valide um ambiente.</p>
+      ${renderMessages('Bloqueios', workspaceState.blockers, 'blocked')}
+    `;
+    return;
+  }
+
+  const { workspace } = workspaceState;
+  body.innerHTML = `
+    <div class="preview-summary">
+      <p class="context-line">Branch atual: <strong>${escapeHtml(workspace.branch ?? 'não identificada')}</strong></p>
+      <p class="context-line">Base de comparação: <strong>${escapeHtml(workspace.baseBranch)}</strong></p>
+      <p class="context-line">Situação: <strong>${workspaceState.hasChanges ? 'Com alterações commitadas em relação à base' : 'Sem alterações em relação à base'}</strong></p>
+      <p class="context-line">Resumo: <strong>${workspace.totals.added}</strong> criados, <strong>${workspace.totals.modified}</strong> modificados, <strong>${workspace.totals.deleted}</strong> removidos</p>
+    </div>
+    ${workspace.files.length > 0 ? `<ul class="preview-files">${renderFileRows(workspace.files)}</ul>` : '<p class="empty-state">Nenhum arquivo alterado foi detectado.</p>'}
+    ${renderMessages('Bloqueios', workspaceState.blockers, 'blocked')}
+    ${renderMessages('Alertas', workspaceState.alerts, 'attention')}
+    <div class="stage-actions">
+      <button class="action-button" data-role="next-stage" ${workspaceState.canAdvanceToPreview ? '' : 'disabled'}>Seguir para Preview</button>
     </div>
   `;
 
-  setStatusMessage(`${result.entries.length} evento(s) no histórico de pacotes.`);
+  bindClick(body, '[data-role="next-stage"]', () => goToStage('preview'));
 }
 
-async function updateMainContent(stage: StageDefinition): Promise<void> {
-  const stageTitle = document.querySelector<HTMLElement>('[data-role="stage-title"]');
-  const stageDescription = document.querySelector<HTMLElement>('[data-role="stage-description"]');
-  const stageBody = document.querySelector<HTMLElement>('[data-role="stage-body"]');
-
-  if (stageTitle) {
-    stageTitle.textContent = stage.label;
+function previewStateLabel(preview: PreviewScreenState): { kind: EnvironmentVisualStatus; label: string } {
+  if (!preview.workspace || preview.workspace.files.length === 0) {
+    return { kind: 'blocked', label: 'Preview vazio' };
   }
 
-  if (stageDescription) {
-    stageDescription.textContent = stage.description;
+  if (preview.status !== 'ready') {
+    return { kind: 'error', label: 'Preview bloqueado' };
   }
 
-  if (!stageBody) {
+  return { kind: 'ready', label: 'Pronto para seguir' };
+}
+
+function renderPreviewStage(preview: PreviewScreenState): void {
+  const body = stageBody();
+  const label = previewStateLabel(preview);
+  setStatusMessage(preview.message);
+  updateContext({
+    status: label.label,
+    git: preview.environment?.gitWorkspacePath ?? 'Não disponível',
+    svn: preview.environment?.svnCheckoutPath ?? 'Não disponível',
+    base: preview.workspace?.baseBranch ?? '-',
+    guard: preview.canApplyInSvn ? 'Preview válido: aplicar ou empacotar' : 'Continuidade bloqueada até preview válido'
+  });
+
+  const workspace = preview.workspace;
+  const summary = workspace
+    ? `
+      <div class="preview-summary">
+        <p class="context-line">Revisando o workspace Git de <strong>${escapeHtml(preview.environment?.environmentName ?? '-')}</strong> ${badge(label.kind, label.label)}</p>
+        <p class="context-line">Branch de origem: <strong>${escapeHtml(workspace.branch ?? 'não identificada')}</strong></p>
+        <p class="context-line">Base de comparação: <strong>${escapeHtml(workspace.baseBranch)}</strong></p>
+        <p class="context-line">Diferença detectada: <strong>${workspace.totalAffectedFiles}</strong> arquivo(s) — ${workspace.totals.added} criado(s), ${workspace.totals.modified} modificado(s), ${workspace.totals.deleted} removido(s)${workspace.totals.renamed ? `, ${workspace.totals.renamed} renomeado(s)` : ''}</p>
+      </div>
+    `
+    : '';
+
+  body.innerHTML = `
+    ${summary}
+    ${workspace && workspace.files.length > 0 ? `<ul class="preview-files">${renderFileRows(workspace.files)}</ul>` : '<p class="empty-state">Nenhum arquivo afetado disponível para preview.</p>'}
+    ${renderMessages('Bloqueios', preview.blockers, 'blocked')}
+    ${renderMessages('Alertas', preview.alerts, 'attention')}
+    <p class="hint">O preview é somente leitura: não altera o checkout SVN e não gera pacote.</p>
+    <div class="stage-actions">
+      <button class="action-button" data-role="go-apply" ${preview.canApplyInSvn ? '' : 'disabled'}>Aplicar no checkout SVN</button>
+      <button class="action-button secondary" data-role="go-packages" ${preview.canExportPackage ? '' : 'disabled'}>Criar pacote .svnflow</button>
+    </div>
+  `;
+
+  bindClick(body, '[data-role="go-apply"]', async () => {
+    state.applySource = { kind: 'workspace' };
+    await goToStage('apply');
+  });
+  bindClick(body, '[data-role="go-packages"]', () => goToStage('packages'));
+}
+
+// ---------------------------------------------------------------------------
+// Pacotes
+
+function renderMiniPrForm(screen: PackagesScreenState): string {
+  const preview = screen.preview;
+
+  if (!preview.canExportPackage || !preview.workspace) {
+    const reason = preview.blockers[0]?.message ?? preview.message;
+    return `
+      <section class="section">
+        <p class="card-label">Criar pacote a partir do workspace atual</p>
+        <p class="empty-state">Exportação indisponível: ${escapeHtml(reason)}</p>
+        <div class="stage-actions"><button class="action-button secondary" data-role="go-preview">Revisar Preview</button></div>
+      </section>
+    `;
+  }
+
+  const workspace = preview.workspace;
+
+  return `
+    <section class="section">
+      <p class="card-label">Criar pacote a partir do workspace atual</p>
+      <div class="commit-context">
+        <p class="context-line">Dados técnicos do preview: <strong>${escapeHtml(workspace.branch ?? '-')}</strong> comparada com <strong>${escapeHtml(workspace.baseBranch)}</strong>, <strong>${workspace.totalAffectedFiles}</strong> arquivo(s), autor <strong>${escapeHtml(screen.author ?? 'não detectado')}</strong></p>
+        <details>
+          <summary>Arquivos que entrarão no pacote</summary>
+          <ul class="preview-files">${renderFileRows(workspace.files)}</ul>
+        </details>
+      </div>
+      <form class="form-grid" data-role="mini-pr-form">
+        <p class="card-label">Mini PR (campos humanos do pr.md)</p>
+        <label class="field"><span>Título *</span><input class="form-input" name="title" type="text" maxlength="120" value="${escapeHtml(state.miniPr.title)}" /></label>
+        <label class="field"><span>Contexto *</span><textarea class="form-input" name="context" rows="3">${escapeHtml(state.miniPr.context)}</textarea></label>
+        <label class="field"><span>O que mudou * (um item por linha)</span><textarea class="form-input" name="whatChanged" rows="4">${escapeHtml(state.miniPr.whatChanged)}</textarea></label>
+        <label class="field"><span>Observações</span><textarea class="form-input" name="notes" rows="2">${escapeHtml(state.miniPr.notes)}</textarea></label>
+        <p class="feedback" data-role="mini-pr-feedback"></p>
+        <details open>
+          <summary>Prévia do pr.md</summary>
+          <pre class="review-markdown" data-role="pr-md-preview">Carregando prévia...</pre>
+        </details>
+        <p class="hint">Exportar gera um arquivo em ${escapeHtml(screen.packagesDirectory)}. Não altera o checkout SVN nem publica nada.</p>
+        <div class="stage-actions">
+          <button class="action-button" type="submit" data-role="export-package">Exportar pacote .svnflow</button>
+        </div>
+        <div data-role="export-result"></div>
+      </form>
+    </section>
+  `;
+}
+
+function readMiniPrForm(form: HTMLFormElement): MiniPrDraft {
+  const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement).value;
+  return {
+    title: value('title'),
+    context: value('context'),
+    whatChanged: value('whatChanged'),
+    notes: value('notes')
+  };
+}
+
+function missingMiniPrFields(draft: MiniPrDraft): string[] {
+  const missing: string[] = [];
+  if (!draft.title.trim()) missing.push('título');
+  if (!draft.context.trim()) missing.push('contexto');
+  if (!draft.whatChanged.trim()) missing.push('o que mudou');
+  return missing;
+}
+
+function bindMiniPrForm(root: HTMLElement): void {
+  const form = query<HTMLFormElement>('[data-role="mini-pr-form"]', root);
+
+  if (!form) {
     return;
   }
 
-  if (stage.key === 'environment') {
-    if (!window.svnflowDesktop?.getEnvironmentScreenState) {
-      renderEmptyEnvironmentState('Integração de ambiente indisponível no preload.');
-      setStatusMessage('Falha ao carregar integração de ambiente.');
+  const feedback = query<HTMLElement>('[data-role="mini-pr-feedback"]', form);
+  const markdownPreview = query<HTMLElement>('[data-role="pr-md-preview"]', form);
+  const exportButton = query<HTMLButtonElement>('[data-role="export-package"]', form);
+  const exportResult = query<HTMLElement>('[data-role="export-result"]', form);
+  let timer: number | undefined;
+
+  const refresh = () => {
+    state.miniPr = readMiniPrForm(form);
+    const missing = missingMiniPrFields(state.miniPr);
+
+    if (feedback) {
+      feedback.textContent = missing.length > 0 ? `Obrigatório para exportar: ${missing.join(', ')}.` : 'Mini PR completa.';
+      feedback.className = missing.length > 0 ? 'feedback invalid' : 'feedback valid';
+    }
+
+    if (exportButton) {
+      exportButton.disabled = missing.length > 0;
+    }
+
+    window.clearTimeout(timer);
+    timer = window.setTimeout(async () => {
+      if (markdownPreview) {
+        markdownPreview.textContent = await api().previewMiniPrMarkdown({
+          environmentId: state.selectedEnvironmentId,
+          miniPr: state.miniPr
+        });
+      }
+    }, 350);
+  };
+
+  form.addEventListener('input', refresh);
+  refresh();
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      if (exportButton) {
+        exportButton.disabled = true;
+      }
+      setStatusMessage('Gerando patch e exportando pacote .svnflow...');
+
+      const result = await api().exportPackage({ environmentId: state.selectedEnvironmentId, miniPr: readMiniPrForm(form) });
+
+      if (!exportResult) {
+        return;
+      }
+
+      if (!result.ok || !result.packagePath) {
+        exportResult.innerHTML = `<div class="notice" data-tone="blocked"><p>${escapeHtml(result.message)}</p></div>`;
+        setStatusMessage(`Falha ao exportar pacote: ${result.message}`);
+        if (exportButton) {
+          exportButton.disabled = false;
+        }
+        return;
+      }
+
+      state.lastExportedPackagePath = result.packagePath;
+      state.suggestedCommitTitle = state.miniPr.title;
+      exportResult.innerHTML = `
+        <div class="notice" data-tone="ready">
+          <p class="card-label">Pacote exportado</p>
+          <p class="context-line">Arquivo: <strong>${escapeHtml(result.packagePath)}</strong></p>
+          <p class="context-line">Checksum: <strong>${escapeHtml(result.manifest?.checksum.slice(0, 16))}…</strong></p>
+          <p class="hint">Próximo passo: compartilhe o arquivo por um canal permitido ou aplique a alteração no seu checkout SVN.</p>
+          <div class="stage-actions">
+            <button class="action-button" type="button" data-role="apply-exported">Aplicar este pacote no SVN</button>
+            <button class="action-button secondary" type="button" data-role="refresh-packages">Atualizar lista de pacotes</button>
+          </div>
+        </div>
+      `;
+      setStatusMessage('Pacote .svnflow exportado com sucesso.');
+
+      bindClick(exportResult, '[data-role="apply-exported"]', async () => {
+        state.applySource = { kind: 'package', packagePath: result.packagePath! };
+        state.importedPackage = await api().importAndValidatePackage(result.packagePath!);
+        await goToStage('apply');
+      });
+      bindClick(exportResult, '[data-role="refresh-packages"]', () => renderActiveStage());
+    })();
+  });
+}
+
+function renderLibrary(screen: PackagesScreenState): string {
+  const library = screen.library;
+  const rows = library.items.map((item) => {
+    const known = HISTORY_KIND_LABELS[item.knownStatus] ?? HISTORY_KIND_LABELS.unknown;
+    return `
+      <li class="package-row">
+        <span class="package-info">
+          <span class="environment-name">${escapeHtml(item.title ?? item.fileName)}</span>
+          <span class="environment-meta">${escapeHtml(item.fileName)} · ${escapeHtml(formatDate(item.generatedAt ?? item.modifiedAt))}${item.readable ? '' : ' · arquivo ilegível'}</span>
+        </span>
+        ${badge(known.kind, known.label)}
+        <button class="action-button secondary" data-role="open-package" data-package-path="${escapeHtml(item.packagePath)}">Abrir e validar</button>
+      </li>
+    `;
+  }).join('');
+
+  const missing = library.missingReferences.map((reference) => `
+    <li>${escapeHtml(reference.packagePath)} (${escapeHtml(HISTORY_KIND_LABELS[reference.lastKind]?.label ?? reference.lastKind)} em ${escapeHtml(formatDate(reference.recordedAt))})</li>
+  `).join('');
+
+  return `
+    <section class="section">
+      <p class="card-label">Pacotes locais</p>
+      <div class="inline-row">
+        <p class="context-line">Pasta: <strong>${escapeHtml(screen.packagesDirectory)}</strong></p>
+        <button class="action-button secondary" data-role="change-directory">Alterar pasta</button>
+        <button class="action-button secondary" data-role="refresh-packages">Atualizar</button>
+      </div>
+      ${library.ok ? '' : `<p class="empty-state">${escapeHtml(library.message)}</p>`}
+      ${rows ? `<ul class="preview-files">${rows}</ul>` : `<p class="empty-state">${library.ok ? 'Nenhum pacote .svnflow nesta pasta ainda.' : ''}</p>`}
+      ${missing ? `<div class="notice" data-tone="attention"><p class="card-label">Pacotes do histórico removidos ou movidos</p><ul class="preview-list">${missing}</ul></div>` : ''}
+      <div class="stage-actions">
+        <button class="action-button secondary" data-role="pick-package">Selecionar arquivo .svnflow manualmente</button>
+      </div>
+      <details>
+        <summary>Informar caminho do arquivo</summary>
+        <div class="inline-row">
+          <input id="package-path" class="form-input" type="text" placeholder="Caminho completo do arquivo .svnflow" />
+          <button class="action-button secondary" data-role="open-typed-package">Abrir</button>
+        </div>
+      </details>
+      <div data-role="package-review">${state.importedPackage ? renderPackageReview(state.importedPackage) : ''}</div>
+    </section>
+  `;
+}
+
+function renderPackageReview(result: ImportPackageResult): string {
+  if (!result.ok) {
+    const errors = result.errors
+      .map((error) => `<li>[${escapeHtml(error.category)}] ${escapeHtml(error.message)}</li>`)
+      .join('');
+
+    return `
+      <div class="notice" data-tone="blocked">
+        <p class="card-label">Pacote inválido</p>
+        <p class="context-line">${escapeHtml(result.packagePath)}</p>
+        <p class="context-line">${escapeHtml(result.message)}</p>
+        <ul class="preview-list">${errors}</ul>
+      </div>
+    `;
+  }
+
+  const review = result.review;
+  const whatChanged = (review?.whatChanged ?? []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+  const files = (review?.files ?? []).map((file) => `<li class="preview-row">${badge('attention', file.status)}<span>${escapeHtml(file.path)}</span></li>`).join('');
+
+  return `
+    <div class="notice" data-tone="ready">
+      <p class="card-label">Revisão do pacote (leitura — nada foi aplicado)</p>
+      <h3 class="review-title">${escapeHtml(review?.title)}</h3>
+      <p class="context-line">Autor: <strong>${escapeHtml(review?.author)}</strong> · Gerado em <strong>${escapeHtml(formatDate(review?.generatedAt))}</strong></p>
+      <p class="context-line">Origem: <strong>${escapeHtml(review?.branch)}</strong> comparada com <strong>${escapeHtml(review?.baseBranch)}</strong> no ambiente <strong>${escapeHtml(review?.environmentName)}</strong></p>
+      <p class="context-line">Formato ${escapeHtml(result.manifest?.formatVersion)} · checksum conferido</p>
+      <p class="card-label">Contexto</p>
+      <p class="review-text">${escapeHtml(review?.context)}</p>
+      <p class="card-label">O que mudou</p>
+      <ul class="preview-list bullet">${whatChanged}</ul>
+      <p class="card-label">Arquivos afetados</p>
+      <ul class="preview-files">${files}</ul>
+      <p class="card-label">Observações</p>
+      <p class="review-text">${escapeHtml(review?.notes)}</p>
+      ${review && review.missingOptionalFields.length > 0 ? `<p class="hint">Campos não informados no pacote: ${escapeHtml(review.missingOptionalFields.join(', '))}.</p>` : ''}
+      <details>
+        <summary>pr.md original</summary>
+        <pre class="review-markdown">${escapeHtml(review?.markdown)}</pre>
+      </details>
+      <div class="stage-actions">
+        <button class="action-button" data-role="apply-imported" ${result.canApply ? '' : 'disabled'}>Seguir para aplicação no SVN</button>
+      </div>
+      ${result.canApply ? '' : `<p class="hint">${escapeHtml(result.applyBlockReason)}</p>`}
+    </div>
+  `;
+}
+
+async function openPackage(packagePath: string): Promise<void> {
+  if (!packagePath.trim()) {
+    setStatusMessage('Informe ou selecione um arquivo .svnflow.');
+    return;
+  }
+
+  setStatusMessage('Importando e validando pacote .svnflow...');
+  state.importedPackage = await api().importAndValidatePackage(packagePath);
+  setStatusMessage(state.importedPackage.ok ? 'Pacote validado. Revise antes de aplicar.' : 'Pacote inválido.');
+
+  const container = query<HTMLElement>('[data-role="package-review"]');
+
+  if (container) {
+    container.innerHTML = renderPackageReview(state.importedPackage);
+    bindPackageReview(container);
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function bindPackageReview(root: HTMLElement): void {
+  bindClick(root, '[data-role="apply-imported"]', async () => {
+    if (!state.importedPackage?.canApply) {
       return;
     }
 
-    setStatusMessage('Carregando dados de ambiente...');
-    const screen = await window.svnflowDesktop.getEnvironmentScreenState(selectedEnvironmentId);
-    selectedEnvironmentId = screen.selectedEnvironmentId;
-    renderEnvironmentStage(screen);
+    state.applySource = { kind: 'package', packagePath: state.importedPackage.packagePath };
+    state.suggestedCommitTitle = state.importedPackage.review?.title;
+    await goToStage('apply');
+  });
+}
+
+function renderPackagesStage(screen: PackagesScreenState): void {
+  const body = stageBody();
+  setStatusMessage(screen.library.message);
+  updateContext({
+    status: screen.preview.canExportPackage ? 'Preview válido' : 'Preview indisponível',
+    git: screen.preview.environment?.gitWorkspacePath ?? 'Não disponível',
+    svn: screen.preview.environment?.svnCheckoutPath ?? 'Não disponível',
+    base: screen.preview.workspace?.baseBranch ?? '-',
+    guard: 'Pacotes não alteram o checkout SVN'
+  });
+
+  body.innerHTML = `
+    ${renderMiniPrForm(screen)}
+    ${renderLibrary(screen)}
+  `;
+
+  bindMiniPrForm(body);
+  bindPackageReview(body);
+  bindClick(body, '[data-role="go-preview"]', () => goToStage('preview'));
+  bindClick(body, '[data-role="refresh-packages"]', () => renderActiveStage());
+  bindClick(body, '[data-role="open-package"]', (button) => openPackage(button.dataset.packagePath ?? ''));
+  bindClick(body, '[data-role="open-typed-package"]', () => openPackage(query<HTMLInputElement>('#package-path', body)?.value ?? ''));
+  bindClick(body, '[data-role="pick-package"]', async () => {
+    const selected = await api().selectPackageFile(screen.packagesDirectory);
+    if (selected) {
+      await openPackage(selected);
+    }
+  });
+  bindClick(body, '[data-role="change-directory"]', async () => {
+    const selected = await api().selectDirectory('Selecionar pasta de pacotes .svnflow', screen.packagesDirectory);
+    if (selected) {
+      await api().setPackagesDirectory(selected);
+      await renderActiveStage();
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Aplicação SVN
+
+function renderPlanFiles(plan: ApplyPlan): string {
+  const group = (label: string, kind: EnvironmentVisualStatus, files: string[]) => files
+    .map((file) => `<li class="preview-row">${badge(kind, label)}<span>${escapeHtml(file)}</span></li>`)
+    .join('');
+
+  return `<ul class="preview-files">
+    ${group('Criar', 'ready', plan.files.added)}
+    ${group('Modificar', 'attention', plan.files.modified)}
+    ${group('Remover', 'error', plan.files.deleted)}
+  </ul>`;
+}
+
+function renderApplyResult(result: ExecuteApplyResult): string {
+  const status = result.postApply?.checkoutState;
+  const checkoutPath = result.plan.environment.svnCheckoutPath;
+  const statusRows = (status?.files ?? [])
+    .map((file) => `<li class="preview-row">${badge(file.status === 'conflicted' ? 'error' : 'attention', file.rawCode)}<span title="${escapeHtml(file.description)}">${escapeHtml(relativeToCheckout(checkoutPath, file.path))}</span></li>`)
+    .join('');
+  const tone = result.status === 'applied' ? 'ready' : 'blocked';
+
+  return `
+    <div class="notice" data-tone="${tone}">
+      <p class="card-label">${result.status === 'applied' ? 'Alteração aplicada no checkout SVN' : 'Aplicação não concluída'}</p>
+      <p class="context-line">${escapeHtml(result.message)}</p>
+      ${result.scheduling && result.scheduling.added.length > 0 ? `<p class="context-line">Agendados com svn add: <strong>${result.scheduling.added.length}</strong></p>` : ''}
+      ${result.scheduling && result.scheduling.deleted.length > 0 ? `<p class="context-line">Agendados com svn delete: <strong>${result.scheduling.deleted.length}</strong></p>` : ''}
+      ${statusRows ? `<p class="card-label">svn status</p><ul class="preview-files">${statusRows}</ul>` : ''}
+      <div class="stage-actions">
+        <button class="action-button" data-role="go-commit" ${result.postApply?.canAdvance ? '' : 'disabled'}>Seguir para Commit SVN</button>
+      </div>
+    </div>
+  `;
+}
+
+async function renderApplyStage(): Promise<void> {
+  const body = stageBody();
+  const packageAvailable = Boolean(state.importedPackage?.ok && state.importedPackage.canApply);
+
+  if (state.applySource.kind === 'package' && !packageAvailable) {
+    state.applySource = { kind: 'workspace' };
+  }
+
+  const sourceSelector = `
+    <fieldset class="source-selector">
+      <legend class="card-label">Origem da alteração</legend>
+      <label><input type="radio" name="apply-source" value="workspace" ${state.applySource.kind === 'workspace' ? 'checked' : ''} /> Workspace Git atual (preview)</label>
+      <label><input type="radio" name="apply-source" value="package" ${state.applySource.kind === 'package' ? 'checked' : ''} ${packageAvailable ? '' : 'disabled'} /> Pacote importado${packageAvailable ? `: ${escapeHtml(state.importedPackage?.review?.title)}` : ' (abra um pacote na etapa Pacotes)'}</label>
+    </fieldset>
+  `;
+
+  body.innerHTML = `${sourceSelector}<div data-role="apply-plan"><p class="empty-state">Pré-validando aplicação...</p></div>`;
+
+  body.querySelectorAll<HTMLInputElement>('input[name="apply-source"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      state.applySource = radio.value === 'package' && state.importedPackage
+        ? { kind: 'package', packagePath: state.importedPackage.packagePath }
+        : { kind: 'workspace' };
+      state.lastApplyResult = undefined;
+      void renderApplyStage();
+    });
+  });
+
+  const planContainer = query<HTMLElement>('[data-role="apply-plan"]', body)!;
+
+  if (state.lastApplyResult) {
+    planContainer.innerHTML = renderApplyResult(state.lastApplyResult);
+    bindClick(planContainer, '[data-role="go-commit"]', () => goToStage('commit'));
     return;
   }
 
-  if (stage.key === 'preview') {
-    if (!window.svnflowDesktop?.getPreviewScreenState) {
-      stageBody.innerHTML = '<p class="empty-state">Integração de preview indisponível no preload.</p>';
-      setStatusMessage('Falha ao carregar integração de preview.');
+  setStatusMessage('Pré-validando patch no checkout SVN...');
+  const response = await api().getApplyPlan(state.selectedEnvironmentId, state.applySource);
+  const plan = response.plan;
+  setStatusMessage(response.message);
+  updateContext({
+    status: plan?.canConfirm ? 'Pronto para aplicar' : 'Bloqueado',
+    svn: plan?.environment.svnCheckoutPath,
+    guard: plan?.canConfirm ? 'Aplicação exige confirmação explícita' : 'Aplicação bloqueada'
+  });
+
+  if (!plan) {
+    planContainer.innerHTML = `<div class="notice" data-tone="blocked"><p>${escapeHtml(response.message)}</p></div>`;
+    return;
+  }
+
+  planContainer.innerHTML = `
+    <div class="preview-summary">
+      <p class="context-line">Origem: <strong>${escapeHtml(plan.source.label)}</strong></p>
+      <p class="context-line">Checkout SVN de destino: <strong>${escapeHtml(plan.environment.svnCheckoutPath)}</strong></p>
+      <p class="context-line">Arquivos: <strong>${plan.files.added.length}</strong> a criar, <strong>${plan.files.modified.length}</strong> a modificar, <strong>${plan.files.deleted.length}</strong> a remover</p>
+    </div>
+    ${renderPlanFiles(plan)}
+    ${renderMessages('Bloqueios', plan.blockers, 'blocked')}
+    ${plan.warnings.length > 0 ? `<div class="notice" data-tone="attention"><p class="card-label">Atenção</p><ul class="preview-list">${plan.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul></div>` : ''}
+    <label class="checkbox-row">
+      <input type="checkbox" data-role="confirm-apply" ${plan.canConfirm ? '' : 'disabled'} />
+      Revisei os arquivos e quero alterar o checkout SVN local. Entendo que isto não publica commit.
+    </label>
+    <div class="stage-actions">
+      <button class="action-button" data-role="execute-apply" disabled>Aplicar no checkout SVN</button>
+      <button class="action-button secondary" data-role="revalidate-plan">Pré-validar novamente</button>
+    </div>
+  `;
+
+  const confirmBox = query<HTMLInputElement>('[data-role="confirm-apply"]', planContainer);
+  const executeButton = query<HTMLButtonElement>('[data-role="execute-apply"]', planContainer);
+
+  confirmBox?.addEventListener('change', () => {
+    if (executeButton) {
+      executeButton.disabled = !(confirmBox.checked && plan.canConfirm);
+    }
+  });
+
+  bindClick(planContainer, '[data-role="revalidate-plan"]', () => renderApplyStage());
+  bindClick(planContainer, '[data-role="execute-apply"]', async (button) => {
+    button.disabled = true;
+    setStatusMessage('Aplicando patch no checkout SVN...');
+    const executed = await api().executeApply(state.selectedEnvironmentId, state.applySource);
+
+    if (!executed.result) {
+      planContainer.insertAdjacentHTML('beforeend', `<div class="notice" data-tone="blocked"><p>${escapeHtml(executed.message)}</p></div>`);
+      setStatusMessage(executed.message);
       return;
     }
 
-    setStatusMessage('Carregando dados de preview...');
-    const preview = await window.svnflowDesktop.getPreviewScreenState(selectedEnvironmentId);
-    renderPreviewStage(preview);
+    state.lastApplyResult = executed.result;
+    setStatusMessage(executed.message);
+    planContainer.innerHTML = renderApplyResult(executed.result);
+    bindClick(planContainer, '[data-role="go-commit"]', () => goToStage('commit'));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Commit SVN
+
+function validateTitle(title: string): string | undefined {
+  if (title.length < 10) return 'Título deve ter no mínimo 10 caracteres.';
+  if (title.length > 72) return 'Título deve ter no máximo 72 caracteres.';
+  if (!/^[A-ZÀ-Ý]/.test(title)) return 'Título deve começar com letra maiúscula.';
+  return undefined;
+}
+
+function validateDescription(description: string): string | undefined {
+  if (description.length > 0 && description.length < 20) return 'Descrição opcional: mínimo de 20 caracteres quando preenchida.';
+  return undefined;
+}
+
+function renderCommitStage(commit: CommitScreenState): void {
+  const body = stageBody();
+  setStatusMessage(commit.message);
+  updateContext({
+    status: commit.canExecuteCommit ? 'Pronto para commit' : 'Bloqueado',
+    svn: commit.environment?.svnCheckoutPath,
+    guard: commit.canExecuteCommit ? 'Commit exige confirmação explícita' : 'Commit bloqueado por validações pendentes'
+  });
+
+  const blockers = commit.commitValidation?.blockers ?? [];
+  const files = commit.checkoutFiles
+    .map((file) => `<li class="preview-row">${badge(file.status === 'C' ? 'error' : file.status === '?' ? 'blocked' : 'attention', file.status)}<span title="${escapeHtml(file.description)}">${escapeHtml(file.path)}</span></li>`)
+    .join('');
+
+  if (!commit.canExecuteCommit) {
+    body.innerHTML = `
+      <p class="empty-state">${escapeHtml(commit.message)}</p>
+      ${files ? `<p class="card-label">svn status</p><ul class="preview-files">${files}</ul>` : ''}
+      ${renderMessages('Bloqueios', blockers, 'blocked')}
+      <div class="stage-actions"><button class="action-button secondary" data-role="refresh">Validar novamente</button></div>
+    `;
+    bindClick(body, '[data-role="refresh"]', () => renderActiveStage());
     return;
   }
 
-  if (stage.key === 'workspace') {
-    if (!window.svnflowDesktop?.getWorkspaceScreenState) {
-      stageBody.innerHTML = '<p class="empty-state">Integração de workspace Git indisponível no preload.</p>';
-      setStatusMessage('Falha ao carregar integração de workspace Git.');
-      return;
+  const suggestedTitle = state.suggestedCommitTitle ?? '';
+
+  body.innerHTML = `
+    <div class="commit-form">
+      <p class="context-line">Checkout: <strong>${escapeHtml(commit.environment?.svnCheckoutPath)}</strong> · <strong>${commit.commitValidation?.affectedFilesCount ?? 0}</strong> alteração(ões) versionada(s)</p>
+      <p class="card-label">O que será publicado (svn status)</p>
+      <ul class="preview-files">${files}</ul>
+      <p class="card-label">Mensagem de commit</p>
+      <input id="commit-title" class="form-input" type="text" maxlength="72" placeholder="Título descritivo (10 a 72 caracteres)" value="${escapeHtml(suggestedTitle)}" />
+      <p id="title-feedback" class="feedback"></p>
+      <textarea id="commit-description" class="form-input" maxlength="500" rows="4" placeholder="Descrição opcional (20 a 500 caracteres)"></textarea>
+      <p id="description-feedback" class="feedback"></p>
+      <label class="checkbox-row">
+        <input type="checkbox" id="confirm-commit" />
+        Confirmo a publicação oficial destas alterações no repositório SVN.
+      </label>
+      <div class="stage-actions">
+        <button id="execute-commit" class="action-button" disabled>Executar commit SVN</button>
+      </div>
+      <div data-role="commit-result"></div>
+    </div>
+  `;
+
+  const titleInput = query<HTMLInputElement>('#commit-title', body)!;
+  const descriptionInput = query<HTMLTextAreaElement>('#commit-description', body)!;
+  const confirmBox = query<HTMLInputElement>('#confirm-commit', body)!;
+  const executeButton = query<HTMLButtonElement>('#execute-commit', body)!;
+  const titleFeedback = query<HTMLElement>('#title-feedback', body)!;
+  const descriptionFeedback = query<HTMLElement>('#description-feedback', body)!;
+  const resultContainer = query<HTMLElement>('[data-role="commit-result"]', body)!;
+
+  const refresh = () => {
+    const titleError = validateTitle(titleInput.value.trim());
+    const descriptionError = validateDescription(descriptionInput.value.trim());
+    titleFeedback.textContent = titleError ?? 'Título válido.';
+    titleFeedback.className = titleError ? 'feedback invalid' : 'feedback valid';
+    descriptionFeedback.textContent = descriptionError ?? '';
+    descriptionFeedback.className = descriptionError ? 'feedback invalid' : 'feedback';
+    executeButton.disabled = Boolean(titleError || descriptionError) || !confirmBox.checked;
+  };
+
+  titleInput.addEventListener('input', refresh);
+  descriptionInput.addEventListener('input', refresh);
+  confirmBox.addEventListener('change', refresh);
+  refresh();
+
+  executeButton.addEventListener('click', () => {
+    void (async () => {
+      if (!state.selectedEnvironmentId) {
+        setStatusMessage('Selecione um ambiente antes de commitar.');
+        return;
+      }
+
+      executeButton.disabled = true;
+      executeButton.textContent = 'Publicando...';
+      setStatusMessage('Executando svn commit...');
+
+      const result = await api().executeCommit(state.selectedEnvironmentId, titleInput.value.trim(), descriptionInput.value.trim());
+      executeButton.textContent = 'Executar commit SVN';
+
+      if (result.status === 'success') {
+        state.lastApplyResult = undefined;
+        state.suggestedCommitTitle = undefined;
+        resultContainer.innerHTML = `
+          <div class="notice" data-tone="ready">
+            <p class="card-label">Commit publicado</p>
+            <p class="context-line">Revisão <strong>${escapeHtml(result.revision ?? '?')}</strong> · ${escapeHtml(result.filesCommitted ?? 0)} caminho(s)</p>
+          </div>
+        `;
+        confirmBox.checked = false;
+        confirmBox.disabled = true;
+        setStatusMessage(result.message);
+        return;
+      }
+
+      resultContainer.innerHTML = `
+        <div class="notice" data-tone="blocked">
+          <p class="card-label">${result.status === 'conflict' ? 'Conflito no commit' : 'Commit não realizado'}</p>
+          <p class="context-line">${escapeHtml(result.message)}</p>
+          ${result.error ? `<pre class="review-markdown">${escapeHtml(result.error)}</pre>` : ''}
+        </div>
+      `;
+      setStatusMessage(result.message);
+      refresh();
+    })();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Histórico
+
+function renderHistoryStage(result: PackageHistoryResult): void {
+  const body = stageBody();
+
+  if (!result.ok || result.entries.length === 0) {
+    body.innerHTML = '<p class="empty-state">Nenhum evento registrado ainda. O histórico é preenchido ao exportar, importar, aplicar e commitar.</p>';
+    setStatusMessage('Histórico vazio.');
+    return;
+  }
+
+  const rows = result.entries.map((entry) => {
+    const kind = HISTORY_KIND_LABELS[entry.kind] ?? HISTORY_KIND_LABELS.unknown;
+    return `
+      <tr>
+        <td>${badge(kind.kind, kind.label)}</td>
+        <td>${escapeHtml(entry.detail ?? entry.packageId)}</td>
+        <td>${escapeHtml(entry.environmentName)}</td>
+        <td>${escapeHtml(entry.baseBranch)}</td>
+        <td>${escapeHtml(entry.totalAffectedFiles)}</td>
+        <td title="${escapeHtml(entry.packagePath)}">${escapeHtml(entry.packagePath ? entry.packagePath.split(/[\\/]/).pop() : '-')}</td>
+        <td>${escapeHtml(formatDate(entry.recordedAt))}</td>
+      </tr>
+    `;
+  }).join('');
+
+  body.innerHTML = `
+    <p class="hint">${result.entries.length} registro(s) em ${escapeHtml(result.storagePath)}</p>
+    <table class="history-table">
+      <thead>
+        <tr><th>Evento</th><th>Descrição</th><th>Ambiente</th><th>Base</th><th>Arquivos</th><th>Pacote</th><th>Registrado em</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  setStatusMessage(`${result.entries.length} evento(s) no histórico local.`);
+}
+
+// ---------------------------------------------------------------------------
+// Navegação
+
+async function renderActiveStage(): Promise<void> {
+  const stage = STAGES.find((item) => item.key === state.activeStage) ?? STAGES[0];
+  const title = query<HTMLElement>('[data-role="stage-title"]');
+  const description = query<HTMLElement>('[data-role="stage-description"]');
+  const body = stageBody();
+
+  if (title) {
+    title.textContent = stage.label;
+  }
+
+  if (description) {
+    description.textContent = stage.description;
+  }
+
+  body.innerHTML = '<p class="empty-state">Carregando...</p>';
+
+  try {
+    const desktop = api();
+    const environmentId = state.selectedEnvironmentId;
+
+    if (stage.key === 'environment') {
+      renderEnvironmentStage(await desktop.getEnvironmentScreenState(environmentId));
+    } else if (stage.key === 'workspace') {
+      renderWorkspaceStage(await desktop.getWorkspaceScreenState(environmentId));
+    } else if (stage.key === 'preview') {
+      renderPreviewStage(await desktop.getPreviewScreenState(environmentId));
+    } else if (stage.key === 'packages') {
+      renderPackagesStage(await desktop.getPackagesScreenState(environmentId));
+    } else if (stage.key === 'apply') {
+      await renderApplyStage();
+    } else if (stage.key === 'commit') {
+      renderCommitStage(await desktop.getCommitScreenState(environmentId));
+    } else {
+      renderHistoryStage(await desktop.readPackageHistory());
     }
-
-    setStatusMessage('Carregando estado do workspace Git...');
-    const workspace = await window.svnflowDesktop.getWorkspaceScreenState(selectedEnvironmentId);
-    renderWorkspaceStage(workspace);
-    return;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Erro desconhecido.';
+    body.innerHTML = `<div class="notice" data-tone="blocked"><p>Falha ao carregar a etapa: ${escapeHtml(message)}</p></div>`;
+    setStatusMessage('Falha ao carregar etapa.');
   }
-
-  if (stage.key === 'commit') {
-    if (!window.svnflowDesktop?.getCommitScreenState) {
-      stageBody.innerHTML = '<p class="empty-state">Integração de commit indisponível no preload.</p>';
-      setStatusMessage('Falha ao carregar integração de commit.');
-      return;
-    }
-
-    setStatusMessage('Carregando dados de commit...');
-    const commit = await window.svnflowDesktop.getCommitScreenState(selectedEnvironmentId);
-    renderCommitStage(commit);
-    return;
-  }
-
-  if (stage.key === 'packages') {
-    renderPackagesStage();
-    return;
-  }
-
-  if (stage.key === 'history') {
-    await renderHistoryStage();
-    return;
-  }
-
-  stageBody.innerHTML = `<p class="empty-state">${stage.helper}</p>`;
-  setStatusMessage(stage.helper);
 }
 
 function renderNavigation(): void {
-  const stageList = document.querySelector<HTMLElement>('[data-role="stage-list"]');
+  const stageList = query<HTMLElement>('[data-role="stage-list"]');
 
   if (!stageList) {
     return;
@@ -1040,61 +1205,36 @@ function renderNavigation(): void {
 
   stageList.innerHTML = '';
 
-  for (const stage of STAGES) {
+  STAGES.forEach((stage, index) => {
     const li = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'stage-button';
-
-    const state = stage.key === activeStage ? 'active' : stage.mode;
-    button.dataset.state = state;
-    button.disabled = stage.mode === 'blocked';
-
-    button.innerHTML = `${stage.label}<small>${stage.helper}</small>`;
-
-    button.addEventListener('click', async () => {
-      activeStage = stage.key;
-      renderNavigation();
-      await updateMainContent(stage);
+    button.dataset.state = stage.key === state.activeStage ? 'active' : 'available';
+    button.innerHTML = `${index + 1}. ${escapeHtml(stage.label)}<small>${escapeHtml(stage.helper)}</small>`;
+    button.addEventListener('click', () => {
+      void goToStage(stage.key);
     });
 
     li.appendChild(button);
     stageList.appendChild(li);
-  }
+  });
 }
 
 async function renderAppBootstrap(): Promise<void> {
-  const appName = window.svnflowDesktop?.appName ?? 'SVNFlow';
-  const title = document.querySelector<HTMLElement>('[data-role="app-title"]');
-  const subtitle = document.querySelector<HTMLElement>('[data-role="app-subtitle"]');
-  const environmentStatus = document.querySelector<HTMLElement>('[data-role="environment-status"]');
-  const environmentGit = document.querySelector<HTMLElement>('[data-role="environment-git"]');
-  const environmentSvn = document.querySelector<HTMLElement>('[data-role="environment-svn"]');
+  const title = query<HTMLElement>('[data-role="app-title"]');
+  const subtitle = query<HTMLElement>('[data-role="app-subtitle"]');
 
   if (title) {
-    title.textContent = appName;
+    title.textContent = window.svnflowDesktop?.appName ?? 'SVNFlow';
   }
 
   if (subtitle) {
-    subtitle.textContent = 'Shell inicial navegável da V1';
-  }
-
-  if (environmentStatus) {
-    environmentStatus.textContent = 'Não configurado';
-  }
-
-  if (environmentGit) {
-    environmentGit.textContent = 'Aguardando seleção de ambiente';
-  }
-
-  if (environmentSvn) {
-    environmentSvn.textContent = 'Aguardando seleção de ambiente';
+    subtitle.textContent = `Git prepara, SVN publica · versão ${window.svnflowDesktop?.appVersion ?? 'dev'}`;
   }
 
   renderNavigation();
-
-  const selectedStage = STAGES.find((item) => item.key === activeStage) ?? STAGES[0];
-  await updateMainContent(selectedStage);
+  await renderActiveStage();
 }
 
 window.addEventListener('DOMContentLoaded', () => {

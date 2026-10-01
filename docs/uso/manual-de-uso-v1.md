@@ -7,6 +7,8 @@ Este manual descreve como a V1 do SVNFlow deve ser usada em dois cenários:
 - trabalho solo;
 - colaboração por pacote `.svnflow`.
 
+Para instalar, executar e conhecer as limitações da entrega atual, consulte a [Entrega Experimental da V1](../release/entrega-experimental-v1.md).
+
 O trabalho solo é o fluxo padrão da V1. A colaboração é uma camada adicional para transportar e revisar alterações por pacote, sem transformar o SVNFlow em plataforma colaborativa completa.
 
 ## Premissas de Segurança
@@ -27,6 +29,8 @@ Premissas:
 Use a trilha de trabalho solo quando a mesma pessoa prepara, revisa e leva a alteração ao checkout SVN.
 
 Use a trilha de colaboração quando uma pessoa prepara uma alteração e outra pessoa precisa revisar, importar ou aplicar essa alteração por pacote `.svnflow`.
+
+O pacote `.svnflow` também pode ser usado no trabalho solo quando a pessoa quiser registrar uma mini PR local, transportar a alteração para outra máquina ou guardar um ponto de revisão antes de aplicar no checkout SVN.
 
 ## Trilha 1: Trabalho Solo
 
@@ -98,9 +102,35 @@ Antes de aplicar qualquer alteração, o app deve mostrar:
 - riscos ou limitações;
 - resumo da alteração.
 
-O objetivo do preview é permitir revisão antes de alterar o checkout SVN.
+O objetivo do preview é permitir revisão técnica antes de alterar o checkout SVN.
 
-### 4. Aplicar no Checkout SVN
+O preview responde principalmente:
+
+- qual branch está sendo comparada;
+- qual base foi usada;
+- quais arquivos foram afetados;
+- se existe alteração suficiente para seguir;
+- se há algum bloqueio técnico antes de aplicar ou exportar.
+
+O preview não deve concentrar o preenchimento da mini PR. Ele pode sugerir informações, mas os campos humanos usados no `pr.md` pertencem à etapa Pacotes.
+
+### 4. Exportar Pacote Quando Necessário
+
+Quando a pessoa quiser registrar ou compartilhar a alteração, ela abre a etapa Pacotes depois de um preview válido.
+
+Nessa etapa, o app deve permitir:
+
+- revisar os arquivos que vieram do preview;
+- preencher título, contexto, mudanças e observações;
+- confirmar branch de origem e base de comparação;
+- escolher pasta local de pacotes;
+- gerar o arquivo `.svnflow`.
+
+Exportar pacote não altera o checkout SVN e não publica nada no SVN.
+
+No trabalho solo, exportar é opcional. A pessoa pode seguir do preview diretamente para aplicação no checkout SVN quando não precisar transportar a alteração.
+
+### 5. Aplicar no Checkout SVN
 
 Depois da revisão e confirmação, o app aplica a alteração no checkout SVN validado.
 
@@ -110,7 +140,7 @@ O app deve deixar claro que:
 - a operação ainda não publica no SVN;
 - falhas de patch ou conflito devem bloquear o avanço automático.
 
-### 5. Consultar `svn status`
+### 6. Consultar `svn status`
 
 Após aplicar a alteração, o app deve exibir o estado do checkout SVN.
 
@@ -122,7 +152,7 @@ O app deve traduzir o resultado para uma leitura compreensível, indicando:
 - conflitos;
 - se o estado está pronto para revisão ou commit.
 
-### 6. Revisar Commit SVN Protegido
+### 7. Revisar Commit SVN Protegido
 
 O commit SVN é uma etapa separada.
 
@@ -135,7 +165,7 @@ Antes de publicar, o app deve mostrar:
 
 O commit não deve acontecer automaticamente depois da aplicação.
 
-### 7. Consultar Histórico Local
+### 8. Consultar Histórico Local
 
 O histórico local ajuda a consultar o que foi gerado, importado ou aplicado.
 
@@ -160,13 +190,24 @@ Pessoa A exporta pacote .svnflow
 
 A pessoa que preparou a alteração gera um pacote `.svnflow`.
 
+Na V1, a exportação deve acontecer na etapa Pacotes, usando um preview já validado como fonte técnica da alteração.
+
 O pacote deve conter:
 
 - `manifest.json`;
 - `pr.md`;
 - `patch.diff`.
 
-O app deve mostrar o que entrará no pacote antes da exportação.
+O app deve mostrar o que entrará no pacote antes da exportação e deixar claro que o pacote representa a alteração detectada no workspace Git, não uma branch remota ou um Pull Request completo.
+
+Os campos humanos que alimentam o `pr.md` devem ser preenchidos na etapa Pacotes:
+
+- título;
+- contexto;
+- o que mudou;
+- observações.
+
+Branch de origem, base de comparação e arquivos afetados devem vir do preview validado, com possibilidade de revisão visual antes da exportação.
 
 ### 2. Enviar Pacote
 
@@ -180,6 +221,8 @@ O app não deve enviar código para servidor externo na V1.
 
 A pessoa que recebeu o pacote importa o arquivo `.svnflow`.
 
+Na V1, a importação também pertence à etapa Pacotes.
+
 O app deve validar:
 
 - se o pacote pode ser aberto;
@@ -187,6 +230,8 @@ O app deve validar:
 - se a versão do formato é suportada;
 - se o `pr.md` pode ser renderizado;
 - se o `patch.diff` existe.
+
+Para reduzir digitação manual de caminho, a etapa Pacotes deve priorizar seleção de arquivo ou listagem a partir de uma pasta local de pacotes. Um campo de caminho pode existir como apoio, mas não deve ser a experiência principal.
 
 ### 4. Revisar `pr.md`
 
@@ -199,6 +244,8 @@ Antes de aplicar a alteração, a pessoa deve revisar:
 - arquivos afetados.
 
 O `pr.md` ajuda na revisão, mas não substitui políticas oficiais de aprovação.
+
+A revisão do `pr.md` deve acontecer antes da aplicação no checkout SVN. Revisar pacote não altera arquivos.
 
 ### 5. Aplicar e Validar
 
@@ -222,6 +269,13 @@ Antes de qualquer operação que altere arquivos, o app deve mostrar:
 - estado do checkout SVN;
 - riscos detectados;
 - mensagem clara de confirmação.
+
+No caso de pacote `.svnflow`, o app também deve mostrar se a ação atual é:
+
+- exportar pacote a partir do workspace atual;
+- importar pacote existente;
+- revisar pacote;
+- aplicar o patch do pacote no checkout SVN.
 
 ## Diferença Entre Aplicar e Publicar
 

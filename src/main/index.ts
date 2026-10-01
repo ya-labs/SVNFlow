@@ -1,137 +1,58 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type {
+  ApplyPlanResponse,
+  ApplySourceRequest,
+  ChangeTotals,
+  CommitScreenState,
+  EnvironmentListEntry,
+  EnvironmentScreenState,
+  EnvironmentVisualStatus,
+  ExecuteApplyResponse,
+  ExportPackageRequest,
+  PackagesScreenState,
+  PreviewScreenState,
+  RegisterEnvironmentInput,
+  RegisterEnvironmentResponse,
+  ScreenBlocker,
+  ScreenWorkspaceFile,
+  WorkspaceScreenState
+} from '../shared/ipc-types.js';
+import { readAppSettings, updateAppSettings } from './commands/app-settings.js';
+import { validateCommitPreConditions } from './commands/commit-validator.js';
+import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
+import { generateGitPatch, readGitAuthor } from './commands/git-patch.js';
+import { buildMiniPrMarkdown, normalizeMiniPrDraft } from './commands/mini-pr.js';
+import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
+import { appendPackageHistory, readPackageHistory, type PackageHistoryResult } from './commands/package-history.js';
+import { importAndValidateSvnflowPackage, readValidatedPackagePatch, type ImportPackageResult } from './commands/package-importer.js';
+import { listPackageLibrary } from './commands/package-library.js';
+import { buildPreviewContext } from './commands/preview.js';
+import { buildPreviewScreenState } from './commands/preview-screen.js';
+import { registerSavedEnvironmentFromLocalPaths } from './commands/register-saved-environment.js';
+import { revalidateEnvironment } from './commands/revalidate-environment.js';
 import {
   readSavedEnvironments,
-  updateSavedEnvironment,
-  resolveSavedEnvironmentStoragePath
+  removeSavedEnvironment,
+  resolveSavedEnvironmentStoragePath,
+  updateSavedEnvironment
 } from './commands/saved-environment-store.js';
 import {
   listSavedEnvironments,
   selectSavedEnvironment,
-  type SelectedEnvironment,
   type SavedEnvironmentListItem,
-  type SavedEnvironmentValidationStatus
+  type SavedEnvironmentValidationStatus,
+  type SelectedEnvironment
 } from './commands/saved-environments.js';
-import { revalidateEnvironment } from './commands/revalidate-environment.js';
-import { buildPreviewContext } from './commands/preview.js';
-import { buildPreviewScreenState } from './commands/preview-screen.js';
-import { validateCommitPreConditions, type ValidateCommitResult } from './commands/commit-validator.js';
-import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
-import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
-import { importAndValidateSvnflowPackage, type ImportPackageResult } from './commands/package-importer.js';
-import { appendPackageHistory, readPackageHistory, type PackageHistoryResult } from './commands/package-history.js';
+import { buildApplyPlan, executeApply, type ApplyPlanInput } from './commands/svn-apply-flow.js';
+import { readSvnStatus } from './commands/svn-status.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-type EnvironmentVisualStatus = 'ready' | 'attention' | 'blocked' | 'error' | 'pending';
-
-interface EnvironmentListEntry {
-  id: string;
-  name: string;
-  lastValidationStatus: SavedEnvironmentValidationStatus;
-  needsRevalidation: boolean;
-  visualStatus: EnvironmentVisualStatus;
-}
-
-interface EnvironmentScreenState {
-  message: string;
-  storagePath: string;
-  items: EnvironmentListEntry[];
-  selectedEnvironmentId?: string;
-  selected?: {
-    id: string;
-    name: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    visualStatus: EnvironmentVisualStatus;
-  };
-  emptyState: boolean;
-  canAdvanceToSensitiveOperations: boolean;
-}
-
-interface PreviewScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    svnCheckoutRoot?: string;
-  };
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: Array<{
-      path: string;
-      previousPath?: string;
-      status: string;
-      description: string;
-      rawStatus: string;
-    }>;
-  };
-  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
-  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
-  canExportPackage: boolean;
-  canApplyInSvn: boolean;
-}
-
-interface WorkspaceScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    gitWorkspacePath: string;
-    svnCheckoutPath: string;
-    svnCheckoutRoot?: string;
-  };
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: Array<{
-      path: string;
-      previousPath?: string;
-      status: string;
-      description: string;
-      rawStatus: string;
-    }>;
-    totals: {
-      added: number;
-      modified: number;
-      deleted: number;
-      renamed: number;
-      copied: number;
-      unknown: number;
-    };
-  };
-  blockers: Array<{ code: string; message: string; affectedFiles?: string[] }>;
-  alerts: Array<{ code: string; message: string; severity: 'info' | 'warning'; affectedFiles?: string[] }>;
-  hasChanges: boolean;
-  canAdvanceToPreview: boolean;
-}
-
-interface CommitScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    svnCheckoutPath: string;
-  };
-  commitValidation?: {
-    hasChanges: boolean;
-    affectedFilesCount: number;
-    blockers: Array<{ code: string; message: string }>;
-    canCommit: boolean;
-  };
-  canExecuteCommit: boolean;
-}
+const DEFAULT_BASE_BRANCH = 'main';
 
 async function resolveSelectedEnvironmentById(environmentId?: string): Promise<SelectedEnvironment | undefined> {
   const storagePath = resolveSavedEnvironmentStoragePath();
@@ -150,6 +71,17 @@ async function resolveSelectedEnvironmentById(environmentId?: string): Promise<S
   return selectedResult.selectedEnvironment;
 }
 
+function countChangeTotals(files: ScreenWorkspaceFile[]): ChangeTotals {
+  const totals: ChangeTotals = { added: 0, modified: 0, deleted: 0, renamed: 0, copied: 0, unknown: 0 };
+  const byCode: Record<string, keyof ChangeTotals> = { A: 'added', M: 'modified', D: 'deleted', R: 'renamed', C: 'copied' };
+
+  for (const file of files) {
+    totals[byCode[file.rawStatus.charAt(0)] ?? 'unknown'] += 1;
+  }
+
+  return totals;
+}
+
 async function buildPreviewRendererState(environmentId?: string): Promise<PreviewScreenState> {
   const selectedEnvironment = await resolveSelectedEnvironmentById(environmentId);
   const preview = buildPreviewScreenState({
@@ -161,7 +93,12 @@ async function buildPreviewRendererState(environmentId?: string): Promise<Previe
     title: preview.title,
     message: preview.message,
     environment: preview.environment,
-    workspace: preview.workspace,
+    workspace: preview.workspace
+      ? {
+          ...preview.workspace,
+          totals: countChangeTotals(preview.workspace.files)
+        }
+      : undefined,
     blockers: preview.blockers,
     alerts: preview.alerts,
     canExportPackage: preview.actions.canExportPackage.canAdvance,
@@ -169,7 +106,7 @@ async function buildPreviewRendererState(environmentId?: string): Promise<Previe
   };
 }
 
-function normalizeWorkspaceBlockers(blockers: Array<string | { code: string; message: string; affectedFiles?: string[] }>): Array<{ code: string; message: string; affectedFiles?: string[] }> {
+function normalizeWorkspaceBlockers(blockers: Array<string | ScreenBlocker>): ScreenBlocker[] {
   return blockers.map((blocker) => {
     if (typeof blocker === 'string') {
       return {
@@ -214,14 +151,7 @@ async function buildWorkspaceRendererState(environmentId?: string): Promise<Work
             description: file.description,
             rawStatus: file.rawStatus
           })),
-          totals: workspaceContext.summary?.totalsByChangeType ?? {
-            added: 0,
-            modified: 0,
-            deleted: 0,
-            renamed: 0,
-            copied: 0,
-            unknown: 0
-          }
+          totals: workspaceContext.summary?.totalsByChangeType ?? countChangeTotals([])
         }
       : undefined,
     blockers,
@@ -229,6 +159,186 @@ async function buildWorkspaceRendererState(environmentId?: string): Promise<Work
     hasChanges,
     canAdvanceToPreview: workspaceContext.canPreview && hasChanges && blockers.length === 0
   };
+}
+
+async function buildPackagesScreenState(environmentId?: string): Promise<PackagesScreenState> {
+  const [settings, preview, history, selected] = await Promise.all([
+    readAppSettings(),
+    buildPreviewRendererState(environmentId),
+    readPackageHistory(),
+    resolveSelectedEnvironmentById(environmentId)
+  ]);
+  const library = await listPackageLibrary({
+    directory: settings.packagesDirectory,
+    historyEntries: history.entries
+  });
+
+  return {
+    packagesDirectory: settings.packagesDirectory,
+    preview,
+    author: selected ? readGitAuthor(selected.gitWorkspacePath) : undefined,
+    library
+  };
+}
+
+async function exportPackageFromPreview(request: ExportPackageRequest): Promise<ExportPackageResult> {
+  const selected = await resolveSelectedEnvironmentById(request.environmentId);
+  const preview = await buildPreviewRendererState(request.environmentId);
+
+  if (!selected || !preview.environment || !preview.workspace || !preview.canExportPackage) {
+    return {
+      ok: false,
+      message: preview.blockers[0]?.message ?? 'Preview indisponível ou bloqueado para exportação de pacote.',
+      errorCode: 'INVALID_PREVIEW'
+    };
+  }
+
+  const patch = generateGitPatch({
+    gitRepositoryPath: selected.gitWorkspacePath,
+    baseBranch: preview.workspace.baseBranch
+  });
+
+  if (!patch.ok) {
+    return {
+      ok: false,
+      message: patch.message,
+      errorCode: 'INVALID_PATCH'
+    };
+  }
+
+  const settings = await readAppSettings();
+  const exportResult = await exportSvnflowPackage({
+    preview: {
+      environment: preview.environment,
+      workspace: preview.workspace,
+      blockers: preview.blockers,
+      alerts: preview.alerts
+    },
+    miniPr: request.miniPr,
+    patchContent: patch.patchContent,
+    author: readGitAuthor(selected.gitWorkspacePath),
+    outputDirectory: settings.packagesDirectory
+  });
+
+  if (exportResult.ok && exportResult.packagePath && exportResult.manifest) {
+    await appendPackageHistory({
+      entry: {
+        kind: 'exported',
+        packageId: exportResult.manifest.packageId,
+        packagePath: exportResult.packagePath,
+        environmentName: preview.environment.environmentName,
+        baseBranch: preview.workspace.baseBranch,
+        totalAffectedFiles: preview.workspace.totalAffectedFiles,
+        generatedAt: exportResult.manifest.generatedAt,
+        detail: request.miniPr.title
+      }
+    });
+  }
+
+  return exportResult;
+}
+
+type ResolvedApplyInput =
+  | { ok: true; input: ApplyPlanInput; baseBranch: string }
+  | { ok: false; message: string };
+
+async function resolveApplyInput(environmentId: string | undefined, source: ApplySourceRequest): Promise<ResolvedApplyInput> {
+  const selected = await resolveSelectedEnvironmentById(environmentId);
+
+  if (!selected) {
+    return { ok: false, message: 'Nenhum ambiente selecionado. Cadastre ou selecione um ambiente para aplicar alterações.' };
+  }
+
+  if (source.kind === 'package') {
+    const validated = await readValidatedPackagePatch(source.packagePath);
+
+    if (!validated.ok || !validated.patchContent) {
+      return { ok: false, message: validated.message };
+    }
+
+    return {
+      ok: true,
+      baseBranch: validated.result.summary?.baseBranch ?? '',
+      input: {
+        environmentName: selected.name,
+        svnCheckoutPath: selected.svnCheckoutPath,
+        patchContent: validated.patchContent,
+        source: {
+          kind: 'package',
+          label: `Pacote: ${validated.result.review?.title ?? path.basename(source.packagePath)}`,
+          packagePath: validated.result.packagePath,
+          packageId: validated.result.manifest?.packageId
+        }
+      }
+    };
+  }
+
+  const preview = await buildPreviewRendererState(environmentId);
+
+  if (!preview.canApplyInSvn || !preview.workspace) {
+    return { ok: false, message: preview.blockers[0]?.message ?? preview.message };
+  }
+
+  const patch = generateGitPatch({
+    gitRepositoryPath: selected.gitWorkspacePath,
+    baseBranch: preview.workspace.baseBranch
+  });
+
+  if (!patch.ok) {
+    return { ok: false, message: patch.message };
+  }
+
+  return {
+    ok: true,
+    baseBranch: preview.workspace.baseBranch,
+    input: {
+      environmentName: selected.name,
+      svnCheckoutPath: selected.svnCheckoutPath,
+      patchContent: patch.patchContent,
+      source: {
+        kind: 'workspace',
+        label: `Workspace Git: ${preview.workspace.branch ?? 'branch atual'} comparada com ${preview.workspace.baseBranch}`
+      }
+    }
+  };
+}
+
+async function buildApplyPlanResponse(environmentId: string | undefined, source: ApplySourceRequest): Promise<ApplyPlanResponse> {
+  const resolved = await resolveApplyInput(environmentId, source);
+
+  if (!resolved.ok) {
+    return { ok: false, message: resolved.message };
+  }
+
+  const plan = buildApplyPlan(resolved.input);
+  return { ok: plan.canConfirm, message: plan.message, plan };
+}
+
+async function executeApplyFromSource(environmentId: string | undefined, source: ApplySourceRequest): Promise<ExecuteApplyResponse> {
+  const resolved = await resolveApplyInput(environmentId, source);
+
+  if (!resolved.ok) {
+    return { ok: false, message: resolved.message };
+  }
+
+  const result = executeApply({ ...resolved.input, confirmed: true });
+
+  if (result.status === 'applied' || result.appliedFiles.length > 0) {
+    await appendPackageHistory({
+      entry: {
+        kind: 'applied',
+        packageId: resolved.input.source.packageId ?? 'workspace-local',
+        packagePath: resolved.input.source.packagePath ?? '',
+        environmentName: resolved.input.environmentName,
+        baseBranch: resolved.baseBranch,
+        totalAffectedFiles: result.appliedFiles.length,
+        generatedAt: new Date().toISOString(),
+        detail: resolved.input.source.label
+      }
+    });
+  }
+
+  return { ok: result.status === 'applied', message: result.message, result };
 }
 
 async function buildCommitScreenState(selectedEnvironmentId?: string): Promise<CommitScreenState> {
@@ -239,6 +349,7 @@ async function buildCommitScreenState(selectedEnvironmentId?: string): Promise<C
       status: 'blocked',
       title: 'Commit SVN Protegido',
       message: 'Nenhum ambiente selecionado. Selecione um ambiente para iniciar.',
+      checkoutFiles: [],
       canExecuteCommit: false
     };
   }
@@ -246,7 +357,7 @@ async function buildCommitScreenState(selectedEnvironmentId?: string): Promise<C
   const validationResult = validateCommitPreConditions({
     checkoutPath: selected.svnCheckoutPath
   });
-
+  const checkoutState = readSvnStatus({ checkoutPath: selected.svnCheckoutPath });
   const canExecuteCommit = validationResult.status === 'ready' && validationResult.canCommit;
 
   return {
@@ -263,6 +374,11 @@ async function buildCommitScreenState(selectedEnvironmentId?: string): Promise<C
       blockers: validationResult.blockers,
       canCommit: validationResult.canCommit
     },
+    checkoutFiles: checkoutState.files.map((file) => ({
+      path: path.relative(selected.svnCheckoutPath, path.resolve(selected.svnCheckoutPath, file.path)) || file.path,
+      status: file.rawCode,
+      description: file.description
+    })),
     canExecuteCommit
   };
 }
@@ -326,7 +442,8 @@ async function buildEnvironmentScreenState(
     };
   }
 
-  const resolvedSelectedId = selectedEnvironmentId ?? list.items[0].id;
+  const knownSelectedId = list.items.some((item) => item.id === selectedEnvironmentId) ? selectedEnvironmentId : undefined;
+  const resolvedSelectedId = knownSelectedId ?? list.items[0].id;
   const selectedResult = selectSavedEnvironment({
     environments: storage.environments,
     environmentId: resolvedSelectedId
@@ -340,7 +457,11 @@ async function buildEnvironmentScreenState(
     selectedEnvironmentId: selectedResult.selectedEnvironment?.id,
     selected: selectedResult.selectedEnvironment && selectedItem
       ? {
-          ...selectedResult.selectedEnvironment,
+          id: selectedResult.selectedEnvironment.id,
+          name: selectedResult.selectedEnvironment.name,
+          gitWorkspacePath: selectedResult.selectedEnvironment.gitWorkspacePath,
+          svnCheckoutPath: selectedResult.selectedEnvironment.svnCheckoutPath,
+          baseBranch: selectedResult.selectedEnvironment.baseBranch ?? DEFAULT_BASE_BRANCH,
           visualStatus: mapVisualStatus(selectedItem)
         }
       : undefined,
@@ -349,101 +470,138 @@ async function buildEnvironmentScreenState(
   };
 }
 
+async function revalidateSelectedEnvironment(environmentId?: string): Promise<EnvironmentScreenState> {
+  const screenState = await buildEnvironmentScreenState(environmentId);
+
+  if (!screenState.selectedEnvironmentId) {
+    return screenState;
+  }
+
+  const storage = await readSavedEnvironments({ storagePath: screenState.storagePath });
+
+  if (!storage.ok) {
+    return {
+      ...screenState,
+      message: storage.message
+    };
+  }
+
+  const selected = storage.environments.find((item) => item.id === screenState.selectedEnvironmentId);
+
+  if (!selected) {
+    return {
+      ...screenState,
+      message: 'Ambiente selecionado não encontrado para revalidação.'
+    };
+  }
+
+  const revalidation = revalidateEnvironment({ environment: selected, baseBranch: selected.baseBranch });
+  const now = new Date().toISOString();
+  const nextStatus: Exclude<SavedEnvironmentValidationStatus, 'pending'> =
+    revalidation.safeForSensitiveOperations
+      ? 'ready'
+      : revalidation.blockers.some((blocker) => blocker.code === 'VALIDATION_ERROR')
+        ? 'error'
+        : 'blocked';
+
+  await updateSavedEnvironment({
+    storagePath: screenState.storagePath,
+    environmentId: selected.id,
+    changes: {
+      lastValidatedAt: now,
+      lastValidationStatus: nextStatus
+    }
+  });
+
+  return buildEnvironmentScreenState(selected.id, revalidation.message);
+}
+
+async function showOpenDialog(event: IpcMainInvokeEvent, options: OpenDialogOptions): Promise<string | undefined> {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+
+  return result.canceled ? undefined : result.filePaths[0];
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle('environment:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildEnvironmentScreenState(payload?.environmentId)
   );
 
-  ipcMain.handle('environment:revalidate', async (_event, payload?: { environmentId?: string }) => {
-    const screenState = await buildEnvironmentScreenState(payload?.environmentId);
+  ipcMain.handle('environment:revalidate', async (_event, payload?: { environmentId?: string }) =>
+    revalidateSelectedEnvironment(payload?.environmentId)
+  );
 
-    if (!screenState.selectedEnvironmentId) {
-      return screenState;
-    }
-
-    const storage = await readSavedEnvironments({ storagePath: screenState.storagePath });
-
-    if (!storage.ok) {
-      return {
-        ...screenState,
-        message: storage.message
-      };
-    }
-
-    const selected = storage.environments.find((item) => item.id === screenState.selectedEnvironmentId);
-
-    if (!selected) {
-      return {
-        ...screenState,
-        message: 'Ambiente selecionado não encontrado para revalidação.'
-      };
-    }
-
-    const revalidation = revalidateEnvironment({ environment: selected });
-    const now = new Date().toISOString();
-    const nextStatus: Exclude<SavedEnvironmentValidationStatus, 'pending'> =
-      revalidation.safeForSensitiveOperations
-        ? 'ready'
-        : revalidation.blockers.some((blocker) => blocker.code === 'VALIDATION_ERROR')
-          ? 'error'
-          : 'blocked';
-
-    await updateSavedEnvironment({
-      storagePath: screenState.storagePath,
-      environmentId: selected.id,
-      changes: {
-        lastValidatedAt: now,
-        lastValidationStatus: nextStatus
-      }
+  ipcMain.handle('environment:register', async (_event, payload: RegisterEnvironmentInput): Promise<RegisterEnvironmentResponse> => {
+    const registration = await registerSavedEnvironmentFromLocalPaths({
+      name: payload?.name,
+      gitWorkspacePath: payload?.gitWorkspacePath ?? '',
+      svnCheckoutPath: payload?.svnCheckoutPath ?? '',
+      baseBranch: payload?.baseBranch
     });
+    const screen = await buildEnvironmentScreenState(registration.savedEnvironment?.id, registration.message);
 
-    return buildEnvironmentScreenState(selected.id, revalidation.message);
+    return { registration, screen };
   });
 
-  ipcMain.handle('preview:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
-    buildPreviewRendererState(payload?.environmentId)
+  ipcMain.handle('environment:remove', async (_event, payload: { environmentId: string }) => {
+    const result = await removeSavedEnvironment({ environmentId: payload.environmentId });
+    return buildEnvironmentScreenState(undefined, result.ok ? 'Ambiente removido da lista local. Nenhuma pasta foi apagada.' : result.message);
+  });
+
+  ipcMain.handle('dialog:select-directory', async (event, payload: { title: string; defaultPath?: string }) =>
+    showOpenDialog(event, {
+      title: payload.title,
+      defaultPath: payload.defaultPath,
+      properties: ['openDirectory', 'createDirectory']
+    })
+  );
+
+  ipcMain.handle('dialog:select-package-file', async (event, payload?: { defaultPath?: string }) =>
+    showOpenDialog(event, {
+      title: 'Selecionar pacote .svnflow',
+      defaultPath: payload?.defaultPath,
+      properties: ['openFile'],
+      filters: [{ name: 'Pacote SVNFlow', extensions: ['svnflow'] }]
+    })
   );
 
   ipcMain.handle('workspace:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildWorkspaceRendererState(payload?.environmentId)
   );
 
-  ipcMain.handle('packages:export-from-preview', async (_event, payload?: { environmentId?: string }): Promise<ExportPackageResult> => {
-    const preview = await buildPreviewRendererState(payload?.environmentId);
+  ipcMain.handle('preview:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
+    buildPreviewRendererState(payload?.environmentId)
+  );
 
-    if (!preview.environment || !preview.workspace) {
-      return {
-        ok: false,
-        message: 'Preview indisponivel para exportacao de pacote.',
-        errorCode: 'INVALID_PREVIEW'
-      };
-    }
+  ipcMain.handle('packages:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
+    buildPackagesScreenState(payload?.environmentId)
+  );
 
-    const exportResult = await exportSvnflowPackage({
-      preview: {
-        environment: preview.environment,
-        workspace: preview.workspace,
-        blockers: preview.blockers,
-        alerts: preview.alerts
-      }
-    });
-
-    if (exportResult.ok && exportResult.packagePath && exportResult.manifest) {
-      await appendPackageHistory({
-        entry: {
-          kind: 'exported',
-          packageId: exportResult.manifest.packageId,
-          packagePath: exportResult.packagePath,
-          environmentName: preview.environment.environmentName,
-          baseBranch: preview.workspace.baseBranch,
-          totalAffectedFiles: preview.workspace.totalAffectedFiles,
-          generatedAt: exportResult.manifest.generatedAt
-        }
-      });
-    }
-
-    return exportResult;
+  ipcMain.handle('packages:set-directory', async (_event, payload: { directory: string }) => {
+    const settings = await updateAppSettings({ packagesDirectory: payload.directory });
+    return settings.packagesDirectory;
   });
+
+  ipcMain.handle('packages:preview-pr-md', async (_event, payload: ExportPackageRequest): Promise<string> => {
+    const [selected, preview] = await Promise.all([
+      resolveSelectedEnvironmentById(payload.environmentId),
+      buildPreviewRendererState(payload.environmentId)
+    ]);
+
+    return buildMiniPrMarkdown(normalizeMiniPrDraft(payload.miniPr), {
+      environmentName: preview.environment?.environmentName ?? 'não identificado',
+      branch: preview.workspace?.branch,
+      baseBranch: preview.workspace?.baseBranch ?? DEFAULT_BASE_BRANCH,
+      author: selected ? readGitAuthor(selected.gitWorkspacePath) : undefined,
+      generatedAt: new Date().toISOString(),
+      files: preview.workspace?.files ?? []
+    });
+  });
+
+  ipcMain.handle('packages:export', async (_event, payload: ExportPackageRequest): Promise<ExportPackageResult> =>
+    exportPackageFromPreview(payload)
+  );
 
   ipcMain.handle('packages:import-and-validate', async (_event, payload?: { packagePath?: string }): Promise<ImportPackageResult> => {
     const result = await importAndValidateSvnflowPackage(payload?.packagePath ?? '');
@@ -457,7 +615,8 @@ function registerIpcHandlers(): void {
           environmentName: result.summary.environmentName,
           baseBranch: result.summary.baseBranch,
           totalAffectedFiles: result.summary.totalAffectedFiles,
-          generatedAt: result.manifest.generatedAt
+          generatedAt: result.manifest.generatedAt,
+          detail: result.review?.title
         }
       });
     }
@@ -465,9 +624,15 @@ function registerIpcHandlers(): void {
     return result;
   });
 
-  ipcMain.handle('packages:read-history', async (): Promise<PackageHistoryResult> => {
-    return readPackageHistory();
-  });
+  ipcMain.handle('packages:read-history', async (): Promise<PackageHistoryResult> => readPackageHistory());
+
+  ipcMain.handle('apply:get-plan', async (_event, payload: { environmentId?: string; source: ApplySourceRequest }) =>
+    buildApplyPlanResponse(payload.environmentId, payload.source)
+  );
+
+  ipcMain.handle('apply:execute', async (_event, payload: { environmentId?: string; source: ApplySourceRequest }) =>
+    executeApplyFromSource(payload.environmentId, payload.source)
+  );
 
   ipcMain.handle('commit:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildCommitScreenState(payload?.environmentId)
@@ -486,11 +651,38 @@ function registerIpcHandlers(): void {
         };
       }
 
-      return executeCommit({
+      const validation = validateCommitPreConditions({ checkoutPath: selected.svnCheckoutPath });
+
+      if (!validation.canCommit) {
+        return {
+          status: 'failed',
+          message: validation.blockers[0]?.message ?? validation.message,
+          errorCode: 'PRECONDITIONS_NOT_MET'
+        };
+      }
+
+      const result = executeCommit({
         checkoutPath: selected.svnCheckoutPath,
         title: payload.title,
         description: payload.description
       });
+
+      if (result.status === 'success') {
+        await appendPackageHistory({
+          entry: {
+            kind: 'committed',
+            packageId: result.revision ? `r${result.revision}` : 'svn-commit',
+            packagePath: '',
+            environmentName: selected.name,
+            baseBranch: selected.baseBranch ?? DEFAULT_BASE_BRANCH,
+            totalAffectedFiles: result.filesCommitted ?? 0,
+            generatedAt: new Date().toISOString(),
+            detail: payload.title
+          }
+        });
+      }
+
+      return result;
     }
   );
 }
@@ -507,7 +699,8 @@ function createMainWindow(): BrowserWindow {
       preload: path.join(__dirname, '..', 'preload', 'index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      additionalArguments: [`--svnflow-version=${app.getVersion()}`]
     }
   });
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceita para orientar a v1.
+Aceita para orientar a v1. O formato de arquivo (ZIP renomeado) foi substituído pela [ADR-006](ADR-006-pacote-svnflow-json-v1.md).
 
 ## Contexto
 

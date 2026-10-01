@@ -4,6 +4,8 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 
+import { isolatedGitEnv } from './git-patch.js';
+
 export type ApplyPatchStatus = 'applied' | 'blocked' | 'error';
 
 export interface ApplyPatchInput {
@@ -66,7 +68,8 @@ export function applyPatch(input: ApplyPatchInput): ApplyPatchResult {
       encoding: 'utf-8',
       timeout: 30000,
       stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: input.checkoutPath
+      cwd: input.checkoutPath,
+      env: isolatedGitEnv(input.checkoutPath)
     });
 
     const affectedFiles = extractAffectedFiles(output);

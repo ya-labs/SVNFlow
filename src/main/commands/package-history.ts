@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-export type PackageHistoryEventKind = 'exported' | 'imported' | 'invalid';
+export type PackageHistoryEventKind = 'exported' | 'imported' | 'invalid' | 'applied' | 'committed';
 
 export interface PackageHistoryEntry {
   id: string;
@@ -14,6 +14,7 @@ export interface PackageHistoryEntry {
   totalAffectedFiles: number;
   generatedAt: string;
   recordedAt: string;
+  detail?: string;
 }
 
 export interface PackageHistoryFile {

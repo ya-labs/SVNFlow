@@ -3,6 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 import { validateGitRepository } from './git.js';
+import { validateGitComparisonBase } from './workspace.js';
 import { saveSavedEnvironment, type SaveSavedEnvironmentInput, type SavedEnvironmentStorageErrorCode } from './saved-environment-store.js';
 import type { SavedEnvironment } from './saved-environments.js';
 import { validateSvnCheckout } from './svn.js';
@@ -10,6 +11,7 @@ import { validateSvnCheckout } from './svn.js';
 export type RegisterSavedEnvironmentErrorCode =
   | 'INVALID_NAME'
   | 'INVALID_GIT_WORKSPACE'
+  | 'INVALID_BASE_BRANCH'
   | 'INVALID_SVN_CHECKOUT'
   | 'STORAGE_ERROR';
 
@@ -22,6 +24,7 @@ export interface RegisterSavedEnvironmentInput {
   name?: string;
   gitWorkspacePath: string;
   svnCheckoutPath: string;
+  baseBranch?: string;
   storagePath?: string;
   now?: string;
 }
@@ -127,6 +130,23 @@ export async function registerSavedEnvironmentFromLocalPaths(
     };
   }
 
+  const baseBranch = normalizeText(input.baseBranch) || 'main';
+  const baseValidation = validateGitComparisonBase({ gitRepositoryPath: gitWorkspacePath, baseBranch });
+
+  if (!baseValidation.valid) {
+    return {
+      canSave: false,
+      message: `Base de comparação ${baseBranch} não encontrada no workspace Git. Informe uma branch local existente.`,
+      suggestedName,
+      blockers: [
+        {
+          code: 'INVALID_BASE_BRANCH',
+          message: baseValidation.message
+        }
+      ]
+    };
+  }
+
   const svnValidation = validateSvnCheckout(svnCheckoutPath);
 
   if (!svnValidation.valid) {
@@ -151,6 +171,7 @@ export async function registerSavedEnvironmentFromLocalPaths(
     name: resolvedName,
     gitWorkspacePath,
     svnCheckoutPath,
+    baseBranch,
     svnUrl: metadata.svnUrl,
     svnCheckoutRoot: metadata.svnCheckoutRoot ?? svnValidation.checkoutRoot,
     svnRevision: metadata.svnRevision,

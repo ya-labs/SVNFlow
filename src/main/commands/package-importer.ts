@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 
-import type { SvnflowManifest, SvnflowPackageFile } from './package-exporter.js';
+import { listPatchFiles, parsePatchFileOperations } from './git-patch.js';
+import { calculateArtifactsChecksum, type SvnflowManifest, type SvnflowPackageFile } from './package-exporter.js';
 
 export type ImportPackageErrorCategory = 'io' | 'schema' | 'integrity' | 'artifact';
 
@@ -22,14 +22,18 @@ export interface ImportPackageSummary {
 
 export interface ImportPackageReview {
   title: string;
+  context: string;
+  author: string;
   environmentName: string;
   branch: string;
   baseBranch: string;
   totalAffectedFiles: number;
   generatedAt: string;
   whatChanged: string[];
+  files: Array<{ path: string; status: string }>;
   notes: string;
   markdown: string;
+  missingOptionalFields: string[];
 }
 
 export interface ImportPackageResult {
@@ -40,7 +44,24 @@ export interface ImportPackageResult {
   manifest?: SvnflowManifest;
   summary?: ImportPackageSummary;
   review?: ImportPackageReview;
+  canApply: boolean;
+  applyBlockReason?: string;
+  patchFiles?: string[];
   errors: ImportPackageValidationError[];
+}
+
+export interface ValidatedPackagePatch {
+  ok: boolean;
+  message: string;
+  result: ImportPackageResult;
+  patchContent?: string;
+}
+
+const SUPPORTED_FORMAT_VERSIONS = ['1.0.0', '1.1.0'];
+const NOT_INFORMED = 'Não informado.';
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function parseMarkdownField(markdown: string, label: string): string | undefined {
@@ -49,24 +70,40 @@ function parseMarkdownField(markdown: string, label: string): string | undefined
   return match?.[1]?.trim();
 }
 
-function parseWhatChanged(markdown: string): string[] {
-  const marker = /^##\s+O que mudou\s*$/im;
+function parseMarkdownTitle(markdown: string): string | undefined {
+  return markdown.match(/^#\s+(.+)$/m)?.[1]?.trim();
+}
+
+function readMarkdownSection(markdown: string, heading: string): string | undefined {
+  const marker = new RegExp(`^##\\s+${heading}\\s*$`, 'im');
   const markerMatch = markdown.match(marker);
 
   if (!markerMatch || markerMatch.index === undefined) {
-    return [];
+    return undefined;
   }
 
-  const section = markdown.slice(markerMatch.index + markerMatch[0].length).trim();
+  const rest = markdown.slice(markerMatch.index + markerMatch[0].length);
+  const nextHeading = rest.search(/^##\s+/m);
+  const section = (nextHeading >= 0 ? rest.slice(0, nextHeading) : rest).trim();
+
+  return section.length > 0 ? section : undefined;
+}
+
+function parseBulletLines(section: string | undefined): string[] {
   if (!section) {
     return [];
   }
 
-  const lines = section.split('\n').map((line) => line.trim());
-  return lines
-    .filter((line) => line.startsWith('- '))
-    .map((line) => line.slice(2).trim())
+  return section
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.replace(/^[-*]\s+/, '').trim())
     .filter((line) => line.length > 0);
+}
+
+function isNotInformed(value: string | undefined): boolean {
+  return !value || /^n[aã]o informad[oa]\.?$/i.test(value.trim());
 }
 
 function buildReview(
@@ -75,6 +112,7 @@ function buildReview(
 ): ImportPackageReview | undefined {
   const markdown = parsed.artifacts['pr.md'];
   const preview = parsed.artifacts['preview.json'];
+  const miniPr = parsed.artifacts['mini-pr.json'];
 
   if (!isNonEmptyString(markdown)) {
     errors.push({
@@ -86,7 +124,7 @@ function buildReview(
     return undefined;
   }
 
-  const whatChanged = parseWhatChanged(markdown);
+  const whatChanged = parseBulletLines(readMarkdownSection(markdown, 'O que mudou'));
   if (whatChanged.length === 0) {
     errors.push({
       code: 'REVIEW_WHAT_CHANGED_REQUIRED',
@@ -114,8 +152,7 @@ function buildReview(
     });
   }
 
-  const totalAffected = preview?.workspace?.totalAffectedFiles;
-  if (typeof totalAffected !== 'number') {
+  if (typeof preview?.workspace?.totalAffectedFiles !== 'number') {
     errors.push({
       code: 'REVIEW_TOTAL_AFFECTED_REQUIRED',
       category: 'artifact',
@@ -124,40 +161,41 @@ function buildReview(
     });
   }
 
-  const generatedAt = parseMarkdownField(markdown, 'Gerado em')
-    ?? parsed.manifest.generatedAt;
-  const branch = parseMarkdownField(markdown, 'Branch')
-    ?? preview.workspace.branch
-    ?? 'nao identificado';
-  const notes = parseMarkdownField(markdown, 'Notas')
-    ?? 'Sem notas adicionais.';
+  const generatedAt = parseMarkdownField(markdown, 'Gerado em') ?? parsed.manifest.generatedAt;
+  const branch = parseMarkdownField(markdown, 'Branch') ?? preview?.workspace?.branch ?? 'nao identificado';
+  const title = miniPr?.title || parseMarkdownTitle(markdown) || 'Revisao de Pacote SVNFlow';
+  const context = miniPr?.context || readMarkdownSection(markdown, 'Contexto');
+  const notes = miniPr?.notes || readMarkdownSection(markdown, 'Observações') || parseMarkdownField(markdown, 'Notas');
+  const author = parsed.manifest.author || parseMarkdownField(markdown, 'Autor');
+  const missingOptionalFields: string[] = [];
+
+  if (isNotInformed(context)) {
+    missingOptionalFields.push('contexto');
+  }
+
+  if (isNotInformed(notes)) {
+    missingOptionalFields.push('observações');
+  }
+
+  if (isNotInformed(author)) {
+    missingOptionalFields.push('autor');
+  }
 
   return {
-    title: 'Revisao de Pacote SVNFlow',
-    environmentName: preview.environment.environmentName,
+    title,
+    context: isNotInformed(context) ? NOT_INFORMED : context!,
+    author: isNotInformed(author) ? NOT_INFORMED : author!,
+    environmentName: preview?.environment?.environmentName ?? '',
     branch,
-    baseBranch: preview.workspace.baseBranch,
-    totalAffectedFiles: preview.workspace.totalAffectedFiles,
+    baseBranch: preview?.workspace?.baseBranch ?? '',
+    totalAffectedFiles: preview?.workspace?.totalAffectedFiles ?? 0,
     generatedAt,
     whatChanged,
-    notes,
-    markdown
+    files: (preview?.workspace?.files ?? []).map((file) => ({ path: file.path, status: file.status })),
+    notes: isNotInformed(notes) ? 'Sem notas adicionais.' : notes!,
+    markdown,
+    missingOptionalFields
   };
-}
-
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value);
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
-  }
-
-  const objectValue = value as Record<string, unknown>;
-  const keys = Object.keys(objectValue).sort();
-  const serialized = keys.map((key) => `${JSON.stringify(key)}:${stableStringify(objectValue[key])}`);
-  return `{${serialized.join(',')}}`;
 }
 
 function readPathValue(target: unknown, dottedPath: string): unknown {
@@ -191,10 +229,6 @@ function readPathValue(target: unknown, dottedPath: string): unknown {
   return current;
 }
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
 function validateManifest(manifest: unknown): ImportPackageValidationError[] {
   const errors: ImportPackageValidationError[] = [];
 
@@ -210,11 +244,11 @@ function validateManifest(manifest: unknown): ImportPackageValidationError[] {
 
   const manifestObj = manifest as Record<string, unknown>;
 
-  if (manifestObj.formatVersion !== '1.0.0') {
+  if (!SUPPORTED_FORMAT_VERSIONS.includes(String(manifestObj.formatVersion))) {
     errors.push({
       code: 'UNSUPPORTED_FORMAT_VERSION',
       category: 'schema',
-      message: 'formatVersion nao suportado. Esperado: 1.0.0.',
+      message: `formatVersion nao suportado. Esperado: ${SUPPORTED_FORMAT_VERSIONS.join(' ou ')}.`,
       path: 'manifest.formatVersion'
     });
   }
@@ -304,45 +338,48 @@ function buildSummary(parsed: SvnflowPackageFile): ImportPackageSummary {
   };
 }
 
+function createInvalidResult(
+  packagePath: string,
+  message: string,
+  errors: ImportPackageValidationError[]
+): ImportPackageResult {
+  return {
+    ok: false,
+    status: 'invalid',
+    message,
+    packagePath,
+    canApply: false,
+    errors
+  };
+}
+
 export async function importAndValidateSvnflowPackage(packagePath: string): Promise<ImportPackageResult> {
   const normalizedPath = packagePath.trim();
   const errors: ImportPackageValidationError[] = [];
 
   if (!normalizedPath) {
-    return {
-      ok: false,
-      status: 'invalid',
-      message: 'Caminho do pacote .svnflow nao informado.',
-      packagePath: normalizedPath,
-      errors: [
-        {
-          code: 'PACKAGE_PATH_REQUIRED',
-          category: 'io',
-          message: 'Informe o caminho completo do arquivo .svnflow.',
-          path: 'input.packagePath'
-        }
-      ]
-    };
+    return createInvalidResult(normalizedPath, 'Caminho do pacote .svnflow nao informado.', [
+      {
+        code: 'PACKAGE_PATH_REQUIRED',
+        category: 'io',
+        message: 'Informe o caminho completo do arquivo .svnflow.',
+        path: 'input.packagePath'
+      }
+    ]);
   }
 
   try {
     const fileInfo = await stat(normalizedPath);
 
     if (fileInfo.isDirectory()) {
-      return {
-        ok: false,
-        status: 'invalid',
-        message: 'O caminho informado aponta para uma pasta, nao para um arquivo .svnflow.',
-        packagePath: normalizedPath,
-        errors: [
-          {
-            code: 'PACKAGE_PATH_IS_DIRECTORY',
-            category: 'io',
-            message: 'Informe o caminho completo de um arquivo .svnflow, nao de uma pasta.',
-            path: normalizedPath
-          }
-        ]
-      };
+      return createInvalidResult(normalizedPath, 'O caminho informado aponta para uma pasta, nao para um arquivo .svnflow.', [
+        {
+          code: 'PACKAGE_PATH_IS_DIRECTORY',
+          category: 'io',
+          message: 'Informe o caminho completo de um arquivo .svnflow, nao de uma pasta.',
+          path: normalizedPath
+        }
+      ]);
     }
   } catch {
     // Mantem a leitura abaixo como fonte do erro quando o arquivo nao existe ou nao pode ser acessado.
@@ -361,41 +398,29 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
   try {
     raw = await readFile(normalizedPath, 'utf8');
   } catch (error) {
-    return {
-      ok: false,
-      status: 'invalid',
-      message: 'Falha ao ler arquivo .svnflow.',
-      packagePath: normalizedPath,
-      errors: [
-        ...errors,
-        {
-          code: 'PACKAGE_READ_FAILED',
-          category: 'io',
-          message: error instanceof Error ? error.message : 'Erro desconhecido ao ler arquivo.',
-          path: normalizedPath
-        }
-      ]
-    };
+    return createInvalidResult(normalizedPath, 'Falha ao ler arquivo .svnflow.', [
+      ...errors,
+      {
+        code: 'PACKAGE_READ_FAILED',
+        category: 'io',
+        message: error instanceof Error ? error.message : 'Erro desconhecido ao ler arquivo.',
+        path: normalizedPath
+      }
+    ]);
   }
 
   let parsedUnknown: unknown;
   try {
     parsedUnknown = JSON.parse(raw);
   } catch (error) {
-    return {
-      ok: false,
-      status: 'invalid',
-      message: 'JSON do pacote .svnflow invalido.',
-      packagePath: normalizedPath,
-      errors: [
-        {
-          code: 'PACKAGE_JSON_INVALID',
-          category: 'schema',
-          message: error instanceof Error ? error.message : 'Erro desconhecido ao interpretar JSON.',
-          path: normalizedPath
-        }
-      ]
-    };
+    return createInvalidResult(normalizedPath, 'JSON do pacote .svnflow invalido.', [
+      {
+        code: 'PACKAGE_JSON_INVALID',
+        category: 'schema',
+        message: error instanceof Error ? error.message : 'Erro desconhecido ao interpretar JSON.',
+        path: normalizedPath
+      }
+    ]);
   }
 
   const parsed = parsedUnknown as Record<string, unknown>;
@@ -436,13 +461,8 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
 
   if (errors.length === 0) {
     const manifest = parsed.manifest as SvnflowManifest;
-    const artifactsForChecksum = parsed.artifacts;
 
-    const calculatedChecksum = createHash('sha256')
-      .update(stableStringify(artifactsForChecksum), 'utf8')
-      .digest('hex');
-
-    if (calculatedChecksum !== manifest.checksum) {
+    if (calculateArtifactsChecksum(parsed.artifacts) !== manifest.checksum) {
       errors.push({
         code: 'CHECKSUM_MISMATCH',
         category: 'integrity',
@@ -453,13 +473,7 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
   }
 
   if (errors.length > 0) {
-    return {
-      ok: false,
-      status: 'invalid',
-      message: 'Pacote .svnflow invalido. Revise os erros de validacao.',
-      packagePath: normalizedPath,
-      errors
-    };
+    return createInvalidResult(normalizedPath, 'Pacote .svnflow invalido. Revise os erros de validacao.', errors);
   }
 
   const validPackage = parsed as unknown as SvnflowPackageFile;
@@ -467,16 +481,15 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
 
   if (errors.length > 0) {
     return {
-      ok: false,
-      status: 'invalid',
-      message: 'Pacote .svnflow invalido para revisao. Revise os erros obrigatorios.',
-      packagePath: normalizedPath,
+      ...createInvalidResult(normalizedPath, 'Pacote .svnflow invalido para revisao. Revise os erros obrigatorios.', errors),
       manifest: validPackage.manifest,
       summary: buildSummary(validPackage),
-      review,
-      errors
+      review
     };
   }
+
+  const patchContent = validPackage.artifacts['patch.diff'];
+  const hasPatch = isNonEmptyString(patchContent);
 
   return {
     ok: true,
@@ -486,6 +499,32 @@ export async function importAndValidateSvnflowPackage(packagePath: string): Prom
     manifest: validPackage.manifest,
     summary: buildSummary(validPackage),
     review,
+    canApply: hasPatch,
+    applyBlockReason: hasPatch
+      ? undefined
+      : 'Pacote no formato 1.0.0 sem patch.diff: disponível apenas para revisão.',
+    patchFiles: hasPatch ? listPatchFiles(parsePatchFileOperations(patchContent)) : undefined,
     errors: []
+  };
+}
+
+export async function readValidatedPackagePatch(packagePath: string): Promise<ValidatedPackagePatch> {
+  const result = await importAndValidateSvnflowPackage(packagePath);
+
+  if (!result.ok) {
+    return { ok: false, message: result.message, result };
+  }
+
+  if (!result.canApply) {
+    return { ok: false, message: result.applyBlockReason ?? 'Pacote sem patch aplicável.', result };
+  }
+
+  const raw = JSON.parse(await readFile(result.packagePath, 'utf8')) as SvnflowPackageFile;
+
+  return {
+    ok: true,
+    message: 'Patch do pacote validado para aplicação.',
+    result,
+    patchContent: raw.artifacts['patch.diff']
   };
 }

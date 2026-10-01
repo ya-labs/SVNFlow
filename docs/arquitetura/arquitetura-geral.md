@@ -54,11 +54,11 @@ O contrato detalhado fica em [ambientes-salvos.md](../contratos/ambientes-salvos
 
 ## Formato do pacote
 
-O pacote `.svnflow` é um ZIP renomeado contendo, no mínimo:
+O pacote `.svnflow` é um arquivo JSON único ([ADR-006](../adrs/ADR-006-pacote-svnflow-json-v1.md)) contendo, no mínimo:
 
-- `manifest.json`;
+- `manifest` com versão, identificador, autor e checksum;
 - `pr.md`;
 - `patch.diff`;
-- pasta `files/` reservada para cenários futuros.
+- `preview.json` e `mini-pr.json` com os dados técnicos e humanos usados na exportação.
 
 O contrato detalhado fica em [pacote-svnflow.md](../contratos/pacote-svnflow.md).
