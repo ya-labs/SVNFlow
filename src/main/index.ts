@@ -30,7 +30,7 @@ import type {
 } from '../shared/ipc-types.js';
 import { isAppTheme, isSvnUrl, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
 import { checkoutProject } from './commands/svn-checkout.js';
-import { commitSelected, readWorkingCopyDiff, readWorkingCopyStatus, type CommitSelectedResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
+import { commitSelected, countIncoming, readWorkingCopyDiff, readWorkingCopyStatus, updateWorkingCopy, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
 import type { SvnCredentials } from './commands/svn-client.js';
 import { listRemote, type RemoteListing } from './commands/svn-repository-browser.js';
 import { validateCommitPreConditions } from './commands/commit-validator.js';
@@ -753,6 +753,21 @@ function registerIpcHandlers(): void {
     }
 
     return readWorkingCopyDiff(selected.svnCheckoutPath, payload.filePath);
+  });
+
+  ipcMain.handle('svn:incoming', async (_event, payload: { environmentId?: string }): Promise<IncomingResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+    return selected ? countIncoming(selected.svnCheckoutPath) : { ok: false, message: 'Nenhum projeto selecionado.', incoming: 0 };
+  });
+
+  ipcMain.handle('svn:update', async (_event, payload: { environmentId?: string; credentials?: SvnCredentials }): Promise<UpdateResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected) {
+      return { ok: false, message: 'Nenhum projeto selecionado.', updated: [], conflicts: [] };
+    }
+
+    return updateWorkingCopy(selected.svnCheckoutPath, { credentials: sanitizeCredentials(payload?.credentials) });
   });
 
   ipcMain.handle('svn:commit-selected', async (_event, payload: CommitSelectedRequest): Promise<CommitSelectedResult> =>

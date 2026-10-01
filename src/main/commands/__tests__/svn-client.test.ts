@@ -1,10 +1,10 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, type ChildProcess } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
 import { buildSvnArgs, classifySvnError, runSvn } from '../svn-client';
+import { startSvnserve } from './helpers/svnserve';
 import { parseInfoXml } from '../svn-xml';
 
 function hasCommand(command: string): boolean {
@@ -17,34 +17,6 @@ function hasCommand(command: string): boolean {
 }
 
 const describeWithSvnserve = hasCommand('svnserve') && hasCommand('svnadmin') ? describe : describe.skip;
-
-function freePort(): Promise<number> {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.listen(0, '127.0.0.1', () => {
-      const { port } = server.address() as net.AddressInfo;
-      server.close(() => resolve(port));
-    });
-  });
-}
-
-async function waitForPort(port: number): Promise<void> {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const connected = await new Promise<boolean>((resolve) => {
-      const socket = net.connect(port, '127.0.0.1', () => {
-        socket.end();
-        resolve(true);
-      });
-      socket.on('error', () => resolve(false));
-    });
-
-    if (connected) {
-      return;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-}
 
 describe('svn-client', () => {
   it('nunca coloca a senha nos argumentos', () => {
@@ -60,6 +32,22 @@ describe('svn-client', () => {
     expect(classifySvnError('svn: E170001: Authentication error from server').code).toBe('AUTH_REQUIRED');
     expect(classifySvnError('svn: E155007: is not a working copy').code).toBe('NOT_WORKING_COPY');
     expect(classifySvnError('svn: E155011: File is out of date').code).toBe('OUT_OF_DATE');
+  });
+
+  it('não quebra quando o svn termina sem ler a entrada (EPIPE)', async () => {
+    // svn falso que sai na hora, sem ler a entrada: a escrita de 1 MB encontra o pipe fechado.
+    const fakeBin = mkdtempSync(path.join(os.tmpdir(), 'svnflow-fake-svn-'));
+    writeFileSync(path.join(fakeBin, 'svn'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${fakeBin}${path.delimiter}${originalPath}`;
+
+    try {
+      const result = await runSvn(['info'], { credentials: { username: 'pessoa', password: 'x'.repeat(1024 * 1024) } });
+      expect(result.ok).toBe(true);
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(fakeBin, { recursive: true, force: true });
+    }
   });
 
   it('informa svn ausente sem lançar erro', async () => {
@@ -90,9 +78,9 @@ describeWithSvnserve('svn-client com svnserve autenticado', () => {
     writeFileSync(path.join(repo, 'conf', 'svnserve.conf'), '[general]\nanon-access = none\nauth-access = write\npassword-db = passwd\nrealm = svnflow-teste\n');
     writeFileSync(path.join(repo, 'conf', 'passwd'), '[users]\npessoa = segredo\n');
 
-    const port = await freePort();
-    server = spawn('svnserve', ['-d', '--foreground', '--listen-host', '127.0.0.1', '--listen-port', String(port), '-r', path.join(root, 'repos')], { stdio: 'ignore' });
-    await waitForPort(port);
+    const running = await startSvnserve(path.join(root, 'repos'), 'projeto', configDir);
+    server = running.process;
+    const port = running.port;
     url = `svn://127.0.0.1:${port}/projeto`;
   });
 

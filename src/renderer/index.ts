@@ -1,4 +1,5 @@
 import type {
+  IncomingResult,
   SvnXmlLogEntry,
   WorkingCopyStatus,
   RemoteListing,
@@ -1174,6 +1175,7 @@ interface DesktopState {
   screen?: SyncScreenState;
   workingCopy?: WorkingCopyStatus;
   log: HistoryLogState;
+  incoming?: IncomingResult;
   selectedPath?: string;
   selectedRevision?: string;
   selectedLogPath?: string;
@@ -1381,7 +1383,17 @@ function renderToolbar(): void {
     branchPicker.disabled = !gitLinked;
   }
 
-  if (isCopyStep()) {
+  const refreshButton = query<HTMLButtonElement>('[data-role="refresh"]');
+  const incoming = desktop.incoming?.ok ? desktop.incoming.incoming : 0;
+
+  if (refreshButton) {
+    refreshButton.dataset.mode = incoming > 0 ? 'update' : 'refresh';
+  }
+
+  if (incoming > 0) {
+    setText('refresh-label', 'Atualizar do servidor');
+    setText('refresh-value', `${incoming} revisão(ões) nova(s)`);
+  } else if (isCopyStep()) {
     setText('refresh-label', 'Diferenças com o Git');
     setText('refresh-value', `${plan!.changes.length} arquivo(s) a copiar`);
   } else if (localChanges > 0) {
@@ -1728,7 +1740,7 @@ async function commitToSvn(): Promise<void> {
   } else {
     desktop.banner = {
       tone: 'error',
-      html: `<p><strong>Commit não realizado.</strong> ${escapeHtml(result.message)}</p>${result.detail ? `<pre class="review-markdown">${escapeHtml(result.detail)}</pre>` : ''}`
+      html: `<p><strong>Commit não realizado.</strong> ${escapeHtml(result.message)}</p>${result.errorCode === 'OUT_OF_DATE' ? '<p><button type="button" class="button primary" data-role="banner-update">Atualizar agora</button></p>' : ''}${result.detail ? `<pre class="review-markdown">${escapeHtml(result.detail)}</pre>` : ''}`
     };
   }
 
@@ -1797,6 +1809,7 @@ function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="refresh-detail"]', () => loadDesktop());
   bindClick(detail, '[data-role="open-advanced"]', () => showAdvancedView('environment'));
   bindClick(detail, '[data-role="link-git"]', () => openLinkGitModal());
+  bindClick(detail, '[data-role="banner-update"]', () => updateFromServer());
   bindClick(detail, '[data-role="open-repositories-inline"]', () => showRepositoriesView());
 }
 
@@ -2066,6 +2079,63 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
   if (desktop.tab === 'history' && !desktop.log.loaded && state.selectedEnvironmentId) {
     void loadHistory();
   }
+
+  void checkIncoming();
+}
+
+// Verificação em segundo plano: não abre login sozinha se o servidor pedir senha.
+async function checkIncoming(): Promise<void> {
+  const environmentId = state.selectedEnvironmentId;
+
+  if (!environmentId) {
+    desktop.incoming = undefined;
+    renderToolbar();
+    return;
+  }
+
+  const result = await api().getIncoming(environmentId);
+
+  if (state.selectedEnvironmentId === environmentId) {
+    desktop.incoming = result;
+    renderToolbar();
+  }
+}
+
+async function updateFromServer(): Promise<void> {
+  const environmentId = state.selectedEnvironmentId;
+  const localChanges = desktop.workingCopy?.changes.length ?? 0;
+  const incoming = desktop.incoming?.incoming ?? 0;
+
+  if (!environmentId) {
+    return;
+  }
+
+  if (localChanges > 0 && !(await confirmModal({
+    title: 'Atualizar do servidor',
+    message: `${incoming > 0 ? `${incoming} revisão(ões) nova(s) serão baixadas. ` : ''}O checkout tem ${localChanges} alteração(ões) local(is): o SVN junta as mudanças do servidor com as suas. Se a mesma linha mudou dos dois lados, o arquivo fica em conflito para você resolver.`,
+    confirmLabel: 'Atualizar'
+  }))) {
+    return;
+  }
+
+  setStatusMessage('Atualizando o checkout com o servidor...');
+  const refresh = query<HTMLButtonElement>('[data-role="refresh"]');
+  if (refresh) {
+    refresh.disabled = true;
+  }
+
+  const result = await withCredentials(desktop.workingCopy?.url ?? '', (credentials) => api().updateWorkingCopy(environmentId, credentials));
+
+  desktop.banner = result.ok
+    ? {
+        tone: result.conflicts.length > 0 ? 'warning' : 'success',
+        html: `<p><strong>${escapeHtml(result.message)}</strong></p>${result.conflicts.length > 0 ? `<ul>${result.conflicts.map((file) => `<li>${escapeHtml(file)}</li>`).join('')}</ul>` : ''}`
+      }
+    : { tone: 'error', html: `<p><strong>Não foi possível atualizar.</strong> ${escapeHtml(result.message)}</p>${result.detail ? `<pre class="review-markdown">${escapeHtml(result.detail)}</pre>` : ''}` };
+  desktop.incoming = undefined;
+  desktop.log = emptyHistoryLog();
+  setStatusMessage(result.message);
+  await loadDesktop({ quiet: true });
 }
 
 
@@ -3020,7 +3090,12 @@ function bindDesktopShell(): void {
     void toggleBranchMenu();
   });
 
-  query<HTMLButtonElement>('[data-role="refresh"]')?.addEventListener('click', () => {
+  query<HTMLButtonElement>('[data-role="refresh"]')?.addEventListener('click', (event) => {
+    if ((event.currentTarget as HTMLElement).dataset.mode === 'update' && !state.showAdvanced) {
+      void updateFromServer();
+      return;
+    }
+
     desktop.banner = undefined;
     desktop.log = emptyHistoryLog();
     if (state.showAdvanced) {

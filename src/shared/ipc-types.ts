@@ -13,7 +13,7 @@ import type { RepositoryRoot } from '../main/commands/app-settings.js';
 import type { CheckoutResult } from '../main/commands/svn-checkout.js';
 import type { SvnCredentials } from '../main/commands/svn-client.js';
 import type { RemoteEntry, RemoteListing } from '../main/commands/svn-repository-browser.js';
-import type { CommitSelectedResult, WorkingCopyChange, WorkingCopyStatus } from '../main/commands/svn-working-copy.js';
+import type { CommitSelectedResult, IncomingResult, UpdateResult, WorkingCopyChange, WorkingCopyStatus } from '../main/commands/svn-working-copy.js';
 import type { GitBranch, GitBranchList, SwitchGitBranchResult } from '../main/commands/git-branches.js';
 import type { ExecuteSyncResult, SyncFileDiff, SyncPlan } from '../main/commands/git-svn-sync.js';
 import type { SvnLogPage } from '../main/commands/svn-history.js';
@@ -33,6 +33,8 @@ export type {
   PackageLibraryResult,
   CheckoutResult,
   CommitSelectedResult,
+  IncomingResult,
+  UpdateResult,
   RegisterSavedEnvironmentResult,
   RemoteEntry,
   RemoteListing,
@@ -278,6 +280,8 @@ export interface SvnflowDesktopApi {
   getWorkingCopyStatus: (environmentId: string | undefined) => Promise<WorkingCopyStatus>;
   getWorkingCopyDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   commitSelected: (request: CommitSelectedRequest) => Promise<CommitSelectedResult>;
+  getIncoming: (environmentId: string | undefined) => Promise<IncomingResult>;
+  updateWorkingCopy: (environmentId: string | undefined, credentials?: SvnCredentials) => Promise<UpdateResult>;
   getSyncFileDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   readSvnLog: (request: { environmentId?: string; url?: string; before?: string; credentials?: SvnCredentials }) => Promise<SvnLogPage>;
   readRevisionDiff: (request: { repositoryRoot: string; revision: string; path: string; credentials?: SvnCredentials }) => Promise<SyncFileDiff>;

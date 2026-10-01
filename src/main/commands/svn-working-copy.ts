@@ -61,6 +61,14 @@ async function isDirectory(target: string): Promise<boolean> {
   }
 }
 
+function isConflictArtifact(candidate: string, conflictPath: string): boolean {
+  if (!candidate.startsWith(`${conflictPath}.`)) {
+    return false;
+  }
+
+  return /^(mine|working|r\d+|merge-(left|right)\.r\d+)$/.test(candidate.slice(conflictPath.length + 1));
+}
+
 function isUnder(candidate: string, parent: string): boolean {
   return candidate.startsWith(`${parent}/`);
 }
@@ -83,7 +91,7 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
     return { ok: false, message: statusResult.message, detail: svnErrorDetail(statusResult.stderr), errorCode: statusResult.errorCode, changes: [], conflicts: 0 };
   }
 
-  const changes: WorkingCopyChange[] = [];
+  const collected: WorkingCopyChange[] = [];
 
   for (const entry of parseStatusXml(statusResult.stdout)) {
     const relative = toPosix(entry.path);
@@ -100,7 +108,7 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
       continue;
     }
 
-    changes.push({
+    collected.push({
       path: relative,
       kind,
       isDirectory: directory,
@@ -109,8 +117,13 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
     });
   }
 
-  changes.sort((a, b) => a.path.localeCompare(b.path));
-  const conflicts = changes.filter((change) => change.kind === 'conflicted').length;
+  // Arquivos auxiliares que o SVN cria num conflito (.mine, .rN, .working…)
+  // somem com svn resolve e não devem ser oferecidos para commit.
+  const conflicted = collected.filter((change) => change.kind === 'conflicted').map((change) => change.path);
+  const changes = collected
+    .filter((change) => !(change.kind === 'unversioned' && conflicted.some((conflictPath) => isConflictArtifact(change.path, conflictPath))))
+    .sort((a, b) => a.path.localeCompare(b.path));
+  const conflicts = conflicted.length;
 
   return {
     ok: true,
@@ -264,5 +277,127 @@ export async function commitSelected(input: CommitSelectedInput): Promise<Commit
     revision,
     committed: targets,
     message: revision ? `Revisão ${revision} publicada no SVN com ${targets.length} caminho(s).` : 'Commit concluído.'
+  };
+}
+
+export interface IncomingResult {
+  ok: boolean;
+  message: string;
+  incoming: number;
+  workingCopyRevision?: string;
+  headRevision?: string;
+  errorCode?: SvnErrorCode;
+}
+
+export interface UpdateResult {
+  ok: boolean;
+  message: string;
+  revision?: string;
+  updated: Array<{ action: string; path: string }>;
+  conflicts: string[];
+  detail?: string;
+  errorCode?: SvnErrorCode | 'HAS_CONFLICTS';
+}
+
+// Quantas revisões do servidor mexeram no projeto depois da revisão do checkout.
+export async function countIncoming(checkoutPath: string, options: WorkingCopyOptions = {}): Promise<IncomingResult> {
+  const local = await runSvnInSession(['info', '--xml', '.'], { cwd: checkoutPath, configDir: options.configDir });
+
+  if (!local.ok) {
+    return { ok: false, message: local.message, incoming: 0, errorCode: local.errorCode };
+  }
+
+  const info = parseInfoXml(local.stdout);
+
+  if (!info.url || !info.revision) {
+    return { ok: false, message: 'Não foi possível ler a revisão do checkout.', incoming: 0 };
+  }
+
+  const session = { url: info.url, credentials: options.credentials, configDir: options.configDir, timeoutMs: 60000 };
+  const remote = await runSvnInSession(['info', '--xml', info.url], session);
+
+  if (!remote.ok) {
+    return { ok: false, message: remote.message, incoming: 0, workingCopyRevision: info.revision, errorCode: remote.errorCode };
+  }
+
+  const remoteInfo = parseInfoXml(remote.stdout);
+  const lastChanged = Number(remoteInfo.lastChangedRevision ?? 0);
+  const base = { ok: true, workingCopyRevision: info.revision, headRevision: remoteInfo.revision };
+
+  if (lastChanged <= Number(info.revision)) {
+    return { ...base, incoming: 0, message: 'O checkout está atualizado com o servidor.' };
+  }
+
+  const log = await runSvnInSession(['log', '-q', '-r', `${Number(info.revision) + 1}:HEAD`, info.url], session);
+
+  if (!log.ok) {
+    return { ok: false, message: log.message, incoming: 0, workingCopyRevision: info.revision, errorCode: log.errorCode };
+  }
+
+  const incoming = log.stdout.split('\n').filter((line) => /^r\d+ \|/.test(line)).length;
+
+  return { ...base, incoming, message: `${incoming} revisão(ões) nova(s) no servidor.` };
+}
+
+export async function updateWorkingCopy(checkoutPath: string, options: WorkingCopyOptions = {}): Promise<UpdateResult> {
+  const before = await readWorkingCopyStatus(checkoutPath, options);
+
+  if (!before.ok) {
+    return { ok: false, message: before.message, updated: [], conflicts: [], detail: before.detail, errorCode: before.errorCode };
+  }
+
+  if (before.conflicts > 0) {
+    return { ok: false, message: 'Resolva os conflitos do checkout antes de atualizar.', updated: [], conflicts: [], errorCode: 'HAS_CONFLICTS' };
+  }
+
+  // --accept postpone: conflitos ficam marcados para a pessoa resolver; nada é escolhido automaticamente.
+  const result = await runSvnInSession(['update', '--accept', 'postpone', '.'], {
+    cwd: checkoutPath,
+    url: before.url,
+    credentials: options.credentials,
+    configDir: options.configDir,
+    timeoutMs: 10 * 60 * 1000
+  });
+
+  if (!result.ok) {
+    return { ok: false, message: result.message, updated: [], conflicts: [], detail: svnErrorDetail(result.stderr), errorCode: result.errorCode };
+  }
+
+  const updated: Array<{ action: string; path: string }> = [];
+  const conflicts: string[] = [];
+
+  for (const line of result.stdout.split('\n')) {
+    const match = line.match(/^([ADUCGER ])([ADUCGER ]?)[ B]?[ C]?\s+(.+)$/);
+
+    if (!match || /^(Updating|Updated to|At revision|Summary of conflicts|Text conflicts|Tree conflicts|Merge conflicts|Restored)/.test(line)) {
+      continue;
+    }
+
+    const action = match[1].trim() || match[2].trim();
+
+    if (!action) {
+      continue;
+    }
+
+    const updatedPath = toPosix(match[3].trim().replace(/^\.\//, ''));
+    updated.push({ action, path: updatedPath });
+
+    if (action === 'C' || match[2] === 'C') {
+      conflicts.push(updatedPath);
+    }
+  }
+
+  const revision = result.stdout.match(/(?:Updated to|At) revision (\d+)\./)?.[1];
+
+  return {
+    ok: true,
+    revision,
+    updated,
+    conflicts,
+    message: conflicts.length > 0
+      ? `Atualizado para a revisão ${revision ?? '?'} com ${conflicts.length} conflito(s). Resolva antes de commitar.`
+      : updated.length === 0
+        ? `O checkout já estava na revisão ${revision ?? '?'}.`
+        : `Atualizado para a revisão ${revision ?? '?'}: ${updated.length} arquivo(s).`
   };
 }
