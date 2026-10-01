@@ -8,10 +8,12 @@ O projeto busca tornar esse processo mais visual, seguro e repetível, com foco 
 
 1. Em **Repositórios**, informe a URL base do servidor SVN, navegue pelos projetos, consulte o histórico e faça checkout. Ou adicione um checkout que você já tem.
 2. Em **Alterações**, veja o diff de cada arquivo, marque o que entra no commit, escreva a mensagem e publique no SVN.
-3. Em **Histórico**, consulte os commits do servidor e o diff de cada arquivo. Quando houver revisões novas, use **Atualizar do servidor**.
+3. Em **Histórico**, consulte os commits do servidor e o diff de cada arquivo. Quando houver revisões novas, use **Atualizar do servidor**. Se der conflito, escolha pelo app qual versão fica. Cada revisão pode ser desfeita no checkout ou baixada numa pasta separada (checkout naquela revisão).
 4. Opcional: vincule um repositório Git ao projeto para copiar o último commit de uma branch para o checkout antes do commit SVN.
 
 Os checkouts são sugeridos dentro de uma pasta padrão (`~/svn`, ou a que você escolher em **Repositórios**).
+
+Atalhos: **F5** ou **Ctrl+R** verifica alterações, **Ctrl+1** e **Ctrl+2** trocam de aba e **Ctrl+Enter** copia do Git ou publica. Operações demoradas (checkout, update, listagem) podem ser canceladas no aviso de carregamento.
 
 ## Como instalar
 

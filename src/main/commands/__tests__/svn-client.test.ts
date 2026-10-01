@@ -66,18 +66,23 @@ describe('svn-client', () => {
 
   it('cancela só as operações marcadas como canceláveis', async () => {
     const fakeBin = mkdtempSync(path.join(os.tmpdir(), 'svnflow-fake-svn-'));
-    writeFileSync(path.join(fakeBin, 'svn'), '#!/bin/sh\nexec sleep 30\n', { mode: 0o755 });
+    // Como o svn real durante a conexão, o falso ignora o SIGTERM.
+    writeFileSync(path.join(fakeBin, 'svn'), "#!/bin/sh\ntrap '' TERM\nwhile :; do sleep 0.1; done\n", { mode: 0o755 });
     const originalPath = process.env.PATH;
     process.env.PATH = `${fakeBin}${path.delimiter}${originalPath}`;
 
     try {
       const cancelable = runSvn(['list', 'svn://servidor/caminho'], { cancelable: true });
-      const protectedRun = runSvn(['commit'], { timeoutMs: 1500 });
+      const protectedRun = runSvn(['commit'], { timeoutMs: 2500 });
       await new Promise((resolve) => setTimeout(resolve, 200));
 
+      const startedAt = Date.now();
       expect(cancelSvnOperations()).toBe(1);
       expect(await cancelable).toMatchObject({ ok: false, errorCode: 'CANCELLED' });
+      expect(Date.now() - startedAt).toBeLessThan(5000);
       expect((await protectedRun).errorCode).toBe('TIMEOUT');
+      // O timeout também força a saída do svn que ignora o SIGTERM; espera para não deixar processo para trás.
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     } finally {
       process.env.PATH = originalPath;
       rmSync(fakeBin, { recursive: true, force: true });

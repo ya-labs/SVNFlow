@@ -84,12 +84,23 @@ export function buildSvnArgs(args: string[], credentials?: SvnCredentials, confi
 const cancelableChildren = new Set<ChildProcess>();
 const cancelledChildren = new WeakSet<ChildProcess>();
 
+// Pede para o svn terminar e, se ele não sair (conectando ao servidor, ele ignora
+// o SIGTERM), força a saída para não deixar processo para trás.
+function stopChild(child: ChildProcess): void {
+  child.kill('SIGTERM');
+  setTimeout(() => {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGKILL');
+    }
+  }, 1500).unref();
+}
+
 // Interrompe as operações canceláveis em andamento. Devolve quantas foram interrompidas.
 export function cancelSvnOperations(): number {
   const running = [...cancelableChildren];
   running.forEach((child) => {
     cancelledChildren.add(child);
-    child.kill('SIGTERM');
+    stopChild(child);
   });
   return running.length;
 }
@@ -133,7 +144,7 @@ export function runSvn(args: string[], options: SvnRunOptions = {}): Promise<Svn
     }
 
     const timer = setTimeout(() => {
-      child.kill('SIGTERM');
+      stopChild(child);
       finish({ ok: false, stdout, stderr, exitCode: null, errorCode: 'TIMEOUT', message: 'O comando SVN demorou demais e foi interrompido.' });
     }, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
