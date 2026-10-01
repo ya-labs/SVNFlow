@@ -34,6 +34,10 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('sync:revision-log', { environmentId, revision }),
   openEnvironmentFolder: (environmentId, which) =>
     ipcRenderer.invoke('shell:open-environment-folder', { environmentId, which }),
+  listGitBranches: (environmentId) =>
+    ipcRenderer.invoke('git:list-branches', { environmentId }),
+  switchGitBranch: (environmentId, branch, kind) =>
+    ipcRenderer.invoke('git:switch-branch', { environmentId, branch, kind }),
   getTheme: () =>
     ipcRenderer.invoke('appearance:get-theme'),
   setTheme: (theme) =>
