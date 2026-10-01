@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -848,6 +848,14 @@ function registerIpcHandlers(): void {
   );
 }
 
+// No X11, o Chromium descarta em silêncio ícones grandes (512 px passa de 1 MB
+// na propriedade _NET_WM_ICON); 128 px chega à barra de tarefas.
+function loadWindowIcon(): Electron.NativeImage {
+  return nativeImage
+    .createFromPath(path.join(__dirname, '..', 'assets', 'icon.png'))
+    .resize({ width: 128, height: 128 });
+}
+
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
@@ -857,6 +865,7 @@ function createMainWindow(): BrowserWindow {
     title: 'SVNFlow',
     autoHideMenuBar: true,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#24292e' : '#ffffff',
+    icon: loadWindowIcon(),
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'index.js'),
       contextIsolation: true,

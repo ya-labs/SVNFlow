@@ -61,14 +61,14 @@ cat > ~/.local/share/applications/svnflow.desktop <<EOF
 [Desktop Entry]
 Name=SVNFlow
 Exec=$HOME/.local/opt/svnflow/SVNFlow.AppImage %U
-Icon=svnflow
+Icon=$HOME/.local/share/icons/hicolor/512x512/apps/svnflow.png
 Type=Application
 Categories=Development;
 StartupWMClass=svnflow
 EOF
 ```
 
-O SVNFlow passa a aparecer no menu.
+O SVNFlow passa a aparecer no menu. O ícone é indicado pelo caminho completo para aparecer na hora, sem depender do cache de ícones do sistema.
 
 - **Atualizar:** substitua `~/.local/opt/svnflow/SVNFlow.AppImage` pelo arquivo da versão nova e rode `chmod +x` de novo.
 - **Remover:** apague `~/.local/opt/svnflow`, `~/.local/share/applications/svnflow.desktop` e `~/.local/share/icons/hicolor/512x512/apps/svnflow.png`.
