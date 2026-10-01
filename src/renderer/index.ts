@@ -180,11 +180,21 @@ function stageBody(): HTMLElement {
   return body;
 }
 
+// Mensagens de andamento terminam em "..." (ou "…"); enquanto uma delas está
+// na barra de status, o aviso de carregamento fica visível no topo da janela.
 function setStatusMessage(message: string): void {
   const status = query<HTMLElement>('[data-role="app-status"]');
 
   if (status) {
     status.textContent = message;
+  }
+
+  const busy = /(\.\.\.|…)$/.test(message.trim());
+  const indicator = query<HTMLElement>('[data-role="busy-indicator"]');
+
+  if (indicator) {
+    indicator.hidden = !busy;
+    setText('busy-label', message.trim().replace(/(\.\.\.|…)$/, '…'));
   }
 }
 
@@ -1195,6 +1205,8 @@ interface DesktopState {
   requestId: number;
   // Projeto a que pertencem os dados carregados (histórico, seleção, novidades).
   loadedEnvironmentId?: string;
+  // Projeto com Git: mostra as alterações do checkout SVN mesmo com diferenças do Git.
+  showSvnChanges?: boolean;
 }
 
 interface HistoryLogState {
@@ -1231,8 +1243,12 @@ const WORKING_COPY_LABELS: Record<string, { kind: ChangeKind; label: string }> =
 const SYNC_LABELS: Record<'added' | 'modified' | 'deleted', string> = { added: 'Criar', modified: 'Atualizar', deleted: 'Remover' };
 
 // Projeto com Git vinculado e com diferenças: primeiro passo é copiar do Git.
-function isCopyStep(): boolean {
+function hasGitDifferences(): boolean {
   return desktop.screen?.plan?.status === 'ready';
+}
+
+function isCopyStep(): boolean {
+  return hasGitDifferences() && !desktop.showSvnChanges;
 }
 
 function currentChangeItems(): ChangeItem[] {
@@ -1497,15 +1513,22 @@ function renderSidebar(): void {
     return;
   }
 
+  // Alterna entre a cópia do Git e as alterações do checkout SVN.
+  const switcher = isCopyStep()
+    ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-svn-changes" title="Descartar, ignorar e commitar o que já está no checkout SVN">Ver alterações do checkout SVN</button></div>`
+    : hasGitDifferences()
+      ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-copy-step">← Voltar às ${desktop.screen!.plan!.changes.length} diferença(s) do Git</button></div>`
+      : '';
+
   if (items.length === 0) {
-    list.innerHTML = '<p class="list-empty">Nenhuma alteração.</p>';
+    list.innerHTML = `${switcher}<p class="list-empty">Nenhuma alteração.</p>`;
     return;
   }
 
   let header: string;
 
   if (isCopyStep()) {
-    header = `<div class="list-header">${escapeHtml(`${items.length} arquivo(s) diferentes do Git`)}</div>`;
+    header = `<div class="list-header">${escapeHtml(`${items.length} arquivo(s) diferentes do Git`)}</div>${switcher}`;
   } else {
     const selectable = items.filter((item) => item.selectable);
     const checked = checkedItems().length;
@@ -1517,7 +1540,7 @@ function renderSidebar(): void {
           <span>${items.length} alteração(ões) · ${checked} selecionada(s)</span>
         </label>
         <button type="button" class="button small danger" data-role="discard-selected" ${checked === 0 ? 'disabled' : ''} title="Descartar as alterações marcadas">Descartar</button>
-      </div>
+      </div>${switcher}
     `;
   }
 
@@ -1624,6 +1647,31 @@ function openContextMenu(x: number, y: number, entries: ContextMenuEntry[]): voi
   query<HTMLButtonElement>('.context-item:not([disabled])', menu)?.focus();
 }
 
+// Etapa de cópia: o arquivo ainda não foi copiado do Git para o checkout SVN.
+function copyStepContextEntries(item: ChangeItem): ContextMenuEntry[] {
+  const inGit = item.kind !== 'deleted';
+  const inSvn = item.kind !== 'added';
+  const later = 'Copie para o SVN ou use "Ver alterações do checkout SVN" para descartar e ignorar.';
+
+  return [
+    { label: 'Abrir no VS Code (Git)', disabled: !inGit, action: () => openInEditor('git', item.path) },
+    { label: 'Abrir no VS Code (SVN)', disabled: !inSvn, action: () => openInEditor('svn', item.path) },
+    { label: 'Mostrar na pasta do SVN', disabled: !inSvn, action: () => api().showItemInFolder(state.selectedEnvironmentId, item.path) },
+    'separator',
+    {
+      label: 'Ignorar no commit',
+      disabled: !inSvn,
+      title: inSvn ? 'Depois da cópia, o arquivo fica desmarcado e separado na lista de commit (ignore-on-commit).' : 'O arquivo ainda não existe no SVN.',
+      action: () => runWorkingCopyAction(() => api().setIgnoreOnCommit(state.selectedEnvironmentId, item.path, true))
+    },
+    { label: 'Descartar e svn:ignore: veja as alterações do SVN', disabled: true, title: later, action: () => undefined }
+  ];
+}
+
+function contextEntriesFor(item: ChangeItem): ContextMenuEntry[] {
+  return isCopyStep() ? copyStepContextEntries(item) : changeContextEntries(item);
+}
+
 function changeContextEntries(item: ChangeItem): ContextMenuEntry[] {
   const name = item.path === '.' ? ROOT_LABEL : item.path.slice(item.path.lastIndexOf('/') + 1);
   const parent = item.path.includes('/') ? item.path.slice(0, item.path.lastIndexOf('/')) : '';
@@ -1714,6 +1762,13 @@ function bindSidebar(): void {
       return;
     }
 
+    if (target.matches('[data-role="show-svn-changes"], [data-role="show-copy-step"]')) {
+      desktop.showSvnChanges = target.matches('[data-role="show-svn-changes"]');
+      desktop.selectedPath = undefined;
+      void loadDesktop();
+      return;
+    }
+
     if (target.matches('[data-role="load-more"]')) {
       void loadHistory(true);
       return;
@@ -1740,13 +1795,13 @@ function bindSidebar(): void {
     const row = (event.target as HTMLElement).closest<HTMLElement>('.change-row');
     const item = row ? currentChangeItems().find((candidate) => candidate.path === row.dataset.path) : undefined;
 
-    if (!row || !item?.checkable) {
+    if (!row || !item) {
       return;
     }
 
     event.preventDefault();
     selectSidebarItem(row);
-    openContextMenu(event.clientX, event.clientY, changeContextEntries(item));
+    openContextMenu(event.clientX, event.clientY, contextEntriesFor(item));
   });
 
   list?.addEventListener('keydown', (event) => {
@@ -1755,10 +1810,10 @@ function bindSidebar(): void {
     // Shift+F10 ou tecla de menu abrem o menu de contexto pelo teclado.
     if ((event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) && focused?.matches('.change-row')) {
       const item = currentChangeItems().find((candidate) => candidate.path === focused.dataset.path);
-      if (item?.checkable) {
+      if (item) {
         event.preventDefault();
         const bounds = focused.getBoundingClientRect();
-        openContextMenu(bounds.left + 24, bounds.bottom, changeContextEntries(item));
+        openContextMenu(bounds.left + 24, bounds.bottom, contextEntriesFor(item));
       }
       return;
     }
@@ -2269,6 +2324,7 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
       desktop.selectedPath = undefined;
       desktop.incoming = undefined;
       desktop.commitDraft = undefined;
+      desktop.showSvnChanges = false;
       desktop.loadedEnvironmentId = state.selectedEnvironmentId;
     }
 
