@@ -307,6 +307,7 @@ export interface SvnflowDesktopApi {
   switchGitBranch: (environmentId: string | undefined, branch: string, kind: 'local' | 'remote') => Promise<SwitchGitBranchResult>;
   getTheme: () => Promise<AppTheme>;
   setTheme: (theme: AppTheme) => Promise<AppTheme>;
+  setCheckoutDirectory: (directory: string) => Promise<string>;
   getWorkspaceScreenState: (environmentId?: string) => Promise<WorkspaceScreenState>;
   getPreviewScreenState: (environmentId?: string) => Promise<PreviewScreenState>;
   getPackagesScreenState: (environmentId?: string) => Promise<PackagesScreenState>;

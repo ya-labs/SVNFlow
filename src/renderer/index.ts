@@ -3075,9 +3075,31 @@ async function withCredentials<T extends { errorCode?: string }>(url: string, ru
   return result;
 }
 
+// Pasta padrão de checkout: cada projeto é sugerido como subpasta dela.
+async function chooseCheckoutDirectory(): Promise<string | undefined> {
+  const current = repos.data?.defaultCheckoutDirectory || undefined;
+  const picked = await api().selectDirectory('Escolher a pasta padrão para os checkouts', current);
+
+  if (!picked) {
+    return undefined;
+  }
+
+  const saved = await api().setCheckoutDirectory(picked);
+  repos.data = { ...(repos.data ?? { roots: [] }), defaultCheckoutDirectory: saved };
+  renderRepoRoots();
+  setStatusMessage(`Pasta padrão de checkout: ${saved}`);
+  return saved;
+}
+
 function renderRepoRoots(): void {
   const container = query<HTMLElement>('[data-role="repo-roots"]');
   const roots = repos.data?.roots ?? [];
+  const folder = query<HTMLElement>('[data-role="checkout-folder"]');
+
+  if (folder) {
+    folder.textContent = repos.data?.defaultCheckoutDirectory ?? '';
+    folder.title = folder.textContent;
+  }
 
   if (!container) {
     return;
@@ -3422,6 +3444,10 @@ function openCheckoutModal(url: string): void {
         <label class="modal-field">Nome do projeto
           <input class="input" name="name" type="text" value="${escapeHtml(name)}" />
         </label>
+        <label class="modal-check" data-role="save-default-field" hidden>
+          <input type="checkbox" name="saveDefault" />
+          <span>Usar <strong data-role="picked-folder"></strong> como pasta padrão dos próximos checkouts</span>
+        </label>
         <p class="checkout-progress" data-role="checkout-progress" hidden></p>
         <p class="modal-error" data-role="checkout-error" hidden></p>
       </div>
@@ -3444,9 +3470,27 @@ function openCheckoutModal(url: string): void {
     }
   };
   bindClick(modal, '[data-role="modal-cancel"]', () => closeActiveModal?.());
+  let pickedFolder: string | undefined;
+  const saveDefaultField = query<HTMLElement>('[data-role="save-default-field"]', modal)!;
   bindClick(modal, '[data-role="pick-destination"]', async () => {
     const picked = await api().selectDirectory('Escolher a pasta onde o projeto será baixado', defaultDirectory || undefined);
-    if (picked) input('destination').value = `${picked.replace(/\/+$/, '')}/${input('name').value.trim() || name}`;
+
+    if (picked) {
+      pickedFolder = picked.replace(/\/+$/, '');
+      input('destination').value = `${pickedFolder}/${input('name').value.trim() || name}`;
+      // Pasta diferente da padrão: oferece salvar como nova padrão.
+      saveDefaultField.hidden = pickedFolder === defaultDirectory;
+      setText('picked-folder', pickedFolder);
+    }
+  });
+
+  // O nome do projeto acompanha a pasta de destino enquanto ela segue o padrão "<pasta>/<nome>".
+  input('name').addEventListener('input', () => {
+    const base = pickedFolder ?? defaultDirectory;
+    const destination = input('destination').value.trim();
+    if (base && destination.startsWith(`${base}/`) && !destination.slice(base.length + 1).includes('/')) {
+      input('destination').value = `${base}/${input('name').value.trim() || name}`;
+    }
   });
   input('destination').focus();
 
@@ -3459,6 +3503,12 @@ function openCheckoutModal(url: string): void {
           progress.textContent = `${update.files} item(ns) baixado(s) · ${update.line}`;
         }
       });
+
+      if (pickedFolder && (form.elements.namedItem('saveDefault') as HTMLInputElement).checked) {
+        const saved = await api().setCheckoutDirectory(pickedFolder);
+        repos.data = { ...(repos.data ?? { roots: [] }), defaultCheckoutDirectory: saved };
+        renderRepoRoots();
+      }
 
       running = true;
       submit.disabled = true;
@@ -3580,6 +3630,7 @@ function bindDesktopShell(): void {
   });
 
   query<HTMLButtonElement>('[data-role="add-root"]')?.addEventListener('click', () => openAddRootModal());
+  query<HTMLButtonElement>('[data-role="change-checkout-folder"]')?.addEventListener('click', () => void chooseCheckoutDirectory());
 
   query<HTMLButtonElement>('[data-role="appearance"]')?.addEventListener('click', () => {
     closeMenus();

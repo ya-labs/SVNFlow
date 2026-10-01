@@ -79,6 +79,8 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('git:switch-branch', { environmentId, branch, kind }),
   getTheme: () =>
     ipcRenderer.invoke('appearance:get-theme'),
+  setCheckoutDirectory: (directory) =>
+    ipcRenderer.invoke('settings:set-checkout-directory', { directory }),
   setTheme: (theme) =>
     ipcRenderer.invoke('appearance:set-theme', { theme }),
   getWorkspaceScreenState: (environmentId) =>

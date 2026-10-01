@@ -894,10 +894,15 @@ function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle('repos:get-state', async (): Promise<RepositoriesState> => ({
-    roots: (await readAppSettings()).repositoryRoots,
-    defaultCheckoutDirectory: path.join(os.homedir(), 'svn')
-  }));
+  ipcMain.handle('repos:get-state', async (): Promise<RepositoriesState> => {
+    const settings = await readAppSettings();
+    return { roots: settings.repositoryRoots, defaultCheckoutDirectory: settings.checkoutDirectory };
+  });
+
+  ipcMain.handle('settings:set-checkout-directory', async (_event, payload: { directory: string }): Promise<string> => {
+    const directory = typeof payload?.directory === 'string' ? payload.directory : '';
+    return (await updateAppSettings({ checkoutDirectory: directory })).checkoutDirectory;
+  });
 
   ipcMain.handle('repos:save-roots', async (_event, payload: { roots: RepositoryRoot[] }): Promise<RepositoryRoot[]> =>
     (await updateAppSettings({ repositoryRoots: Array.isArray(payload?.roots) ? payload.roots : [] })).repositoryRoots
