@@ -34,6 +34,14 @@ describe('svn-client', () => {
     expect(classifySvnError('svn: E155011: File is out of date').code).toBe('OUT_OF_DATE');
   });
 
+  it('distingue peg revision inválida de caminho não encontrado', () => {
+    const result = classifySvnError("svn: E200009: 'icon-20@2x.png': a peg revision is not allowed here");
+    expect(result.code).toBe('FAILED');
+    expect(result.message).toContain('nomes com @');
+    expect(classifySvnError('svn: E200009: Could not display info for all targets').code).toBe('NOT_FOUND');
+    expect(classifySvnError("svn: E155010: The node was not found").code).toBe('NOT_FOUND');
+  });
+
   it('não quebra quando o svn termina sem ler a entrada (EPIPE)', async () => {
     // svn falso que sai na hora, sem ler a entrada: a escrita de 1 MB encontra o pipe fechado.
     const fakeBin = mkdtempSync(path.join(os.tmpdir(), 'svnflow-fake-svn-'));

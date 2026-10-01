@@ -6,6 +6,7 @@ import { validatePatchFit, type ValidatePatchResult } from './patch-validator.js
 import { readPostApplyStatus, type PostApplyStatusResult } from './post-apply-status.js';
 import { validateSvnCheckout } from './svn.js';
 import { readSvnStatus, type SvnCheckoutState } from './svn-status.js';
+import { svnLocalTarget } from './svn-path.js';
 
 export type ApplySourceKind = 'workspace' | 'package';
 
@@ -184,7 +185,7 @@ export function scheduleSvnFileOperations(checkoutPath: string, files: PatchFile
 
   if (files.added.length > 0) {
     try {
-      runSvn(checkoutPath, ['add', '--parents', '--force', '--', ...files.added]);
+      runSvn(checkoutPath, ['add', '--parents', '--force', '--', ...files.added.map(svnLocalTarget)]);
       result.added.push(...files.added);
     } catch (error) {
       result.errors.push(`Falha ao executar svn add: ${error instanceof Error ? error.message : 'erro desconhecido'}`);
@@ -193,7 +194,7 @@ export function scheduleSvnFileOperations(checkoutPath: string, files: PatchFile
 
   if (files.deleted.length > 0) {
     try {
-      runSvn(checkoutPath, ['delete', '--force', '--', ...files.deleted]);
+      runSvn(checkoutPath, ['delete', '--force', '--', ...files.deleted.map(svnLocalTarget)]);
       result.deleted.push(...files.deleted);
     } catch (error) {
       result.errors.push(`Falha ao executar svn delete: ${error instanceof Error ? error.message : 'erro desconhecido'}`);
