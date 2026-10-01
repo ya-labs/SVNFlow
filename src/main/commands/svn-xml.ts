@@ -5,6 +5,7 @@ export interface SvnXmlStatusEntry {
   item: string;
   props: string;
   revision?: string;
+  changelist?: string;
 }
 
 export interface SvnXmlLogPath {
@@ -67,6 +68,20 @@ function blocks(xml: string, tag: string): Array<{ attributes: string; body: str
 }
 
 export function parseStatusXml(xml: string): SvnXmlStatusEntry[] {
+  // Arquivos de um changelist vêm agrupados num bloco <changelist name="…">.
+  const changelistOf = new Map<string, string>();
+
+  for (const changelist of blocks(xml, 'changelist')) {
+    const name = readAttribute(changelist.attributes, 'name');
+
+    for (const entry of blocks(changelist.body, 'entry')) {
+      const entryPath = readAttribute(entry.attributes, 'path');
+      if (name && entryPath !== undefined) {
+        changelistOf.set(entryPath, name);
+      }
+    }
+  }
+
   return blocks(xml, 'entry').flatMap(({ attributes, body }) => {
     const entryPath = readAttribute(attributes, 'path');
     const status = body.match(/<wc-status\b([^>]*)>/);
@@ -79,7 +94,8 @@ export function parseStatusXml(xml: string): SvnXmlStatusEntry[] {
       path: entryPath,
       item: readAttribute(status[1], 'item') ?? 'none',
       props: readAttribute(status[1], 'props') ?? 'none',
-      revision: readAttribute(status[1], 'revision')
+      revision: readAttribute(status[1], 'revision'),
+      changelist: changelistOf.get(entryPath)
     }];
   });
 }

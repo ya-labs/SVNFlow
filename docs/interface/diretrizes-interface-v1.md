@@ -75,9 +75,11 @@ Quando a issue exigir interface e regras internas na mesma entrega, use `full-st
 O layout principal segue o padrão de clientes Git desktop, com o GitHub Desktop como referência:
 
 - barra superior escura com o projeto atual (menu para trocar, adicionar, vincular Git ou remover), a branch e o commit Git (menu para trocar de branch, com filtro, branches locais e remotas) e um botão contextual: verificar alterações, ou **Atualizar do servidor** quando há revisões novas;
-- tela **Repositórios** com servidores SVN salvos, navegação por breadcrumb, histórico remoto e checkout com progresso;
+- tela **Repositórios** com servidores SVN salvos, navegação por breadcrumb, busca na pasta ou no histórico, histórico remoto e checkout com progresso;
 - barra lateral com as abas *Alterações* e *Histórico*;
 - lista de arquivos com caixa de seleção para o commit e ícone de status: criado (`+`), modificado (`•`), removido (`−`) ou em conflito (`!`);
+- menu de clique direito em cada arquivo (ou Shift+F10): descartar mudanças, abrir no VS Code, mostrar na pasta, `svn:ignore` para itens novos e *Ignorar no commit* (changelist `ignore-on-commit`, como no TortoiseSVN) para itens versionados; botão *Descartar* no topo da lista para os arquivos marcados;
+- descartar mudanças sempre manda uma cópia do conteúdo atual para a Lixeira do sistema antes de reverter;
 - caixa de commit no rodapé da barra lateral, com resumo e descrição editáveis;
 - painel de detalhe com o diff do arquivo selecionado, numeração de linhas e cores de adição e remoção;
 - barra de status com a última mensagem do app;

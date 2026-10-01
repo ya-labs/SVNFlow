@@ -13,7 +13,7 @@ import type { RepositoryRoot } from '../main/commands/app-settings.js';
 import type { CheckoutResult } from '../main/commands/svn-checkout.js';
 import type { SvnCredentials } from '../main/commands/svn-client.js';
 import type { RemoteEntry, RemoteListing } from '../main/commands/svn-repository-browser.js';
-import type { CommitSelectedResult, IncomingResult, UpdateResult, WorkingCopyChange, WorkingCopyStatus } from '../main/commands/svn-working-copy.js';
+import type { CommitSelectedResult, DiscardResult, IncomingResult, SimpleResult, UpdateResult, WorkingCopyChange, WorkingCopyStatus } from '../main/commands/svn-working-copy.js';
 import type { GitBranch, GitBranchList, SwitchGitBranchResult } from '../main/commands/git-branches.js';
 import type { ExecuteSyncResult, SyncFileDiff, SyncPlan } from '../main/commands/git-svn-sync.js';
 import type { SvnLogPage } from '../main/commands/svn-history.js';
@@ -33,6 +33,8 @@ export type {
   PackageLibraryResult,
   CheckoutResult,
   CommitSelectedResult,
+  DiscardResult,
+  SimpleResult,
   IncomingResult,
   UpdateResult,
   RegisterSavedEnvironmentResult,
@@ -281,6 +283,11 @@ export interface SvnflowDesktopApi {
   getWorkingCopyDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   commitSelected: (request: CommitSelectedRequest) => Promise<CommitSelectedResult>;
   getIncoming: (environmentId: string | undefined) => Promise<IncomingResult>;
+  discardChanges: (environmentId: string | undefined, paths: string[]) => Promise<DiscardResult>;
+  setIgnoreOnCommit: (environmentId: string | undefined, path: string, ignore: boolean, recursive?: boolean) => Promise<SimpleResult>;
+  addToSvnIgnore: (environmentId: string | undefined, path: string, mode: 'item' | 'extension') => Promise<SimpleResult>;
+  openInEditor: (environmentId: string | undefined, which: 'git' | 'svn', path?: string) => Promise<SimpleResult>;
+  showItemInFolder: (environmentId: string | undefined, path: string) => Promise<void>;
   updateWorkingCopy: (environmentId: string | undefined, credentials?: SvnCredentials) => Promise<UpdateResult>;
   getSyncFileDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   readSvnLog: (request: { environmentId?: string; url?: string; before?: string; credentials?: SvnCredentials }) => Promise<SvnLogPage>;
