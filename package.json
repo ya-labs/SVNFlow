@@ -1,8 +1,9 @@
 {
   "name": "svnflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Aplicativo desktop local em que Git prepara alterações e SVN permanece como destino oficial de publicação",
   "main": "dist/main/index.js",
+  "desktopName": "svnflow.desktop",
   "type": "module",
   "scripts": {
     "test": "jest",
@@ -10,7 +11,8 @@
     "build": "tsc -p tsconfig.build.json && node ./scripts/copy-renderer-assets.mjs",
     "dev": "tsc -p tsconfig.build.json --watch",
     "app": "npm run build && electron .",
-    "app:dev": "npm run build && electron ."
+    "app:dev": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --linux"
   },
   "keywords": [
     "git",
@@ -18,14 +20,60 @@
     "workflow",
     "corporate"
   ],
-  "author": "",
+  "author": {
+    "name": "YA LABS"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "electron": "^41.7.1",
+    "electron-builder": "^26.15.3",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.0.0"
+  },
+  "homepage": "https://github.com/ya-labs/SVNFlow",
+  "build": {
+    "appId": "com.yalabs.svnflow",
+    "productName": "SVNFlow",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/**/*.map",
+      "!dist/**/*.d.ts",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "icon": "build/icon.png",
+      "maintainer": "YA LABS",
+      "synopsis": "Sincroniza o último commit Git com um checkout SVN",
+      "description": "Aplicativo desktop que deixa um checkout SVN igual ao último commit do Git e publica com um commit SVN.",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "syncDesktopName": true
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "git",
+        "subversion"
+      ]
+    }
   }
 }
