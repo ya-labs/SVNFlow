@@ -2606,6 +2606,12 @@ function toggleEnvironmentMenu(): void {
 
   bindClick(menu, '[data-environment-id]', async (button) => {
     closeMenus();
+
+    // Escolher um projeto (inclusive o atual) sai da tela de Repositórios e abre a página dele.
+    if (!query<HTMLElement>('[data-role="repos-view"]')?.hidden) {
+      setActiveView(state.showAdvanced ? 'advanced' : 'desktop');
+    }
+
     state.selectedEnvironmentId = button.dataset.environmentId;
     desktop.selectedPath = undefined;
     desktop.selectedRevision = undefined;
