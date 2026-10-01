@@ -74,13 +74,14 @@ Quando a issue exigir interface e regras internas na mesma entrega, use `full-st
 
 O layout principal segue o padrão de clientes Git desktop, com o GitHub Desktop como referência:
 
-- barra superior escura com o ambiente atual (menu para trocar, adicionar ou remover), a branch e o commit Git (menu para trocar de branch, com filtro, branches locais e remotas), e a ação de verificar alterações;
+- barra superior escura com o projeto atual (menu para trocar, adicionar, vincular Git ou remover), a branch e o commit Git (menu para trocar de branch, com filtro, branches locais e remotas) e um botão contextual: verificar alterações, ou **Atualizar do servidor** quando há revisões novas;
+- tela **Repositórios** com servidores SVN salvos, navegação por breadcrumb, histórico remoto e checkout com progresso;
 - barra lateral com as abas *Alterações* e *Histórico*;
-- lista de arquivos com ícone de status: criado (`+`), modificado (`•`) ou removido (`−`);
+- lista de arquivos com caixa de seleção para o commit e ícone de status: criado (`+`), modificado (`•`), removido (`−`) ou em conflito (`!`);
 - caixa de commit no rodapé da barra lateral, com resumo e descrição editáveis;
 - painel de detalhe com o diff do arquivo selecionado, numeração de linhas e cores de adição e remoção;
 - barra de status com a última mensagem do app;
-- modais para adicionar ambiente e confirmar operações sensíveis;
+- modais para adicionar projeto, fazer checkout, entrar no servidor e confirmar operações sensíveis;
 - tema claro e escuro, escolhido em *Aparência* (Sistema, Claro ou Escuro). O padrão segue o sistema.
 
 Operações sensíveis (atualizar o checkout SVN e publicar commit) sempre passam por um modal de confirmação que descreve o efeito.
@@ -108,10 +109,12 @@ A lista de arquivos, o diff e a lista de etapas do modo avançado têm scroll pr
 
 ## Navegação Principal
 
-A navegação principal tem apenas a sincronização ([ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md)):
+A visão principal tem duas abas ([ADR-008](../adrs/ADR-008-cliente-svn-com-git-opcional.md)):
 
-- *Alterações*: o que difere entre o último commit do Git e o checkout SVN e, depois da cópia, o que será publicado;
-- *Histórico*: sincronizações publicadas, com a revisão SVN e os caminhos alterados.
+- *Alterações*: o `svn status` do checkout, com seleção do que entra no commit. Em projeto com Git vinculado e diferenças, vem antes o passo de copiar o último commit do Git ([ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md));
+- *Histórico*: o `svn log` do servidor, com as revisões que o checkout ainda não tem marcadas como novas e o diff por arquivo.
+
+A tela *Repositórios* fica num botão da barra superior.
 
 O *Modo avançado* mantém as etapas da V1 por patch e pacote:
 

@@ -1,6 +1,6 @@
 # Instalar o SVNFlow no Linux
 
-O SVNFlow deixa um checkout SVN igual ao último commit de um repositório Git e publica a alteração com um commit SVN.
+O SVNFlow é um cliente SVN visual: faz checkout dos projetos do servidor, mostra as alterações com diff, commita só os arquivos escolhidos, exibe o histórico e atualiza o checkout. Opcionalmente, copia o último commit de um repositório Git para o SVN.
 
 ## Qual arquivo baixar
 
@@ -87,17 +87,16 @@ Não é preciso passar `--no-sandbox`: o AppImage desativa o sandbox do Chromium
 
 ## Primeiro uso
 
-1. Faça o checkout SVN uma vez numa pasta separada, por exemplo:
+1. Abra o SVNFlow e clique em **Repositórios**. Em **Adicionar URL…**, informe a URL base do servidor SVN da sua equipe (por exemplo, `svn://servidor/caminho/projetos`). Ela fica salva só no seu computador.
+2. Navegue até o projeto e clique em **Fazer checkout…**. Em projetos com `trunk/branches/tags`, o app sugere o checkout do `trunk`. O projeto é adicionado sozinho ao terminar.
+3. Edite os arquivos no seu editor. Em **Alterações**, marque o que entra no commit, escreva a mensagem e clique em **Commit para o SVN**.
+4. Em **Histórico**, veja os commits do servidor. Quando aparecer **Atualizar do servidor** na barra superior, há revisões novas para baixar.
 
-   ```bash
-   svn checkout <url-do-repositório-svn> ~/svn/meu-projeto
-   ```
+Já tem um checkout? Use **Adicionar projeto…** no menu de projetos e escolha a pasta.
 
-2. Abra o SVNFlow e clique em **Adicionar ambiente**. Escolha a pasta do repositório Git e a pasta do checkout SVN.
-3. Em **Alterações**, revise o que difere do último commit do Git e clique em **Copiar para o SVN**.
-4. Revise ou edite a mensagem e clique em **Commit para o SVN**.
+Se o servidor pedir usuário e senha, o app pergunta. O SVNFlow guarda a senha só enquanto estiver aberto. O próprio SVN pode lembrá-la, conforme a configuração da máquina.
 
-O app usa as credenciais SVN já salvas no seu computador. Se o servidor pedir senha, faça um `svn update` no checkout pelo terminal uma vez para salvá-la.
+Para quem trabalha no Git e publica no SVN: no menu do projeto, **Vincular Git…** liga um repositório Git ao checkout. A aba Alterações passa a copiar o último commit da branch atual para o SVN antes do commit.
 
 ## Avisos
 

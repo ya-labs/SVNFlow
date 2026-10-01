@@ -6,9 +6,10 @@ O projeto busca tornar esse processo mais visual, seguro e repetível, com foco 
 
 ## Como funciona
 
-1. Cadastre uma vez o repositório Git e a pasta do checkout SVN.
-2. Escolha a branch Git no menu **Branch Git** da barra superior. Em **Alterações**, veja o que mudou entre o último commit dessa branch e o checkout SVN e confirme a cópia.
-3. Revise ou edite a mensagem sugerida a partir dos commits Git e confirme o commit SVN.
+1. Em **Repositórios**, informe a URL base do servidor SVN, navegue pelos projetos, consulte o histórico e faça checkout. Ou adicione um checkout que você já tem.
+2. Em **Alterações**, veja o diff de cada arquivo, marque o que entra no commit, escreva a mensagem e publique no SVN.
+3. Em **Histórico**, consulte os commits do servidor e o diff de cada arquivo. Quando houver revisões novas, use **Atualizar do servidor**.
+4. Opcional: vincule um repositório Git ao projeto para copiar o último commit de uma branch para o checkout antes do commit SVN.
 
 O fluxo por patch e pacotes `.svnflow` continua disponível em **Modo avançado**.
 
