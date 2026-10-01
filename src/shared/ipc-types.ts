@@ -233,6 +233,9 @@ export interface CommitSelectedRequest {
   paths: string[];
   message: string;
   credentials?: SvnCredentials;
+  // Commit pela visão "Ver alterações do checkout SVN": publica o checkout como está,
+  // mesmo com diferenças do Git ainda não copiadas.
+  allowGitDifferences?: boolean;
 }
 
 export type AppTheme = 'system' | 'light' | 'dark';
@@ -285,6 +288,7 @@ export interface SvnflowDesktopApi {
   getIncoming: (environmentId: string | undefined) => Promise<IncomingResult>;
   discardChanges: (environmentId: string | undefined, paths: string[]) => Promise<DiscardResult>;
   setIgnoreOnCommit: (environmentId: string | undefined, path: string, ignore: boolean, recursive?: boolean) => Promise<SimpleResult>;
+  setSyncExclusion: (environmentId: string | undefined, path: string, exclude: boolean) => Promise<SimpleResult>;
   addToSvnIgnore: (environmentId: string | undefined, path: string, mode: 'item' | 'extension') => Promise<SimpleResult>;
   openInEditor: (environmentId: string | undefined, which: 'git' | 'svn', path?: string) => Promise<SimpleResult>;
   showItemInFolder: (environmentId: string | undefined, path: string) => Promise<void>;

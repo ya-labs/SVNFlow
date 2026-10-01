@@ -47,11 +47,24 @@ export interface SyncPlan {
   warnings: string[];
   blockers: string[];
   canSync: boolean;
+  // Regras do projeto: arquivos e pastas que não são copiados nem removidos no SVN.
+  exclusions: string[];
 }
 
 export interface SyncPlanInput {
   gitWorkspacePath: string;
   svnCheckoutPath: string;
+  exclusions?: string[];
+}
+
+// Metadados de checkout SVN versionados por engano no Git nunca são copiados:
+// gravar dentro de .svn corrompe o checkout.
+function isSvnMetadata(filePath: string): boolean {
+  return filePath.split('/').includes('.svn');
+}
+
+export function isExcludedFromSync(filePath: string, exclusions: readonly string[] = []): boolean {
+  return exclusions.some((rule) => filePath === rule || filePath.startsWith(`${rule}/`));
 }
 
 export interface ExecuteSyncResult {
@@ -196,7 +209,8 @@ function blockedPlan(input: SyncPlanInput, message: string, source?: SyncGitSour
     pending: [],
     warnings: [],
     blockers: [message],
-    canSync: false
+    canSync: false,
+    exclusions: input.exclusions ?? []
   };
 }
 
@@ -244,8 +258,23 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
   const pendingSvnChanges = pending.length;
 
   const gitDirectories = new Set<string>();
+  const exclusions = input.exclusions ?? [];
+  let svnMetadata = 0;
+  let excluded = 0;
 
   for (const [filePath, entry] of tree) {
+    if (isSvnMetadata(filePath)) {
+      svnMetadata += 1;
+      continue;
+    }
+
+    if (isExcludedFromSync(filePath, exclusions)) {
+      // A pasta continua existindo no Git: não pode ser removida do SVN.
+      parentDirectories(filePath).forEach((directory) => gitDirectories.add(directory));
+      excluded += 1;
+      continue;
+    }
+
     if (entry.mode === '160000' || entry.mode === '120000') {
       skipped.push(filePath);
       continue;
@@ -270,12 +299,20 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
       continue;
     }
 
-    if (tree.has(entryPath) || gitDirectories.has(entryPath)) {
+    if (tree.has(entryPath) || gitDirectories.has(entryPath) || isExcludedFromSync(entryPath, exclusions)) {
       continue;
     }
 
     // Inclui diretórios versionados que não existem mais no Git; o conteúdo sai junto.
     changes.push({ path: entryPath, kind: 'deleted' });
+  }
+
+  if (svnMetadata > 0) {
+    warnings.push(`${svnMetadata} arquivo(s) de pastas .svn versionados no Git não são copiados (são metadados do checkout).`);
+  }
+
+  if (excluded > 0) {
+    warnings.push(`${excluded} arquivo(s) do Git ficam fora da cópia pelas regras "Não copiar para o SVN" do projeto.`);
   }
 
   if (skipped.length > 0) {
@@ -308,7 +345,8 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
     pendingSvnChanges,
     pending,
     warnings,
-    blockers
+    blockers,
+    exclusions
   };
 
   if (blockers.length > 0) {

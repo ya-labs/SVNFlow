@@ -208,7 +208,8 @@ async function buildSyncScreenState(environmentId?: string, messageOverride?: st
 
   const plan = buildSyncPlan({
     gitWorkspacePath: selected.gitWorkspacePath,
-    svnCheckoutPath: selected.svnCheckoutPath
+    svnCheckoutPath: selected.svnCheckoutPath,
+    exclusions: selected.syncExclusions
   });
   const canCommit = plan.status === 'up-to-date' && plan.pendingSvnChanges > 0;
 
@@ -243,6 +244,7 @@ async function executeSyncForEnvironment(environmentId?: string): Promise<SyncEx
   const result = executeSync({
     gitWorkspacePath: selected.gitWorkspacePath,
     svnCheckoutPath: selected.svnCheckoutPath,
+    exclusions: selected.syncExclusions,
     confirmed: true
   });
 
@@ -258,7 +260,7 @@ async function commitSelectedForEnvironment(request: CommitSelectedRequest): Pro
     return { ok: false, message: 'Nenhum projeto selecionado.', committed: [], errorCode: 'INVALID_SELECTION' };
   }
 
-  if (hasGit(selected) && (await buildSyncScreenState(selected.id)).plan?.status === 'ready') {
+  if (hasGit(selected) && request.allowGitDifferences !== true && (await buildSyncScreenState(selected.id)).plan?.status === 'ready') {
     return { ok: false, message: 'O checkout ainda não está igual ao Git. Copie os arquivos do Git antes de commitar.', committed: [], errorCode: 'INVALID_SELECTION' };
   }
 
@@ -805,6 +807,32 @@ function registerIpcHandlers(): void {
     }
 
     return discardChanges({ checkoutPath: selected.svnCheckoutPath, paths, moveToTrash: (target) => shell.trashItem(target) });
+  });
+
+  ipcMain.handle('sync:set-exclusion', async (_event, payload: { environmentId?: string; path: string; exclude: boolean }): Promise<SimpleResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!hasGit(selected) || !isSafeRelativePath(payload?.path) || payload.path === '.') {
+      return { ok: false, message: 'Projeto ou caminho inválidos.' };
+    }
+
+    const rule = payload.path.replace(/\/+$/, '');
+    const current = selected.syncExclusions ?? [];
+    const next = payload.exclude
+      ? [...new Set([...current.filter((item) => !item.startsWith(`${rule}/`)), rule])].sort()
+      : current.filter((item) => item !== rule);
+    const saved = await updateSavedEnvironment({ environmentId: selected.id, changes: { syncExclusions: next } });
+
+    if (!saved.ok) {
+      return { ok: false, message: saved.message };
+    }
+
+    return {
+      ok: true,
+      message: payload.exclude
+        ? `${rule} não será mais copiado do Git para o SVN neste projeto.`
+        : `${rule} volta a ser copiado do Git para o SVN.`
+    };
   });
 
   ipcMain.handle('svn:ignore-on-commit', async (_event, payload: { environmentId?: string; path: string; ignore: boolean; recursive?: boolean }): Promise<SimpleResult> => {

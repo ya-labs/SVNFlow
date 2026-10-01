@@ -146,4 +146,35 @@ describeWithTools('sincronização Git -> SVN por espelhamento', () => {
     expect(executeCommit({ checkoutPath: svnPath, title: 'Remove ícone' }).status).toBe('success');
     expect(existsSync(path.join(svnPath, name))).toBe(false);
   });
+
+  it('não copia regras "Não copiar para o SVN" nem pastas .svn versionadas no Git', () => {
+    mkdirSync(path.join(gitPath, '.svn', 'pristine', 'ab'), { recursive: true });
+    mkdirSync(path.join(gitPath, '.idea', 'caches'), { recursive: true });
+    mkdirSync(path.join(gitPath, 'config'), { recursive: true });
+    writeFileSync(path.join(gitPath, '.svn', 'pristine', 'ab', 'abc.svn-base'), 'metadado\n');
+    writeFileSync(path.join(gitPath, '.idea', 'caches', 'estado.xml'), '<x/>\n');
+    writeFileSync(path.join(gitPath, 'config', 'local.json'), '{}\n');
+    writeFileSync(path.join(gitPath, 'config', 'publico.json'), '{}\n');
+    commitAll(gitPath, 'chore: arquivos que não vão para o SVN');
+
+    const exclusions = ['.idea', 'config/local.json'];
+    const plan = buildSyncPlan({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, exclusions });
+    expect(plan.changes).toEqual([{ path: 'config/publico.json', kind: 'added' }]);
+    expect(plan.exclusions).toEqual(exclusions);
+    expect(plan.warnings.join(' ')).toContain('.svn');
+    expect(plan.warnings.join(' ')).toContain('2 arquivo(s) do Git ficam fora da cópia');
+
+    expect(executeSync({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, exclusions, confirmed: true }).errors).toEqual([]);
+    expect(existsSync(path.join(svnPath, '.svn', 'pristine', 'ab', 'abc.svn-base'))).toBe(false);
+    expect(existsSync(path.join(svnPath, '.idea'))).toBe(false);
+    expect(existsSync(path.join(svnPath, 'config', 'local.json'))).toBe(false);
+    expect(executeCommit({ checkoutPath: svnPath, title: 'Publica config' }).status).toBe('success');
+
+    // Regra de pasta também impede remover do SVN o que saiu do Git.
+    rmSync(path.join(gitPath, 'config', 'publico.json'));
+    commitAll(gitPath, 'chore: remove config pública');
+    expect(buildSyncPlan({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, exclusions: ['.idea', 'config'] }).status).toBe('up-to-date');
+    // A pasta segue no Git por causa do arquivo excluído: sai só o arquivo, não a pasta.
+    expect(buildSyncPlan({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, exclusions }).changes).toEqual([{ path: 'config/publico.json', kind: 'deleted' }]);
+  });
 });
