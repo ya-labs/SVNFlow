@@ -1,5 +1,7 @@
 # Fluxo Principal da V1
 
+> O fluxo principal atual é a sincronização por espelhamento ([ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md)): último commit do Git → checkout SVN → commit SVN. Os fluxos abaixo descrevem o modo avançado, por patch e pacote.
+
 ## Objetivo
 
 Este documento descreve a jornada principal de uso do SVNFlow na V1.

@@ -4,6 +4,14 @@ SVNFlow é um estudo de produto para um aplicativo desktop local que apoia fluxo
 
 O projeto busca tornar esse processo mais visual, seguro e repetível, com foco em prévia, validação e confirmação antes de qualquer operação sensível no checkout SVN.
 
+## Como funciona
+
+1. Cadastre uma vez o repositório Git e a pasta do checkout SVN.
+2. Em **Sincronizar**, veja o que mudou entre o último commit do Git e o checkout SVN e confirme a cópia.
+3. Revise ou edite a mensagem sugerida a partir dos commits Git e confirme o commit SVN.
+
+O fluxo por patch e pacotes `.svnflow` continua disponível em **Modo avançado**.
+
 ## Como executar
 
 Pré-requisitos: Node.js 20+, Git e cliente `svn` no `PATH`.
