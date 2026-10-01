@@ -22,6 +22,12 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('dialog:select-directory', { title, defaultPath }),
   selectPackageFile: (defaultPath) =>
     ipcRenderer.invoke('dialog:select-package-file', { defaultPath }),
+  getSyncScreenState: (environmentId) =>
+    ipcRenderer.invoke('sync:get-state', { environmentId }),
+  executeSync: (environmentId) =>
+    ipcRenderer.invoke('sync:execute', { environmentId }),
+  commitSync: (environmentId, message) =>
+    ipcRenderer.invoke('sync:commit', { environmentId, message }),
   getWorkspaceScreenState: (environmentId) =>
     ipcRenderer.invoke('workspace:get-screen-state', { environmentId }),
   getPreviewScreenState: (environmentId) =>

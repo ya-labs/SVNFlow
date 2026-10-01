@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 
 export type CommitExecutionStatus = 'success' | 'failed' | 'cancelled' | 'conflict';
 
@@ -103,8 +103,10 @@ export function executeCommit(input: ExecuteCommitInput): ExecuteCommitResult {
     // Executar svn commit com a mensagem
     let output: string;
     try {
-      output = execSync(
-        `svn commit "${checkoutPath}" -m "${commitMessage.replace(/"/g, '\\"')}"`,
+      // Argumentos sem shell: a mensagem pode conter crases, $() ou aspas.
+      output = execFileSync(
+        'svn',
+        ['commit', checkoutPath, '-m', commitMessage],
         {
           encoding: 'utf-8',
           timeout: 30000,

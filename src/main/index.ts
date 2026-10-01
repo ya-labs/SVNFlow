@@ -18,12 +18,16 @@ import type {
   RegisterEnvironmentResponse,
   ScreenBlocker,
   ScreenWorkspaceFile,
+  SyncCommitResponse,
+  SyncExecuteResponse,
+  SyncScreenState,
   WorkspaceScreenState
 } from '../shared/ipc-types.js';
 import { readAppSettings, updateAppSettings } from './commands/app-settings.js';
 import { validateCommitPreConditions } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { generateGitPatch, readGitAuthor } from './commands/git-patch.js';
+import { buildSyncPlan, executeSync, suggestSyncCommitMessage } from './commands/git-svn-sync.js';
 import { buildMiniPrMarkdown, normalizeMiniPrDraft } from './commands/mini-pr.js';
 import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
 import { appendPackageHistory, readPackageHistory, type PackageHistoryResult } from './commands/package-history.js';
@@ -159,6 +163,108 @@ async function buildWorkspaceRendererState(environmentId?: string): Promise<Work
     hasChanges,
     canAdvanceToPreview: workspaceContext.canPreview && hasChanges && blockers.length === 0
   };
+}
+
+async function buildSyncScreenState(environmentId?: string, messageOverride?: string): Promise<SyncScreenState> {
+  const selected = await resolveSelectedEnvironmentById(environmentId);
+
+  if (!selected) {
+    return {
+      message: 'Nenhum ambiente cadastrado. Cadastre o repositório Git e o checkout SVN na etapa Ambiente.',
+      canCommit: false
+    };
+  }
+
+  const plan = buildSyncPlan({
+    gitWorkspacePath: selected.gitWorkspacePath,
+    svnCheckoutPath: selected.svnCheckoutPath
+  });
+  const canCommit = plan.status === 'up-to-date' && plan.pendingSvnChanges > 0;
+
+  return {
+    message: messageOverride ?? plan.message,
+    environment: {
+      id: selected.id,
+      name: selected.name,
+      gitWorkspacePath: selected.gitWorkspacePath,
+      svnCheckoutPath: selected.svnCheckoutPath
+    },
+    plan,
+    lastSyncedCommit: selected.lastSyncedGitCommit,
+    suggestedCommitMessage: plan.source
+      ? suggestSyncCommitMessage({
+          gitWorkspacePath: selected.gitWorkspacePath,
+          commit: plan.source.commit,
+          lastSyncedCommit: selected.lastSyncedGitCommit
+        })
+      : undefined,
+    canCommit
+  };
+}
+
+async function executeSyncForEnvironment(environmentId?: string): Promise<SyncExecuteResponse> {
+  const selected = await resolveSelectedEnvironmentById(environmentId);
+
+  if (!selected) {
+    return { screen: await buildSyncScreenState(environmentId) };
+  }
+
+  const result = executeSync({
+    gitWorkspacePath: selected.gitWorkspacePath,
+    svnCheckoutPath: selected.svnCheckoutPath,
+    confirmed: true
+  });
+
+  return { result, screen: await buildSyncScreenState(selected.id, result.message) };
+}
+
+async function commitSyncForEnvironment(environmentId: string | undefined, message: string): Promise<SyncCommitResponse> {
+  const selected = await resolveSelectedEnvironmentById(environmentId);
+  const screen = await buildSyncScreenState(environmentId);
+  const trimmed = message.trim();
+
+  if (!selected || !screen.plan?.source || !screen.canCommit) {
+    return {
+      result: {
+        status: 'failed',
+        message: screen.plan?.status === 'ready'
+          ? 'O checkout ainda não está igual ao Git. Sincronize antes de commitar.'
+          : screen.message,
+        errorCode: 'PRECONDITIONS_NOT_MET'
+      },
+      screen
+    };
+  }
+
+  if (!trimmed) {
+    return {
+      result: { status: 'failed', message: 'Informe a mensagem do commit SVN.', errorCode: 'INVALID_INPUT' },
+      screen
+    };
+  }
+
+  const result = executeCommit({ checkoutPath: selected.svnCheckoutPath, title: trimmed });
+
+  if (result.status === 'success') {
+    await updateSavedEnvironment({
+      environmentId: selected.id,
+      changes: { lastSyncedGitCommit: screen.plan.source.commit }
+    });
+    await appendPackageHistory({
+      entry: {
+        kind: 'committed',
+        packageId: result.revision ? `r${result.revision}` : 'svn-commit',
+        packagePath: '',
+        environmentName: selected.name,
+        baseBranch: screen.plan.source.branch ?? screen.plan.source.shortCommit,
+        totalAffectedFiles: result.filesCommitted ?? 0,
+        generatedAt: new Date().toISOString(),
+        detail: `${trimmed.split('\n')[0]} (Git ${screen.plan.source.shortCommit})`
+      }
+    });
+  }
+
+  return { result, screen: await buildSyncScreenState(selected.id, result.message) };
 }
 
 async function buildPackagesScreenState(environmentId?: string): Promise<PackagesScreenState> {
@@ -564,6 +670,18 @@ function registerIpcHandlers(): void {
       properties: ['openFile'],
       filters: [{ name: 'Pacote SVNFlow', extensions: ['svnflow'] }]
     })
+  );
+
+  ipcMain.handle('sync:get-state', async (_event, payload?: { environmentId?: string }) =>
+    buildSyncScreenState(payload?.environmentId)
+  );
+
+  ipcMain.handle('sync:execute', async (_event, payload?: { environmentId?: string }) =>
+    executeSyncForEnvironment(payload?.environmentId)
+  );
+
+  ipcMain.handle('sync:commit', async (_event, payload: { environmentId?: string; message: string }) =>
+    commitSyncForEnvironment(payload.environmentId, payload.message ?? '')
   );
 
   ipcMain.handle('workspace:get-screen-state', async (_event, payload?: { environmentId?: string }) =>

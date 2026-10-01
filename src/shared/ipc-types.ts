@@ -9,17 +9,20 @@ import type { PackageLibraryResult } from '../main/commands/package-library.js';
 import type { RegisterSavedEnvironmentResult } from '../main/commands/register-saved-environment.js';
 import type { SavedEnvironmentValidationStatus } from '../main/commands/saved-environments.js';
 import type { ApplyPlan, ExecuteApplyResult } from '../main/commands/svn-apply-flow.js';
+import type { ExecuteSyncResult, SyncPlan } from '../main/commands/git-svn-sync.js';
 
 export type {
   ApplyPlan,
   ExecuteApplyResult,
   ExecuteCommitResult,
+  ExecuteSyncResult,
   ExportPackageResult,
   ImportPackageResult,
   MiniPrDraft,
   PackageHistoryResult,
   PackageLibraryResult,
-  RegisterSavedEnvironmentResult
+  RegisterSavedEnvironmentResult,
+  SyncPlan
 };
 
 export type EnvironmentVisualStatus = 'ready' | 'attention' | 'blocked' | 'error' | 'pending';
@@ -180,6 +183,30 @@ export interface ExecuteApplyResponse {
   result?: ExecuteApplyResult;
 }
 
+export interface SyncScreenState {
+  message: string;
+  environment?: {
+    id: string;
+    name: string;
+    gitWorkspacePath: string;
+    svnCheckoutPath: string;
+  };
+  plan?: SyncPlan;
+  lastSyncedCommit?: string;
+  suggestedCommitMessage?: string;
+  canCommit: boolean;
+}
+
+export interface SyncExecuteResponse {
+  result?: ExecuteSyncResult;
+  screen: SyncScreenState;
+}
+
+export interface SyncCommitResponse {
+  result: ExecuteCommitResult;
+  screen: SyncScreenState;
+}
+
 export interface SvnflowDesktopApi {
   appName: string;
   appVersion: string;
@@ -189,6 +216,9 @@ export interface SvnflowDesktopApi {
   removeEnvironment: (environmentId: string) => Promise<EnvironmentScreenState>;
   selectDirectory: (title: string, defaultPath?: string) => Promise<string | undefined>;
   selectPackageFile: (defaultPath?: string) => Promise<string | undefined>;
+  getSyncScreenState: (environmentId?: string) => Promise<SyncScreenState>;
+  executeSync: (environmentId?: string) => Promise<SyncExecuteResponse>;
+  commitSync: (environmentId: string | undefined, message: string) => Promise<SyncCommitResponse>;
   getWorkspaceScreenState: (environmentId?: string) => Promise<WorkspaceScreenState>;
   getPreviewScreenState: (environmentId?: string) => Promise<PreviewScreenState>;
   getPackagesScreenState: (environmentId?: string) => Promise<PackagesScreenState>;
