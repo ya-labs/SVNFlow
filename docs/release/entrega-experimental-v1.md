@@ -96,6 +96,8 @@ Nenhum dado é enviado para servidor externo. Remover um ambiente da lista não 
 ### Cliente SVN
 
 - **Conflitos** são mostrados e bloqueiam o commit do arquivo, mas a resolução é feita fora do app (edite o arquivo e rode `svn resolve`).
+- **Ignorar.** O `svn:ignore` só vale para itens que ainda não estão no SVN, e a mudança na pasta precisa ser commitada para valer para a equipe. Para arquivos já versionados, *Ignorar no commit* usa o changelist `ignore-on-commit`: vale só no seu checkout, e o arquivo continua no SVN.
+- **Descartar** não tem desfazer no app; a cópia do conteúdo fica na Lixeira do sistema.
 - **Sem interface para** `svn:externals`, propriedades, travas (`svn lock`), branches e tags do SVN (o checkout de uma branch é feito pela tela Repositórios).
 - **Credenciais** pedidas pelo app ficam só na memória da sessão. A verificação de revisões novas em segundo plano não pede senha; ela só aparece quando você executa uma ação.
 - **Checkout com revisões misturadas** (partes do checkout em revisões diferentes) usa a revisão da raiz para contar as revisões novas.
