@@ -72,17 +72,20 @@ Quando a issue exigir interface e regras internas na mesma entrega, use `full-st
 
 ## Estrutura Visual Esperada
 
-A V1 deve caminhar para uma aplicação desktop com:
+O layout principal segue o padrão de clientes Git desktop, com o GitHub Desktop como referência:
 
-- shell principal visível;
-- navegação entre etapas do fluxo;
-- área de contexto do ambiente ativo;
-- área principal da etapa atual;
-- mensagens de bloqueio, atenção, sucesso e erro;
-- ações primárias e secundárias claramente diferenciadas;
-- confirmações explícitas antes de operações sensíveis.
+- barra superior escura com o ambiente atual (menu para trocar, adicionar ou remover), a branch e o commit Git, e a ação de verificar alterações;
+- barra lateral com as abas *Alterações* e *Histórico*;
+- lista de arquivos com ícone de status: criado (`+`), modificado (`•`) ou removido (`−`);
+- caixa de commit no rodapé da barra lateral, com resumo e descrição editáveis;
+- painel de detalhe com o diff do arquivo selecionado, numeração de linhas e cores de adição e remoção;
+- barra de status com a última mensagem do app;
+- modais para adicionar ambiente e confirmar operações sensíveis;
+- tema claro e escuro, escolhido em *Aparência* (Sistema, Claro ou Escuro). O padrão segue o sistema.
 
-O shell visual deve permitir que a pessoa usuária entenda onde está no fluxo e qual será o próximo passo seguro.
+Operações sensíveis (atualizar o checkout SVN e publicar commit) sempre passam por um modal de confirmação que descreve o efeito.
+
+O fluxo por patch e pacotes `.svnflow` fica em *Modo avançado*, com navegação própria por etapas.
 
 ## Responsividade e Redimensionamento
 
@@ -99,23 +102,24 @@ Quando faltar espaço, o layout deve se adaptar por:
 - quebra ou tratamento visual de textos longos;
 - scroll apenas em regiões específicas e previsíveis.
 
-Na V1, a lista de etapas pode ter scroll vertical quando a altura da janela for pequena. Topo, área principal e contexto do ambiente devem continuar visíveis.
+A lista de arquivos, o diff e a lista de etapas do modo avançado têm scroll próprio. A barra superior, a caixa de commit e a barra de status continuam visíveis.
 
 ## Navegação Principal
 
-A navegação da V1 deve representar as principais etapas do SVNFlow:
+A navegação principal tem apenas a sincronização ([ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md)):
+
+- *Alterações*: o que difere entre o último commit do Git e o checkout SVN e, depois da cópia, o que será publicado;
+- *Histórico*: sincronizações publicadas, com a revisão SVN e os caminhos alterados.
+
+O *Modo avançado* mantém as etapas da V1 por patch e pacote:
 
 - Ambiente;
 - Workspace Git;
 - Preview;
+- Pacotes SVNFlow;
 - Aplicação SVN;
 - Commit SVN protegido;
-- Pacotes SVNFlow;
 - Histórico local.
-
-Etapas que dependem de validação anterior devem aparecer bloqueadas ou indisponíveis até que as pré-condições sejam atendidas.
-
-A navegação deve funcionar tanto para trabalho solo quanto para colaboração por pacote `.svnflow`, sem transformar a V1 em uma plataforma colaborativa completa.
 
 ## Estados Visuais Obrigatórios
 
@@ -151,11 +155,11 @@ Se a entrega não renderizar nada, a issue não deve ser descrita como implement
 
 ## Uso do Design System da YA LABS
 
-O SVNFlow deve usar o Design System da YA LABS como referência visual.
+O Design System da YA LABS continua como referência de linguagem, textos, hierarquia e estados visuais.
 
-Isso significa buscar consistência com padrões visuais, hierarquia, espaçamento, linguagem e componentes definidos no YABook quando aplicável.
+A referência de layout e de componentes passou a ser o GitHub Desktop, por decisão de produto: o público do SVNFlow já usa clientes Git desktop, e o padrão reduz o aprendizado. Tokens de cor, tipografia e espaçamento ficam definidos em `src/renderer/styles.css`, com variantes clara e escura.
 
-Esta diretriz não cria um design system novo para o SVNFlow. Também não exige que a V1 defina tokens finais, biblioteca definitiva de componentes ou layout final antes da implementação visual inicial.
+Esta diretriz não cria um design system novo para o SVNFlow.
 
 ## Fora de Escopo
 

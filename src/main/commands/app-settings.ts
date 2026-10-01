@@ -4,13 +4,23 @@ import path from 'node:path';
 
 import { resolveSvnflowPackagesDirectory } from './package-exporter.js';
 
+export type AppTheme = 'system' | 'light' | 'dark';
+
 export interface AppSettings {
   packagesDirectory: string;
+  theme: AppTheme;
 }
 
 interface AppSettingsFile {
   version: 1;
   packagesDirectory?: string;
+  theme?: AppTheme;
+}
+
+const THEMES: AppTheme[] = ['system', 'light', 'dark'];
+
+export function isAppTheme(value: unknown): value is AppTheme {
+  return typeof value === 'string' && (THEMES as string[]).includes(value);
 }
 
 export interface AppSettingsOptions {
@@ -24,7 +34,8 @@ export function resolveAppSettingsPath(baseDirectory: string = os.homedir()): st
 
 function defaultSettings(baseDirectory?: string): AppSettings {
   return {
-    packagesDirectory: resolveSvnflowPackagesDirectory(baseDirectory)
+    packagesDirectory: resolveSvnflowPackagesDirectory(baseDirectory),
+    theme: 'system'
   };
 }
 
@@ -38,7 +49,7 @@ export async function readAppSettings(options: AppSettingsOptions = {}): Promise
       ? parsed.packagesDirectory.trim()
       : defaults.packagesDirectory;
 
-    return { packagesDirectory };
+    return { packagesDirectory, theme: isAppTheme(parsed.theme) ? parsed.theme : defaults.theme };
   } catch {
     return defaults;
   }
@@ -51,9 +62,10 @@ export async function updateAppSettings(
   const storagePath = options.storagePath ?? resolveAppSettingsPath(options.baseDirectory);
   const current = await readAppSettings(options);
   const next: AppSettings = {
-    packagesDirectory: changes.packagesDirectory?.trim() || current.packagesDirectory
+    packagesDirectory: changes.packagesDirectory?.trim() || current.packagesDirectory,
+    theme: isAppTheme(changes.theme) ? changes.theme : current.theme
   };
-  const file: AppSettingsFile = { version: 1, packagesDirectory: next.packagesDirectory };
+  const file: AppSettingsFile = { version: 1, packagesDirectory: next.packagesDirectory, theme: next.theme };
 
   await mkdir(path.dirname(storagePath), { recursive: true });
   await writeFile(`${storagePath}.tmp`, `${JSON.stringify(file, null, 2)}\n`, 'utf8');

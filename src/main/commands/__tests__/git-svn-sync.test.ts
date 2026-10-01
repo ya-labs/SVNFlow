@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { executeCommit } from '../commit-executor';
-import { buildSyncPlan, executeSync, suggestSyncCommitMessage } from '../git-svn-sync';
+import { buildFileDiff, buildSyncPlan, executeSync, readSvnRevisionLog, suggestSyncCommitMessage } from '../git-svn-sync';
 
 function commandAvailable(command: string, args: string[]): boolean {
   try {
@@ -90,14 +90,24 @@ describeWithTools('sincronização Git -> SVN por espelhamento', () => {
     ]);
     expect(plan.warnings.some((warning) => warning.includes('não commitada'))).toBe(true);
 
+    const diffBefore = buildFileDiff({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, filePath: 'src/app.js' });
+    expect(diffBefore.source).toBe('git-vs-checkout');
+    expect(diffBefore.lines).toEqual(expect.arrayContaining(['-console.log(1);', '+console.log(2);']));
+    expect(buildFileDiff({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, filePath: 'src/antigo' }).kind).toBe('directory');
+
     const sync = executeSync({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, confirmed: true });
     expect(sync.errors).toEqual([]);
     expect(readFileSync(path.join(svnPath, 'src', 'app.js'), 'utf8')).toBe('console.log(2);\n');
     expect(existsSync(path.join(svnPath, 'rascunho.txt'))).toBe(false);
 
+    const diffPending = buildFileDiff({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, filePath: 'src/app.js' });
+    expect(diffPending.source).toBe('svn-pending');
+    expect(diffPending.lines).toEqual(expect.arrayContaining(['+console.log(2);']));
+
     const upToDate = buildSyncPlan({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath });
     expect(upToDate.status).toBe('up-to-date');
     expect(upToDate.pendingSvnChanges).toBeGreaterThan(0);
+    expect(upToDate.pending.map((change) => change.path)).toEqual(expect.arrayContaining(['src/app.js', 'src/novo.js', 'remover.txt']));
 
     const message = suggestSyncCommitMessage({ gitWorkspacePath: gitPath, commit: lastCommit, lastSyncedCommit: firstCommit });
     expect(message.split('\n')[0]).toBe('feat: adiciona `novo` e $(rm -rf /) de mentira (+1 commit(s))');
@@ -112,6 +122,12 @@ describeWithTools('sincronização Git -> SVN por espelhamento', () => {
     expect(log).toContain('D /remover.txt');
     expect(log).toContain('A /src/novo.js');
     expect(log).toContain('M /src/app.js');
+
+    const revisionLog = readSvnRevisionLog(svnPath, commit.revision!);
+    expect(revisionLog.ok).toBe(true);
+    expect(revisionLog.logMessage).toContain('$(rm -rf /) de mentira');
+    expect(revisionLog.paths).toEqual(expect.arrayContaining([{ action: 'A', path: '/src/novo.js' }]));
+    expect(readSvnRevisionLog(svnPath, '1; rm -rf /').ok).toBe(false);
 
     expect(buildSyncPlan({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath }).message).toContain('Nada a sincronizar');
   });

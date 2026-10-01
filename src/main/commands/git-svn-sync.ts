@@ -1,6 +1,7 @@
 import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
+import os from 'os';
 import path from 'path';
 
 import { readUncommittedChanges } from './git-patch.js';
@@ -18,6 +19,19 @@ export interface SyncGitSource {
   subject: string;
 }
 
+export interface SyncPendingChange {
+  path: string;
+  item: string;
+}
+
+export interface SyncFileDiff {
+  path: string;
+  kind: 'text' | 'binary' | 'directory' | 'empty' | 'too-large';
+  source: 'git-vs-checkout' | 'svn-pending';
+  lines: string[];
+  truncated: boolean;
+}
+
 export interface SyncPlan {
   status: 'ready' | 'up-to-date' | 'blocked';
   message: string;
@@ -27,6 +41,7 @@ export interface SyncPlan {
   changes: SyncFileChange[];
   totals: { added: number; modified: number; deleted: number };
   pendingSvnChanges: number;
+  pending: SyncPendingChange[];
   warnings: string[];
   blockers: string[];
   canSync: boolean;
@@ -185,6 +200,7 @@ function blockedPlan(input: SyncPlanInput, message: string, source?: SyncGitSour
     changes: [],
     totals: { added: 0, modified: 0, deleted: 0 },
     pendingSvnChanges: 0,
+    pending: [],
     warnings: [],
     blockers: [message],
     canSync: false
@@ -226,7 +242,13 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
     blockers.push(`O checkout SVN tem ${conflicted.length} item(ns) em conflito. Resolva com svn resolve antes de sincronizar.`);
   }
 
-  const pendingSvnChanges = [...svnEntries].filter(([, entry]) => ['modified', 'added', 'deleted', 'replaced', 'missing'].includes(entry.item)).length;
+  const pending = [...svnEntries]
+    .filter(([, entry]) => ['modified', 'added', 'deleted', 'replaced', 'missing'].includes(entry.item))
+    // Pastas novas sobem junto com os arquivos; listar só arquivos deixa a revisão mais limpa.
+    .filter(([entryPath, entry]) => !(entry.item === 'added' && isDirectory(path.join(input.svnCheckoutPath, entryPath))))
+    .map(([entryPath, entry]) => ({ path: entryPath, item: entry.item }))
+    .sort((a, b) => a.path.localeCompare(b.path));
+  const pendingSvnChanges = pending.length;
 
   const gitDirectories = new Set<string>();
 
@@ -291,6 +313,7 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
     changes,
     totals,
     pendingSvnChanges,
+    pending,
     warnings,
     blockers
   };
@@ -451,4 +474,139 @@ export function suggestSyncCommitMessage(input: SuggestCommitMessageInput): stri
     '',
     `Git: ${shortCommit}`
   ].join('\n');
+}
+
+const MAX_DIFF_LINES = 4000;
+const MAX_DIFF_FILE_BYTES = 5 * 1024 * 1024;
+
+function readGitBlob(gitWorkspacePath: string, filePath: string): Buffer | undefined {
+  try {
+    return git(gitWorkspacePath, ['cat-file', 'blob', `HEAD:${filePath}`]);
+  } catch {
+    return undefined;
+  }
+}
+
+function isBinary(content: Buffer): boolean {
+  return content.subarray(0, 8000).includes(0);
+}
+
+function diffBuffers(oldContent: Buffer | undefined, newContent: Buffer | undefined): string {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'svnflow-diff-'));
+  const oldPath = path.join(directory, 'antes');
+  const newPath = path.join(directory, 'depois');
+
+  try {
+    writeFileSync(oldPath, oldContent ?? Buffer.alloc(0));
+    writeFileSync(newPath, newContent ?? Buffer.alloc(0));
+
+    try {
+      execFileSync('git', ['diff', '--no-index', '--no-color', '--unified=3', oldPath, newPath], {
+        encoding: 'utf-8',
+        maxBuffer: MAX_BUFFER,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      return '';
+    } catch (error) {
+      // git diff --no-index retorna 1 quando há diferença.
+      return String((error as { stdout?: unknown }).stdout ?? '');
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+function toDiffResult(filePath: string, source: SyncFileDiff['source'], diff: string): SyncFileDiff {
+  const start = diff.search(/^@@/m);
+  const lines = start >= 0 ? diff.slice(start).replace(/\n$/, '').split('\n') : [];
+
+  return {
+    path: filePath,
+    kind: lines.length > 0 ? 'text' : 'empty',
+    source,
+    lines: lines.slice(0, MAX_DIFF_LINES),
+    truncated: lines.length > MAX_DIFF_LINES
+  };
+}
+
+// Diff exibido na interface: Git x checkout enquanto há diferença; depois da
+// cópia, mostra o que o commit SVN vai publicar (svn diff).
+export function buildFileDiff(input: SyncPlanInput & { filePath: string }): SyncFileDiff {
+  const target = path.join(input.svnCheckoutPath, input.filePath);
+  const base = { path: input.filePath, lines: [], truncated: false };
+
+  if (isDirectory(target)) {
+    return { ...base, kind: 'directory', source: 'git-vs-checkout' };
+  }
+
+  const gitContent = readGitBlob(input.gitWorkspacePath, input.filePath);
+  const diskContent = existsSync(target) ? readFileSync(target) : undefined;
+
+  if ((gitContent?.length ?? 0) > MAX_DIFF_FILE_BYTES || (diskContent?.length ?? 0) > MAX_DIFF_FILE_BYTES) {
+    return { ...base, kind: 'too-large', source: 'git-vs-checkout' };
+  }
+
+  const existsSomewhere = gitContent !== undefined || diskContent !== undefined;
+  const differs = !gitContent || !diskContent || !gitContent.equals(diskContent);
+
+  if (existsSomewhere && differs) {
+    if ((gitContent && isBinary(gitContent)) || (diskContent && isBinary(diskContent))) {
+      return { ...base, kind: 'binary', source: 'git-vs-checkout' };
+    }
+
+    const diff = diffBuffers(diskContent, gitContent);
+    if (diff) {
+      return toDiffResult(input.filePath, 'git-vs-checkout', diff);
+    }
+  }
+
+  try {
+    const svnDiff = svn(input.svnCheckoutPath, ['diff', '--', input.filePath]);
+
+    if (/^Cannot display: file marked as a binary type/m.test(svnDiff)) {
+      return { ...base, kind: 'binary', source: 'svn-pending' };
+    }
+
+    return toDiffResult(input.filePath, 'svn-pending', svnDiff);
+  } catch {
+    return { ...base, kind: 'empty', source: 'svn-pending' };
+  }
+}
+
+export interface SvnRevisionLog {
+  ok: boolean;
+  message: string;
+  revision: string;
+  author?: string;
+  date?: string;
+  logMessage?: string;
+  paths: Array<{ action: string; path: string }>;
+}
+
+export function readSvnRevisionLog(svnCheckoutPath: string, revision: string): SvnRevisionLog {
+  if (!/^\d+$/.test(revision)) {
+    return { ok: false, message: 'Revisão inválida.', revision, paths: [] };
+  }
+
+  try {
+    const xml = svn(svnCheckoutPath, ['log', '-v', '--xml', '-r', revision, '.']);
+    const author = xml.match(/<author>([^<]*)<\/author>/)?.[1];
+    const date = xml.match(/<date>([^<]*)<\/date>/)?.[1];
+    const logMessage = xml.match(/<msg>([\s\S]*?)<\/msg>/)?.[1];
+    const paths = [...xml.matchAll(/<path\b([^>]*)>([^<]*)<\/path>/g)]
+      .filter((match) => !/\bkind="dir"/.test(match[1]) || /\baction="D"/.test(match[1]))
+      .map((match) => ({ action: match[1].match(/\baction="([A-Z])"/)?.[1] ?? 'M', path: decodeXmlAttribute(match[2]) }));
+
+    return {
+      ok: true,
+      message: `Revisão ${revision}`,
+      revision,
+      author: author ? decodeXmlAttribute(author) : undefined,
+      date,
+      logMessage: logMessage ? decodeXmlAttribute(logMessage) : undefined,
+      paths
+    };
+  } catch (error) {
+    return { ok: false, message: `Não foi possível ler a revisão ${revision}: ${errorMessage(error)}`, revision, paths: [] };
+  }
 }
