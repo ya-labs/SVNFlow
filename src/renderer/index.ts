@@ -1915,6 +1915,30 @@ function bindSidebar(): void {
 
 // Caixa de commit -----------------------------------------------------------
 
+// Projeto com Git: deixa explícito em qual das duas etapas a pessoa está,
+// para não confundir copiar (local) com commitar (publica no servidor).
+function renderFlowSteps(current: 1 | 2): string {
+  if (!desktop.screen?.environment?.gitWorkspacePath) {
+    return '';
+  }
+
+  const copyPending = hasGitDifferences();
+  const step = (index: 1 | 2, title: string, detail: string): string => {
+    const status = index === current ? 'current' : index === 1 && !copyPending ? 'done' : index === 1 ? 'pending' : 'todo';
+    const marker = status === 'done' ? '✓' : String(index);
+    return `<li class="flow-step" data-status="${status}" ${index === current ? 'aria-current="step"' : ''}><span class="flow-marker">${marker}</span><span class="flow-text"><strong>${title}</strong><small>${detail}</small></span></li>`;
+  };
+
+  return `
+    <ol class="flow-steps" aria-label="Etapas da sincronização">
+      ${step(1, 'Copiar do Git', copyPending ? 'só local' : 'concluído')}
+      <li class="flow-arrow" aria-hidden="true">›</li>
+      ${step(2, 'Publicar no SVN', 'no servidor')}
+    </ol>
+    ${current === 2 && copyPending ? '<p class="commit-box-hint warning">Ainda há diferenças do Git não copiadas. Este commit publica só o que já está no checkout.</p>' : ''}
+  `;
+}
+
 function renderCommitBox(): void {
   const box = query<HTMLElement>('[data-role="commit-box"]');
   const screen = desktop.screen;
@@ -1931,15 +1955,17 @@ function renderCommitBox(): void {
 
   if (isCopyStep() && plan?.source) {
     box.innerHTML = `
-      <p class="commit-box-hint">O checkout SVN será atualizado para o commit <strong>${escapeHtml(plan.source.shortCommit)}</strong>. Nada é publicado nesta etapa.</p>
-      <button type="button" class="button primary block" data-role="copy-to-svn">Copiar ${plan.changes.length} arquivo(s) para o SVN</button>
+      ${renderFlowSteps(1)}
+      <p class="commit-box-hint">Atualiza só os arquivos locais do checkout SVN para o commit <strong>${escapeHtml(plan.source.shortCommit)}</strong>. <strong>Nada é publicado no servidor nesta etapa.</strong></p>
+      <button type="button" class="button block copy-action" data-role="copy-to-svn">⇣ Copiar ${plan.changes.length} arquivo(s) para o checkout</button>
     `;
     bindClick(box, '[data-role="copy-to-svn"]', copyToSvn);
     return;
   }
 
   if ((desktop.workingCopy?.changes.length ?? 0) === 0) {
-    box.innerHTML = '';
+    const steps = renderFlowSteps(2);
+    box.innerHTML = steps ? `${steps}<p class="commit-box-hint">Nada no checkout para publicar.</p>` : '';
     return;
   }
 
@@ -1948,10 +1974,11 @@ function renderCommitBox(): void {
   const hasSuggestion = suggestedCommitMessage().length > 0;
 
   box.innerHTML = `
+    ${renderFlowSteps(2)}
     <input class="input" data-role="commit-summary" type="text" placeholder="Resumo (obrigatório)" value="${escapeHtml(draft.summary)}" aria-label="Resumo do commit SVN" />
     <textarea class="input" data-role="commit-description" placeholder="Descrição" aria-label="Descrição do commit SVN">${escapeHtml(draft.description)}</textarea>
     ${hasSuggestion ? '<button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>' : ''}
-    <button type="button" class="button primary block" data-role="commit-svn">${count > 0 ? `Commit de ${count} arquivo(s) para o SVN` : 'Selecione arquivos para commitar'}</button>
+    <button type="button" class="button primary block" data-role="commit-svn">${count > 0 ? `⇡ Publicar ${count} arquivo(s) no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
   `;
 
   const summary = query<HTMLInputElement>('[data-role="commit-summary"]', box)!;
@@ -1988,7 +2015,7 @@ async function copyToSvn(): Promise<void> {
   }
 
   const confirmed = await confirmModal({
-    title: 'Atualizar checkout SVN',
+    title: 'Etapa 1 de 2 · Copiar do Git para o checkout',
     message: `${plan.totals.added} arquivo(s) serão criados, ${plan.totals.modified} atualizados e ${plan.totals.deleted} removidos em ${plan.svnCheckoutPath}, para ficar igual ao commit ${plan.source.shortCommit}. Nada será publicado no SVN ainda.`,
     confirmLabel: 'Copiar arquivos'
   });
@@ -2025,7 +2052,7 @@ async function commitToSvn(): Promise<void> {
   const message = draft.description.trim() ? `${draft.summary.trim()}\n\n${draft.description.trim()}` : draft.summary.trim();
   const preview = items.slice(0, 8).map((item) => `${CHANGE_ICONS[item.kind]} ${item.path}`).join('\n');
   const confirmed = await confirmModal({
-    title: 'Publicar no SVN',
+    title: desktop.screen?.environment?.gitWorkspacePath ? 'Etapa 2 de 2 · Publicar no servidor SVN' : 'Publicar no servidor SVN',
     message: `${items.length} arquivo(s) serão publicados oficialmente a partir de ${desktop.screen?.environment?.svnCheckoutPath ?? 'checkout SVN'}.`,
     detail: `${message}\n\n${preview}${items.length > 8 ? `\n… e mais ${items.length - 8}` : ''}`,
     confirmLabel: 'Commit para o SVN'
