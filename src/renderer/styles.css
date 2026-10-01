@@ -284,6 +284,7 @@ button.toolbar-button:hover,
 
 .dropdown-footer {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 8px 12px;
   border-top: 1px solid var(--border);
@@ -1598,4 +1599,45 @@ details summary {
 
 .remote-history-detail td {
   background: var(--bg-muted);
+}
+
+/* Lixeira no menu de projetos ------------------------------------------- */
+
+.dropdown-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.dropdown-row .dropdown-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-row:has(.dropdown-item[aria-current='true']) {
+  background: var(--accent-subtle);
+}
+
+.dropdown-row .dropdown-item[aria-current='true'] {
+  background: transparent;
+}
+
+.dropdown-remove {
+  flex: none;
+  width: 36px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.dropdown-row:hover .dropdown-remove,
+.dropdown-remove:focus-visible {
+  opacity: 1;
+}
+
+.dropdown-remove:hover {
+  color: var(--removed);
+  background: var(--removed-bg);
 }
