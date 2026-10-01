@@ -1,9 +1,10 @@
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { isSvnUrl, normalizeSvnUrl } from './app-settings.js';
 import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-client.js';
 import { runSvnInSession } from './svn-session.js';
+import { count } from './text.js';
 
 export type CheckoutErrorCode = SvnErrorCode | 'INVALID_URL' | 'INVALID_DESTINATION' | 'DESTINATION_NOT_EMPTY' | 'INVALID_REVISION';
 
@@ -74,6 +75,7 @@ export async function checkoutProject(input: CheckoutInput): Promise<CheckoutRes
     url,
     credentials: input.credentials,
     configDir: input.configDir,
+    cancelable: true,
     onLine: (line) => {
       if (/^[AUGE ]{1,4}\s+\S/.test(line) && !/^Checked out/.test(line)) {
         files += 1;
@@ -81,6 +83,12 @@ export async function checkoutProject(input: CheckoutInput): Promise<CheckoutRes
       }
     }
   });
+
+  if (result.errorCode === 'CANCELLED') {
+    // O destino estava vazio ou não existia: o checkout parcial é descartado.
+    await rm(destination, { recursive: true, force: true });
+    return { ...base, files, ok: false, message: 'Checkout cancelado. Nada foi mantido na pasta de destino.', errorCode: 'CANCELLED' };
+  }
 
   if (!result.ok) {
     return { ...base, files, ok: false, message: result.message, detail: svnErrorDetail(result.stderr), errorCode: result.errorCode };
@@ -93,6 +101,6 @@ export async function checkoutProject(input: CheckoutInput): Promise<CheckoutRes
     ok: true,
     files,
     revision: checkedOut,
-    message: `Checkout concluído${checkedOut ? ` na revisão ${checkedOut}` : ''}: ${files} arquivo(s).`
+    message: `Checkout concluído${checkedOut ? ` na revisão ${checkedOut}` : ''}: ${count(files, 'arquivo', 'arquivos')}.`
   };
 }

@@ -1,3 +1,5 @@
+import { count } from './text.js';
+
 export type SavedEnvironmentValidationStatus = 'ready' | 'blocked' | 'error' | 'pending';
 
 export interface SavedEnvironment {
@@ -14,6 +16,9 @@ export interface SavedEnvironment {
   lastValidationStatus?: Exclude<SavedEnvironmentValidationStatus, 'pending'>;
   // Caminhos relativos (arquivo ou pasta) que a sincronização Git → SVN não copia.
   syncExclusions?: string[];
+  // Revisões publicadas pelo SVNFlow a partir deste checkout: já estão nele,
+  // mesmo que a revisão base do checkout seja anterior.
+  committedRevisions?: string[];
 }
 
 export interface SavedEnvironmentListItem extends Omit<SavedEnvironment, 'lastValidationStatus'> {
@@ -48,6 +53,7 @@ export interface SelectedEnvironment {
   baseBranch?: string;
   lastSyncedGitCommit?: string;
   syncExclusions?: string[];
+  committedRevisions?: string[];
 }
 
 export interface SelectSavedEnvironmentResult {
@@ -124,8 +130,8 @@ export function listSavedEnvironments(input: ListSavedEnvironmentsInput): ListSa
   return {
     items,
     message: pendingCount > 0
-      ? `${items.length} ambiente(s) carregado(s), ${pendingCount} pendente(s) de revalidação.`
-      : `${items.length} ambiente(s) carregado(s).`
+      ? `${count(items.length, 'projeto carregado', 'projetos carregados')}, ${count(pendingCount, 'pendente', 'pendentes')} de revalidação.`
+      : `${count(items.length, 'projeto carregado', 'projetos carregados')}.`
   };
 }
 
@@ -154,7 +160,8 @@ export function selectSavedEnvironment(input: SelectSavedEnvironmentInput): Sele
       svnCheckoutPath: selected.svnCheckoutPath,
       baseBranch: selected.baseBranch,
       lastSyncedGitCommit: selected.lastSyncedGitCommit,
-      syncExclusions: selected.syncExclusions
+      syncExclusions: selected.syncExclusions,
+      committedRevisions: selected.committedRevisions
     },
     lastValidationStatus: selected.lastValidationStatus,
     needsRevalidation: true,

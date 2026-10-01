@@ -7,6 +7,7 @@ import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-cl
 import { runSvnInSession } from './svn-session.js';
 import { svnLocalTarget } from './svn-path.js';
 import { parseInfoXml, parseStatusXml } from './svn-xml.js';
+import { count } from './text.js';
 
 export type WorkingCopyKind = 'modified' | 'added' | 'deleted' | 'missing' | 'unversioned' | 'conflicted' | 'replaced' | 'obstructed';
 
@@ -146,7 +147,7 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
     conflicts,
     message: changes.length === 0
       ? 'Nenhuma alteração local no checkout SVN.'
-      : `${changes.length} alteração(ões) local(is) no checkout SVN.`
+      : `${count(changes.length, 'alteração local', 'alterações locais')} no checkout SVN.`
   };
 }
 
@@ -322,7 +323,7 @@ export async function commitSelected(input: CommitSelectedInput): Promise<Commit
     ok: true,
     revision,
     committed: targets,
-    message: revision ? `Revisão ${revision} publicada no SVN com ${targets.length} caminho(s).` : 'Commit concluído.'
+    message: revision ? `Revisão ${revision} publicada no SVN com ${count(targets.length, 'caminho', 'caminhos')}.` : 'Commit concluído.'
   };
 }
 
@@ -346,7 +347,7 @@ export interface UpdateResult {
 }
 
 // Quantas revisões do servidor mexeram no projeto depois da revisão do checkout.
-export async function countIncoming(checkoutPath: string, options: WorkingCopyOptions = {}): Promise<IncomingResult> {
+export async function countIncoming(checkoutPath: string, options: WorkingCopyOptions & { localRevisions?: string[] } = {}): Promise<IncomingResult> {
   const local = await runSvnInSession(['info', '--xml', '.'], { cwd: checkoutPath, configDir: options.configDir });
 
   if (!local.ok) {
@@ -380,9 +381,13 @@ export async function countIncoming(checkoutPath: string, options: WorkingCopyOp
     return { ok: false, message: log.message, incoming: 0, workingCopyRevision: info.revision, errorCode: log.errorCode };
   }
 
-  const incoming = log.stdout.split('\n').filter((line) => /^r\d+ \|/.test(line)).length;
+  // Revisões publicadas daqui já estão no checkout e não contam como novidade.
+  const ownRevisions = new Set(options.localRevisions ?? []);
+  const incoming = log.stdout.split('\n')
+    .map((line) => line.match(/^r(\d+) \|/)?.[1])
+    .filter((revision): revision is string => revision !== undefined && !ownRevisions.has(revision)).length;
 
-  return { ...base, incoming, message: `${incoming} revisão(ões) nova(s) no servidor.` };
+  return { ...base, incoming, message: `${count(incoming, 'revisão nova', 'revisões novas')} no servidor.` };
 }
 
 export async function updateWorkingCopy(checkoutPath: string, options: WorkingCopyOptions = {}): Promise<UpdateResult> {
@@ -402,8 +407,15 @@ export async function updateWorkingCopy(checkoutPath: string, options: WorkingCo
     url: before.url,
     credentials: options.credentials,
     configDir: options.configDir,
-    timeoutMs: 10 * 60 * 1000
+    timeoutMs: 10 * 60 * 1000,
+    cancelable: true
   });
+
+  if (result.errorCode === 'CANCELLED') {
+    // Update interrompido deixa o checkout travado: o cleanup libera para uso.
+    await runSvnInSession(['cleanup', '.'], { cwd: checkoutPath, configDir: options.configDir });
+    return { ok: false, message: 'Atualização cancelada. O checkout pode ter ficado parcialmente atualizado; atualize de novo quando quiser.', updated: [], conflicts: [], errorCode: 'CANCELLED' };
+  }
 
   if (!result.ok) {
     return { ok: false, message: result.message, updated: [], conflicts: [], detail: svnErrorDetail(result.stderr), errorCode: result.errorCode };
@@ -441,10 +453,10 @@ export async function updateWorkingCopy(checkoutPath: string, options: WorkingCo
     updated,
     conflicts,
     message: conflicts.length > 0
-      ? `Atualizado para a revisão ${revision ?? '?'} com ${conflicts.length} conflito(s). Resolva antes de commitar.`
+      ? `Atualizado para a revisão ${revision ?? '?'} com ${count(conflicts.length, 'conflito', 'conflitos')}. Resolva antes de commitar.`
       : updated.length === 0
         ? `O checkout já estava na revisão ${revision ?? '?'}.`
-        : `Atualizado para a revisão ${revision ?? '?'}: ${updated.length} arquivo(s).`
+        : `Atualizado para a revisão ${revision ?? '?'}: ${count(updated.length, 'arquivo', 'arquivos')}.`
   };
 }
 
@@ -544,8 +556,8 @@ export async function discardChanges(input: DiscardInput): Promise<DiscardResult
     ...base,
     ok,
     message: ok
-      ? `${base.discarded.length} alteração(ões) descartada(s). Uma cópia do conteúdo foi para a Lixeira.`
-      : `${base.discarded.length} descartada(s), ${base.errors.length} com erro.`
+      ? `${count(base.discarded.length, 'alteração descartada', 'alterações descartadas')}. Uma cópia do conteúdo foi para a Lixeira.`
+      : `${count(base.discarded.length, 'descartada', 'descartadas')}, ${base.errors.length} com erro.`
   };
 }
 
@@ -649,5 +661,164 @@ export async function addToSvnIgnore(input: SvnIgnoreInput): Promise<SimpleResul
   return {
     ok: true,
     message: `${pattern} adicionado ao svn:ignore ${where}. Commite a alteração ${where} (aparece na lista) para valer para a equipe.`
+  };
+}
+
+// Conflitos --------------------------------------------------------------------
+
+export type ConflictChoice = 'mine' | 'theirs' | 'edited';
+
+export interface ResolveConflictInput {
+  checkoutPath: string;
+  path: string;
+  choice: ConflictChoice;
+  configDir?: string;
+}
+
+// "mine" e "theirs" valem para o arquivo inteiro; "edited" aceita o arquivo como
+// está, depois de a pessoa editar os trechos marcados.
+const ACCEPT_BY_CHOICE: Record<ConflictChoice, string> = { mine: 'mine-full', theirs: 'theirs-full', edited: 'working' };
+
+export async function resolveConflict(input: ResolveConflictInput): Promise<SimpleResult> {
+  if (!isSafeRelative(input.path) || !(input.choice in ACCEPT_BY_CHOICE)) {
+    return { ok: false, message: 'Arquivo ou escolha inválidos.' };
+  }
+
+  const status = await readWorkingCopyStatus(input.checkoutPath, { configDir: input.configDir });
+  const change = status.changes.find((item) => item.path === input.path);
+
+  if (!change || change.kind !== 'conflicted') {
+    return { ok: false, message: 'Este arquivo não está mais em conflito. Atualize a lista.' };
+  }
+
+  if (input.choice === 'edited' && !change.isDirectory) {
+    const content = await readFile(path.join(input.checkoutPath, input.path), 'utf8').catch(() => '');
+    if (/^(<{7}|>{7}) /m.test(content)) {
+      return { ok: false, message: 'O arquivo ainda tem marcas de conflito (<<<<<<< e >>>>>>>). Edite os trechos e tente de novo.' };
+    }
+  }
+
+  const result = await runSvnInSession(['resolve', '--accept', ACCEPT_BY_CHOICE[input.choice], '--', svnLocalTarget(input.path)], {
+    cwd: input.checkoutPath,
+    configDir: input.configDir
+  });
+
+  if (!result.ok) {
+    return { ok: false, message: result.message, detail: svnErrorDetail(result.stderr) };
+  }
+
+  const label = { mine: 'com a sua versão', theirs: 'com a versão do servidor', edited: 'com a sua edição' }[input.choice];
+  return { ok: true, message: `Conflito em ${input.path} resolvido ${label}.` };
+}
+
+export interface ConflictHunk {
+  mine: string[];
+  theirs: string[];
+}
+
+// Trechos em conflito do arquivo, para a pessoa comparar antes de escolher.
+export async function readConflictHunks(checkoutPath: string, filePath: string): Promise<ConflictHunk[]> {
+  if (!isSafeRelative(filePath)) {
+    return [];
+  }
+
+  const content = await readFile(path.join(checkoutPath, filePath), 'utf8').catch(() => '');
+  const hunks: ConflictHunk[] = [];
+  let current: ConflictHunk | undefined;
+  let side: 'mine' | 'base' | 'theirs' = 'mine';
+
+  for (const line of content.split(/\r?\n/)) {
+    if (line.startsWith('<<<<<<< ')) {
+      current = { mine: [], theirs: [] };
+      side = 'mine';
+    } else if (current && line.startsWith('||||||| ')) {
+      side = 'base';
+    } else if (current && line === '=======') {
+      side = 'theirs';
+    } else if (current && line.startsWith('>>>>>>> ')) {
+      hunks.push(current);
+      current = undefined;
+    } else if (current && side !== 'base') {
+      current[side].push(line);
+    }
+  }
+
+  return hunks;
+}
+
+// Desfazer revisão ---------------------------------------------------------------
+
+export interface RevertRevisionResult extends SimpleResult {
+  changed: string[];
+  conflicts: string[];
+  errorCode?: SvnErrorCode | 'INVALID_REVISION' | 'HAS_CONFLICTS' | 'NEEDS_UPDATE';
+}
+
+// Aplica no checkout o inverso da revisão (svn merge -c -N). Nada é publicado:
+// as mudanças aparecem em Alterações para a pessoa revisar e commitar.
+export async function revertRevision(input: { checkoutPath: string; revision: string; credentials?: SvnCredentials; configDir?: string }): Promise<RevertRevisionResult> {
+  const base = { changed: [] as string[], conflicts: [] as string[] };
+
+  if (!/^\d+$/.test(input.revision) || Number(input.revision) < 1) {
+    return { ...base, ok: false, message: 'Revisão inválida.', errorCode: 'INVALID_REVISION' };
+  }
+
+  const status = await readWorkingCopyStatus(input.checkoutPath, { configDir: input.configDir });
+
+  if (!status.ok) {
+    return { ...base, ok: false, message: status.message, detail: status.detail, errorCode: status.errorCode };
+  }
+
+  if (status.conflicts > 0) {
+    return { ...base, ok: false, message: 'Resolva os conflitos do checkout antes de desfazer uma revisão.', errorCode: 'HAS_CONFLICTS' };
+  }
+
+  const result = await runSvnInSession(['merge', '--accept', 'postpone', '-c', `-${input.revision}`, status.url ?? '', '.'], {
+    cwd: input.checkoutPath,
+    url: status.url,
+    credentials: input.credentials,
+    configDir: input.configDir,
+    timeoutMs: 10 * 60 * 1000
+  });
+
+  if (!result.ok) {
+    // Depois de um commit o checkout fica com revisões misturadas, e o merge exige um update antes.
+    if (/E195020|mixed-revision/i.test(result.stderr)) {
+      return { ...base, ok: false, message: 'O checkout tem partes em revisões diferentes (normal depois de um commit). Atualize do servidor e tente de novo.', errorCode: 'NEEDS_UPDATE' };
+    }
+
+    return { ...base, ok: false, message: result.message, detail: svnErrorDetail(result.stderr), errorCode: result.errorCode };
+  }
+
+  for (const line of result.stdout.split('\n')) {
+    const match = line.match(/^([ADUCGR ])([ADUCGR ]?)[ C]?\s+(.+)$/);
+
+    if (!match || /^(--- |Summary of conflicts|Text conflicts|Tree conflicts)/.test(line)) {
+      continue;
+    }
+
+    const changedPath = toPosix(match[3].trim().replace(/^\.\//, ''));
+
+    if (changedPath === '.' && !match[1].trim()) {
+      continue;
+    }
+
+    base.changed.push(changedPath);
+
+    if (match[1] === 'C' || match[2] === 'C') {
+      base.conflicts.push(changedPath);
+    }
+  }
+
+  if (base.changed.length === 0) {
+    return { ...base, ok: true, message: `A revisão ${input.revision} não alterou nada neste projeto.` };
+  }
+
+  return {
+    ...base,
+    ok: true,
+    message: base.conflicts.length > 0
+      ? `Revisão ${input.revision} desfeita no checkout com ${count(base.conflicts.length, 'conflito', 'conflitos')}. Resolva e revise antes de publicar.`
+      : `Revisão ${input.revision} desfeita no checkout: ${count(base.changed.length, 'arquivo', 'arquivos')}. Revise e publique em Alterações.`
   };
 }

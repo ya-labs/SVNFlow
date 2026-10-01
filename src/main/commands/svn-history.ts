@@ -3,6 +3,7 @@ import { toDiffResult, type SyncFileDiff } from './git-svn-sync.js';
 import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-client.js';
 import { runSvnInSession } from './svn-session.js';
 import { parseInfoXml, parseLogXml, type SvnXmlLogEntry } from './svn-xml.js';
+import { count } from './text.js';
 
 export interface SvnLogPage {
   ok: boolean;
@@ -12,6 +13,8 @@ export interface SvnLogPage {
   // Caminho do projeto dentro do repositório (ex.: /projeto/trunk), para encurtar os caminhos do log.
   projectPath?: string;
   workingCopyRevision?: string;
+  // Revisões publicadas a partir deste checkout (já estão nele).
+  localRevisions?: string[];
   entries: SvnXmlLogEntry[];
   hasMore: boolean;
   detail?: string;
@@ -78,7 +81,8 @@ export async function readLog(input: ReadLogInput): Promise<SvnLogPage> {
     url,
     credentials: input.credentials,
     configDir: input.configDir,
-    timeoutMs: 120000
+    timeoutMs: 120000,
+    cancelable: true
   });
 
   if (!log.ok) {
@@ -97,7 +101,7 @@ export async function readLog(input: ReadLogInput): Promise<SvnLogPage> {
     workingCopyRevision: input.url ? undefined : parsedInfo.revision,
     entries: entries.slice(0, limit),
     hasMore: entries.length > limit,
-    message: entries.length === 0 ? 'Nenhum commit no histórico.' : `${Math.min(entries.length, limit)} commit(s) carregado(s).`
+    message: entries.length === 0 ? 'Nenhum commit no histórico.' : `${count(Math.min(entries.length, limit), 'commit carregado', 'commits carregados')}.`
   };
 }
 
@@ -113,7 +117,8 @@ export async function readRevisionDiff(input: RevisionDiffInput): Promise<SyncFi
     url: input.repositoryRoot,
     credentials: input.credentials,
     configDir: input.configDir,
-    timeoutMs: 120000
+    timeoutMs: 120000,
+    cancelable: true
   });
 
   if (!diff.ok) {

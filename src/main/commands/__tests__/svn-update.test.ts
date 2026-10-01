@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import os from 'node:os';
 import path from 'node:path';
 
-import { countIncoming, readWorkingCopyStatus, updateWorkingCopy } from '../svn-working-copy';
+import { countIncoming, readConflictHunks, readWorkingCopyStatus, resolveConflict, updateWorkingCopy } from '../svn-working-copy';
 
 function hasCommand(command: string): boolean {
   try {
@@ -75,6 +75,16 @@ describeWithSvn('atualizar checkout (svn update)', () => {
     expect((await countIncoming(mine)).incoming).toBe(0);
   });
 
+  it('não conta como novidade a revisão publicada a partir do próprio checkout', async () => {
+    writeFileSync(path.join(mine, 'b.txt'), 'b meu\n');
+    const output = svn(['commit', '-m', 'Meu commit'], mine);
+    const revision = output.match(/(?:Committed revision|revisão) (\d+)/i)?.[1] ?? '';
+    expect(revision).not.toBe('');
+
+    expect((await countIncoming(mine)).incoming).toBe(1);
+    expect((await countIncoming(mine, { localRevisions: [revision] })).incoming).toBe(0);
+  });
+
   it('marca conflito sem resolver sozinho e bloqueia novo update', async () => {
     writeFileSync(path.join(other, 'a.txt'), 'versão da outra pessoa\n');
     svn(['commit', '--quiet', '-m', 'Outra pessoa muda a'], other);
@@ -91,5 +101,31 @@ describeWithSvn('atualizar checkout (svn update)', () => {
     expect(status.changes.map((change) => `${change.path}:${change.kind}`)).toEqual(['a.txt:conflicted']);
 
     expect((await updateWorkingCopy(mine)).errorCode).toBe('HAS_CONFLICTS');
+  });
+
+  it('mostra os trechos em conflito e resolve pela escolha da pessoa', async () => {
+    expect(await readConflictHunks(mine, 'a.txt')).toEqual([{ mine: ['minha versão'], theirs: ['versão da outra pessoa'] }]);
+
+    const blocked = await resolveConflict({ checkoutPath: mine, path: 'a.txt', choice: 'edited' });
+    expect(blocked.ok).toBe(false);
+    expect(blocked.message).toContain('marcas de conflito');
+
+    expect((await resolveConflict({ checkoutPath: mine, path: 'a.txt', choice: 'theirs' })).ok).toBe(true);
+    expect(readFileSync(path.join(mine, 'a.txt'), 'utf8')).toBe('versão da outra pessoa\n');
+    expect((await readWorkingCopyStatus(mine)).conflicts).toBe(0);
+
+    // Novo conflito, resolvido editando o arquivo à mão.
+    writeFileSync(path.join(other, 'a.txt'), 'servidor de novo\n');
+    svn(['update', '--quiet'], other);
+    writeFileSync(path.join(other, 'a.txt'), 'servidor de novo\n');
+    svn(['commit', '--quiet', '-m', 'Outra pessoa de novo'], other);
+    writeFileSync(path.join(mine, 'a.txt'), 'local de novo\n');
+    expect((await updateWorkingCopy(mine)).conflicts).toEqual(['a.txt']);
+
+    writeFileSync(path.join(mine, 'a.txt'), 'combinado à mão\n');
+    expect((await resolveConflict({ checkoutPath: mine, path: 'a.txt', choice: 'edited' })).ok).toBe(true);
+    expect(readFileSync(path.join(mine, 'a.txt'), 'utf8')).toBe('combinado à mão\n');
+    expect((await resolveConflict({ checkoutPath: mine, path: 'a.txt', choice: 'mine' })).ok).toBe(false);
+    expect((await resolveConflict({ checkoutPath: mine, path: '../fora', choice: 'mine' })).ok).toBe(false);
   });
 });

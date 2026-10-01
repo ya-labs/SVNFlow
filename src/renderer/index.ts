@@ -5,6 +5,8 @@ import type {
   RemoteListing,
   RepositoriesState,
   SvnCredentials,
+  ConflictChoice,
+  ConflictHunk,
   GitBranch,
   EnvironmentScreenState,
   AppTheme,
@@ -33,6 +35,15 @@ function api(): SvnflowDesktopApi {
   return window.svnflowDesktop;
 }
 
+// Concordância de número: "1 arquivo", "3 arquivos".
+function plural(value: number, singular: string, pluralForm: string): string {
+  return value === 1 ? singular : pluralForm;
+}
+
+function count(value: number, singular: string, pluralForm: string): string {
+  return `${value} ${plural(value, singular, pluralForm)}`;
+}
+
 function escapeHtml(value: string | number | undefined): string {
   return String(value ?? '')
     .split('&').join('&amp;')
@@ -48,6 +59,9 @@ function query<T extends HTMLElement>(selector: string, root: ParentNode = docum
 
 // Mensagens de andamento terminam em "..." (ou "…"); enquanto uma delas está
 // na barra de status, o aviso de carregamento fica visível no topo da janela.
+// Operações que demoram mais que alguns segundos ganham o botão "Cancelar".
+let cancelTimer: number | undefined;
+
 function setStatusMessage(message: string): void {
   const status = query<HTMLElement>('[data-role="app-status"]');
 
@@ -61,6 +75,20 @@ function setStatusMessage(message: string): void {
   if (indicator) {
     indicator.hidden = !busy;
     setText('busy-label', message.trim().replace(/(\.\.\.|…)$/, '…'));
+  }
+
+  const cancel = query<HTMLButtonElement>('[data-role="busy-cancel"]');
+  window.clearTimeout(cancelTimer);
+
+  if (cancel) {
+    cancel.hidden = true;
+    cancel.disabled = false;
+
+    if (busy) {
+      cancelTimer = window.setTimeout(() => {
+        cancel.hidden = false;
+      }, 2500);
+    }
   }
 }
 
@@ -84,7 +112,7 @@ function bindClick(root: ParentNode, selector: string, handler: (button: HTMLBut
 // Visão principal (no estilo do GitHub Desktop)
 
 type DesktopTab = 'changes' | 'history';
-type ChangeKind = 'added' | 'modified' | 'deleted' | 'conflicted';
+type ChangeKind = 'added' | 'untracked' | 'modified' | 'deleted' | 'conflicted';
 
 interface ChangeItem {
   path: string;
@@ -137,8 +165,10 @@ interface HistoryLogState {
   entries: SvnXmlLogEntry[];
   hasMore: boolean;
   workingCopyRevision?: string;
+  localRevisions?: string[];
   repositoryRoot?: string;
   projectPath?: string;
+  url?: string;
   error?: string;
   detail?: string;
 }
@@ -149,13 +179,13 @@ function emptyHistoryLog(): HistoryLogState {
 
 const desktop: DesktopState = { tab: 'changes', requestId: 0, checked: new Set(), knownPaths: new Set(), knownIgnored: new Set(), log: emptyHistoryLog() };
 
-const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', modified: '•', deleted: '−', conflicted: '!' };
+const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', untracked: '?', modified: '•', deleted: '−', conflicted: '!' };
 
 const WORKING_COPY_LABELS: Record<string, { kind: ChangeKind; label: string }> = {
   modified: { kind: 'modified', label: 'Modificado' },
   replaced: { kind: 'modified', label: 'Substituído' },
   added: { kind: 'added', label: 'Adicionado' },
-  unversioned: { kind: 'added', label: 'Novo (fora do SVN)' },
+  unversioned: { kind: 'untracked', label: 'Novo (fora do SVN)' },
   deleted: { kind: 'deleted', label: 'Removido' },
   missing: { kind: 'deleted', label: 'Apagado do disco' },
   conflicted: { kind: 'conflicted', label: 'Em conflito' },
@@ -251,7 +281,7 @@ function firstLine(message: string): string {
 
 function isNewOnServer(revision: string): boolean {
   const current = desktop.log.workingCopyRevision;
-  return current !== undefined && Number(revision) > Number(current);
+  return current !== undefined && Number(revision) > Number(current) && !desktop.log.localRevisions?.includes(revision);
 }
 
 function relativeLogPath(logPath: string): string {
@@ -292,7 +322,9 @@ async function loadHistory(more = false): Promise<void> {
     log.entries = more ? [...log.entries, ...page.entries] : page.entries;
     log.hasMore = page.hasMore;
     log.workingCopyRevision = page.workingCopyRevision;
+    log.localRevisions = page.localRevisions;
     log.repositoryRoot = page.repositoryRoot;
+    log.url = page.url;
     log.projectPath = page.projectPath;
   }
 
@@ -342,7 +374,16 @@ function renderToolbar(): void {
   const gitLinked = Boolean(desktop.environments?.selected?.gitWorkspacePath);
   const localChanges = desktop.workingCopy?.changes.length ?? 0;
 
+  const hasProject = Boolean(desktop.environments?.selected);
   setText('environment-name', desktop.environments?.selected?.name ?? 'Nenhum projeto');
+
+  // Sem projeto, branch e verificação não têm sobre o que agir.
+  for (const role of ['branch-picker', 'refresh']) {
+    const button = query<HTMLButtonElement>(`[data-role="${role}"]`);
+    if (button) {
+      button.hidden = !hasProject;
+    }
+  }
   setText('git-branch', source ? `${source.branch ?? 'HEAD'} · ${source.shortCommit}` : desktop.screen?.environment ? 'Sem Git vinculado' : '-');
 
   const branchPicker = query<HTMLButtonElement>('[data-role="branch-picker"]');
@@ -359,13 +400,16 @@ function renderToolbar(): void {
 
   if (incoming > 0) {
     setText('refresh-label', 'Atualizar do servidor');
-    setText('refresh-value', `${incoming} revisão(ões) nova(s)`);
+    setText('refresh-value', count(incoming, 'revisão nova', 'revisões novas'));
   } else if (isCopyStep()) {
     setText('refresh-label', 'Diferenças com o Git');
-    setText('refresh-value', `${plan!.changes.length} arquivo(s) a copiar`);
+    setText('refresh-value', `${count(plan!.changes.length, 'arquivo', 'arquivos')} a copiar`);
+  } else if (desktop.workingCopy?.errorCode === 'MISSING_FOLDER') {
+    setText('refresh-label', 'Pasta do projeto');
+    setText('refresh-value', 'Não encontrada');
   } else if (localChanges > 0) {
     setText('refresh-label', 'Alterações locais');
-    setText('refresh-value', `${localChanges} alteração(ões) no checkout`);
+    setText('refresh-value', `${count(localChanges, 'alteração', 'alterações')} no checkout`);
   } else {
     setText('refresh-label', 'Verificar alterações');
     setText('refresh-value', gitLinked ? 'SVN igual ao Git' : 'Checkout sem alterações');
@@ -466,7 +510,7 @@ function renderSidebar(): void {
   const switcher = isCopyStep()
     ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-svn-changes" title="Descartar, ignorar e commitar o que já está no checkout SVN">Ver alterações do checkout SVN</button></div>`
     : hasGitDifferences()
-      ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-copy-step">← Voltar às ${desktop.screen!.plan!.changes.length} diferença(s) do Git</button></div>`
+      ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-copy-step">← Voltar ${plural(desktop.screen!.plan!.changes.length, 'à', 'às')} ${count(desktop.screen!.plan!.changes.length, 'diferença', 'diferenças')} do Git</button></div>`
       : '';
 
   const exclusions = desktop.screen?.plan?.exclusions ?? [];
@@ -486,7 +530,7 @@ function renderSidebar(): void {
   let header: string;
 
   if (isCopyStep()) {
-    header = `<div class="list-header">${escapeHtml(`${items.length} arquivo(s) diferentes do Git`)}</div>${switcher}`;
+    header = `<div class="list-header">${escapeHtml(`${count(items.length, 'arquivo diferente', 'arquivos diferentes')} do Git`)}</div>${switcher}`;
   } else {
     const selectable = items.filter((item) => item.selectable);
     const checked = checkedItems().length;
@@ -495,7 +539,7 @@ function renderSidebar(): void {
       <div class="list-header list-toolbar">
         <label class="select-all">
           <input type="checkbox" data-role="select-all" ${allChecked ? 'checked' : ''} ${selectable.length === 0 ? 'disabled' : ''} />
-          <span>${items.length} alteração(ões) · ${checked} selecionada(s)</span>
+          <span>${count(items.length, 'alteração', 'alterações')} · ${count(checked, 'selecionada', 'selecionadas')}</span>
         </label>
         <button type="button" class="button small danger" data-role="discard-selected" ${checked === 0 ? 'disabled' : ''} title="Descartar as alterações marcadas">Descartar</button>
       </div>${switcher}
@@ -844,15 +888,17 @@ function renderFlowSteps(current: 1 | 2): string {
   }
 
   const copyPending = hasGitDifferences();
+  // Sincronização bloqueada (ex.: conflito no checkout): a cópia não foi feita nem pode ser.
+  const copyBlocked = desktop.screen?.plan?.status === 'blocked';
   const step = (index: 1 | 2, title: string, detail: string): string => {
-    const status = index === current ? 'current' : index === 1 && !copyPending ? 'done' : index === 1 ? 'pending' : 'todo';
-    const marker = status === 'done' ? '✓' : String(index);
+    const status = index === current ? 'current' : index !== 1 ? 'todo' : copyBlocked ? 'blocked' : copyPending ? 'pending' : 'done';
+    const marker = status === 'done' ? '✓' : status === 'blocked' ? '!' : String(index);
     return `<li class="flow-step" data-status="${status}" ${index === current ? 'aria-current="step"' : ''}><span class="flow-marker">${marker}</span><span class="flow-text"><strong>${title}</strong><small>${detail}</small></span></li>`;
   };
 
   return `
     <ol class="flow-steps" aria-label="Etapas da sincronização">
-      ${step(1, 'Copiar do Git', copyPending ? 'só local' : 'concluído')}
+      ${step(1, 'Copiar do Git', copyBlocked ? 'bloqueado' : copyPending ? 'só local' : 'concluído')}
       <li class="flow-arrow" aria-hidden="true">›</li>
       ${step(2, 'Publicar no SVN', 'no servidor')}
     </ol>
@@ -878,7 +924,7 @@ function renderCommitBox(): void {
     box.innerHTML = `
       ${renderFlowSteps(1)}
       <p class="commit-box-hint">Atualiza só os arquivos locais do checkout SVN para o commit <strong>${escapeHtml(plan.source.shortCommit)}</strong>. <strong>Nada é publicado no servidor nesta etapa.</strong></p>
-      <button type="button" class="button block copy-action" data-role="copy-to-svn">⇣ Copiar ${plan.changes.length} arquivo(s) para o checkout</button>
+      <button type="button" class="button block copy-action" data-role="copy-to-svn" title="Ctrl+Enter">⇣ Copiar ${count(plan.changes.length, 'arquivo', 'arquivos')} para o checkout</button>
     `;
     bindClick(box, '[data-role="copy-to-svn"]', copyToSvn);
     return;
@@ -891,7 +937,7 @@ function renderCommitBox(): void {
   }
 
   const draft = ensureCommitDraft();
-  const count = checkedItems().length;
+  const selectedCount = checkedItems().length;
   const hasSuggestion = suggestedCommitMessage().length > 0;
 
   box.innerHTML = `
@@ -899,7 +945,7 @@ function renderCommitBox(): void {
     <input class="input" data-role="commit-summary" type="text" placeholder="Resumo (obrigatório)" value="${escapeHtml(draft.summary)}" aria-label="Resumo do commit SVN" />
     <textarea class="input" data-role="commit-description" placeholder="Descrição" aria-label="Descrição do commit SVN">${escapeHtml(draft.description)}</textarea>
     ${hasSuggestion ? '<button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>' : ''}
-    <button type="button" class="button success block" data-role="commit-svn">${count > 0 ? `⇡ Publicar ${count} arquivo(s) no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
+    <button type="button" class="button success block" data-role="commit-svn" title="Ctrl+Enter">${selectedCount > 0 ? `⇡ Publicar ${count(selectedCount, 'arquivo', 'arquivos')} no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
   `;
 
   const summary = query<HTMLInputElement>('[data-role="commit-summary"]', box)!;
@@ -909,16 +955,11 @@ function renderCommitBox(): void {
   const refresh = () => {
     draft.summary = summary.value;
     draft.description = description.value;
-    submit.disabled = summary.value.trim().length === 0 || count === 0;
+    submit.disabled = summary.value.trim().length === 0 || selectedCount === 0;
   };
 
   summary.addEventListener('input', refresh);
   description.addEventListener('input', refresh);
-  summary.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !submit.disabled) {
-      submit.click();
-    }
-  });
   refresh();
 
   bindClick(box, '[data-role="reset-message"]', () => {
@@ -937,7 +978,7 @@ async function copyToSvn(): Promise<void> {
 
   const confirmed = await confirmModal({
     title: 'Etapa 1 de 2 · Copiar do Git para o checkout',
-    message: `${plan.totals.added} arquivo(s) serão criados, ${plan.totals.modified} atualizados e ${plan.totals.deleted} removidos em ${plan.svnCheckoutPath}, para ficar igual ao commit ${plan.source.shortCommit}. Nada será publicado no SVN ainda.`,
+    message: `${count(plan.totals.added, 'arquivo criado', 'arquivos criados')}, ${count(plan.totals.modified, 'atualizado', 'atualizados')} e ${count(plan.totals.deleted, 'removido', 'removidos')} em ${plan.svnCheckoutPath}, para ficar igual ao commit ${plan.source.shortCommit}. Nada será publicado no SVN ainda.`,
     confirmLabel: 'Copiar arquivos'
   });
 
@@ -964,10 +1005,10 @@ async function copyToSvn(): Promise<void> {
 // Revisão final antes do commit: o commit cria uma revisão no servidor, visível
 // para a equipe, então a confirmação mostra tudo o que vai ser publicado.
 function publishReviewModal(items: ChangeItem[], draft: CommitDraft, url: string): Promise<boolean> {
-  const count = (kind: ChangeKind): number => items.filter((item) => item.kind === kind).length;
-  const totals = ([['added', 'novo(s)'], ['modified', 'alterado(s)'], ['deleted', 'removido(s)']] as Array<[ChangeKind, string]>)
-    .filter(([kind]) => count(kind) > 0)
-    .map(([kind, label]) => `<span class="review-chip" data-kind="${kind}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${count(kind)} ${label}</span>`)
+  const ofKind = (kind: ChangeKind): number => items.filter((item) => item.kind === kind).length;
+  const totals = ([['added', 'novo', 'novos'], ['untracked', 'novo fora do SVN', 'novos fora do SVN'], ['modified', 'alterado', 'alterados'], ['deleted', 'removido', 'removidos']] as Array<[ChangeKind, string, string]>)
+    .filter(([kind]) => ofKind(kind) > 0)
+    .map(([kind, singular, pluralForm]) => `<span class="review-chip" data-kind="${kind}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${count(ofKind(kind), singular, pluralForm)}</span>`)
     .join('');
   const title = desktop.screen?.environment?.gitWorkspacePath ? 'Etapa 2 de 2 · Publicar no servidor SVN' : 'Publicar no servidor SVN';
 
@@ -985,14 +1026,14 @@ function publishReviewModal(items: ChangeItem[], draft: CommitDraft, url: string
           <div class="review-message"><strong>${escapeHtml(draft.summary.trim())}</strong>${draft.description.trim() ? `<p>${escapeHtml(draft.description.trim())}</p>` : ''}</div>
         </div>
         <div class="review-field">
-          <span class="review-label">${items.length} arquivo(s)</span>
+          <span class="review-label">${count(items.length, 'arquivo', 'arquivos')}</span>
           <div class="review-chips">${totals}</div>
           <ul class="review-files">${items.map((item) => `<li title="${escapeHtml(item.path)}"><span class="change-icon" data-kind="${item.kind}">${CHANGE_ICONS[item.kind]}</span>${renderSplitPath(item.path)}</li>`).join('')}</ul>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="button" data-role="modal-cancel">Voltar e revisar</button>
-        <button type="button" class="button success" data-role="modal-confirm">⇡ Publicar ${items.length} arquivo(s) no SVN</button>
+        <button type="button" class="button success" data-role="modal-confirm">⇡ Publicar ${count(items.length, 'arquivo', 'arquivos')} no SVN</button>
       </div>
     `);
     modal.classList.add('modal-wide');
@@ -1117,6 +1158,19 @@ async function openInEditor(which: 'git' | 'svn', filePath?: string): Promise<vo
   setStatusMessage(result.message);
 }
 
+async function relocateProject(): Promise<void> {
+  const selected = desktop.environments?.selected;
+  const folder = selected ? await api().selectDirectory('Escolher a nova pasta do checkout SVN') : undefined;
+
+  if (!selected || !folder) {
+    return;
+  }
+
+  const result = await api().relocateProject(selected.id, folder);
+  desktop.banner = { tone: result.ok ? 'success' : 'error', html: `<p><strong>${escapeHtml(result.message)}</strong></p>` };
+  await loadDesktop();
+}
+
 function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="add-environment"]', () => openAddEnvironmentModal());
   bindClick(detail, '[data-role="open-svn"]', () => api().openEnvironmentFolder(state.selectedEnvironmentId, 'svn'));
@@ -1127,6 +1181,17 @@ function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="link-git"]', () => openLinkGitModal());
   bindClick(detail, '[data-role="banner-update"]', () => updateFromServer());
   bindClick(detail, '[data-role="open-repositories-inline"]', () => showRepositoriesView());
+  bindClick(detail, '[data-role="relocate-project"]', () => relocateProject());
+  bindClick(detail, '[data-role="remove-missing-project"]', async () => {
+    const selected = desktop.environments?.selected;
+
+    if (selected && await confirmModal({ title: 'Remover projeto', message: `Remover "${selected.name}" da lista? Nenhuma pasta é apagada.`, confirmLabel: 'Remover', danger: true })) {
+      await api().removeEnvironment(selected.id);
+      state.selectedEnvironmentId = undefined;
+      desktop.banner = undefined;
+      await loadDesktop();
+    }
+  });
 }
 
 // Fecha o diff aberto e volta para a tela inicial da aba (ou para a revisão).
@@ -1161,7 +1226,11 @@ async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId
   let body: string;
 
   if (item.kind === 'conflicted') {
-    body = blankSlate('Arquivo em conflito', 'Resolva o conflito no checkout (edite o arquivo e rode svn resolve) antes de commitar. Depois clique em Verificar.');
+    body = renderConflictPanel(item, await api().getConflictHunks(state.selectedEnvironmentId, item.path));
+
+    if (requestId !== desktop.requestId) {
+      return;
+    }
   } else if (!diff || diff.kind === 'empty') {
     body = blankSlate('Sem diferença de conteúdo', item.kind === 'deleted' ? 'O arquivo será removido do SVN.' : 'Não há diferença textual para mostrar.');
   } else if (diff.kind === 'binary') {
@@ -1175,6 +1244,62 @@ async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId
   }
 
   detail.innerHTML = `${renderBanner()}${header}${body}`;
+  bindConflictActions(detail, item);
+}
+
+// Conflito: mostra os trechos dos dois lados e deixa escolher como resolver.
+function renderConflictPanel(item: ChangeItem, hunks: ConflictHunk[]): string {
+  const side = (title: string, lines: string[]): string => `
+    <div class="conflict-side">
+      <div class="conflict-side-title">${title}</div>
+      <pre>${lines.length > 0 ? escapeHtml(lines.join('\n')) : '<span class="conflict-empty">(vazio)</span>'}</pre>
+    </div>`;
+  const comparison = hunks.length > 0
+    ? hunks.map((hunk, index) => `
+        <div class="conflict-hunk">
+          ${hunks.length > 1 ? `<div class="review-label">Trecho ${index + 1} de ${hunks.length}</div>` : ''}
+          <div class="conflict-sides">${side('Sua versão', hunk.mine)}${side('Versão do servidor', hunk.theirs)}</div>
+        </div>`).join('')
+    : `<p class="conflict-note">${item.isDirectory ? 'Conflito de estrutura (pasta movida, apagada ou criada dos dois lados).' : 'Não há trechos marcados para comparar (arquivo binário ou conflito de estrutura).'}</p>`;
+
+  return `
+    <div class="conflict-panel">
+      <div class="conflict-intro">
+        <strong>${escapeHtml(item.path)} mudou no seu checkout e no servidor.</strong>
+        <p>Escolha qual versão fica, ou edite o arquivo e marque como resolvido. Até resolver, ele não pode ser commitado.</p>
+      </div>
+      ${comparison}
+      <div class="conflict-actions">
+        <button type="button" class="button" data-conflict-choice="mine">Ficar com a minha</button>
+        <button type="button" class="button" data-conflict-choice="theirs">Ficar com a do servidor</button>
+        <button type="button" class="button" data-role="conflict-editor">Abrir no VS Code</button>
+        <button type="button" class="button primary" data-conflict-choice="edited">Já editei, marcar como resolvido</button>
+      </div>
+    </div>`;
+}
+
+function bindConflictActions(detail: HTMLElement, item: ChangeItem): void {
+  bindClick(detail, '[data-role="conflict-editor"]', () => openInEditor('svn', item.path));
+  bindClick(detail, '[data-conflict-choice]', async (button) => {
+    const choice = button.dataset.conflictChoice as ConflictChoice;
+
+    if (choice !== 'edited') {
+      const confirmed = await confirmModal({
+        title: choice === 'mine' ? 'Ficar com a sua versão' : 'Ficar com a versão do servidor',
+        message: choice === 'mine'
+          ? `As mudanças do servidor em ${item.path} serão ignoradas. O arquivo fica como estava no seu checkout antes do update.`
+          : `As suas mudanças em ${item.path} serão perdidas. O arquivo fica igual ao do servidor.`,
+        confirmLabel: 'Resolver',
+        danger: choice === 'theirs'
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    await runWorkingCopyAction(() => api().resolveConflict(state.selectedEnvironmentId, item.path, choice));
+  });
 }
 
 const LOG_ACTION_KIND: Record<string, ChangeKind> = { A: 'added', D: 'deleted', M: 'modified', R: 'modified' };
@@ -1225,8 +1350,12 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
     ${renderBanner()}
     <div class="detail-section">
       <h2>${escapeHtml(title.trim() || '(sem mensagem)')}</h2>
-      <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(entry.author ?? 'sem autor')} · ${escapeHtml(formatDate(entry.date))} · ${paths.length} arquivo(s)${isNewOnServer(revision) ? ' · <span class="badge-new">Ainda não está no seu checkout</span>' : ''}</p>
+      <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(entry.author ?? 'sem autor')} · ${escapeHtml(formatDate(entry.date))} · ${count(paths.length, 'arquivo', 'arquivos')}${isNewOnServer(revision) ? ' · <span class="badge-new">Ainda não está no seu checkout</span>' : ''}</p>
       ${body ? `<p class="commit-message-view">${escapeHtml(body)}</p>` : ''}
+      <div class="revision-actions">
+        <button type="button" class="button small" data-role="revert-revision" ${isNewOnServer(revision) ? 'disabled title="Atualize do servidor antes: esta revisão ainda não está no seu checkout."' : 'title="Aplica no checkout o inverso desta revisão. Nada é publicado até você commitar."'}>Desfazer esta revisão…</button>
+        <button type="button" class="button small" data-role="checkout-revision" title="Baixa o projeto como estava nesta revisão, numa pasta separada.">Checkout nesta revisão…</button>
+      </div>
     </div>
     <div class="revision-layout">
       <ul class="path-list revision-files">
@@ -1241,6 +1370,14 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
 
   const diffContainer = query<HTMLElement>('[data-role="revision-diff"]', detail)!;
 
+  bindDetailActions(detail);
+  bindClick(detail, '[data-role="revert-revision"]', () => undoRevision(entry));
+  bindClick(detail, '[data-role="checkout-revision"]', () => {
+    if (desktop.log.url) {
+      void openCheckoutModal(desktop.log.url, revision);
+    }
+  });
+
   bindClick(detail, '[data-log-path]', (button) => {
     desktop.selectedLogPath = button.dataset.logPath;
     detail.querySelectorAll<HTMLElement>('[data-log-path]').forEach((item) => item.setAttribute('aria-selected', String(item === button)));
@@ -1254,6 +1391,45 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
   }
 }
 
+// Desfazer revisão: aplica o inverso no checkout e prepara a mensagem do commit.
+async function undoRevision(entry: SvnXmlLogEntry): Promise<void> {
+  const title = firstLine(entry.message) || '(sem mensagem)';
+  const localChanges = desktop.workingCopy?.changes.length ?? 0;
+  const confirmed = await confirmModal({
+    title: `Desfazer a revisão ${entry.revision}`,
+    message: `As mudanças de "${title}" serão desfeitas no seu checkout. Nada é publicado: você revisa em Alterações e publica com um novo commit.${localChanges > 0 ? ` O checkout já tem ${count(localChanges, 'alteração local', 'alterações locais')}, que vão se misturar com o desfazer.` : ''}`,
+    confirmLabel: 'Desfazer no checkout'
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  setStatusMessage(`Desfazendo a revisão ${entry.revision}...`);
+  const url = desktop.log.url ?? '';
+  const result = await withCredentials(url, (credentials) => api().revertRevision(state.selectedEnvironmentId, entry.revision, credentials));
+  setStatusMessage(result.message);
+
+  if (!result.ok) {
+    desktop.banner = {
+      tone: 'error',
+      html: `<p><strong>${escapeHtml(result.message)}</strong></p>${result.errorCode === 'NEEDS_UPDATE' ? '<p><button type="button" class="button primary" data-role="banner-update">Atualizar agora</button></p>' : ''}${result.detail ? `<pre class="review-markdown">${escapeHtml(result.detail)}</pre>` : ''}`
+    };
+    void renderDetail();
+    return;
+  }
+
+  desktop.banner = { tone: result.conflicts.length > 0 ? 'warning' : 'success', html: `<p><strong>${escapeHtml(result.message)}</strong></p>` };
+
+  if (result.changed.length > 0) {
+    desktop.commitDraft = { key: `svn:${state.selectedEnvironmentId ?? ''}`, summary: `Desfaz r${entry.revision}: ${title}`, description: `Reverte as mudanças da revisão ${entry.revision}.` };
+    desktop.tab = 'changes';
+    desktop.selectedRevision = undefined;
+  }
+
+  await loadDesktop({ quiet: true });
+}
+
 function renderConflictBanner(): string {
   const conflicts = desktop.workingCopy?.conflicts ?? 0;
 
@@ -1261,7 +1437,7 @@ function renderConflictBanner(): string {
     return '';
   }
 
-  return `<div class="banner" data-tone="error"><p><strong>${conflicts} arquivo(s) em conflito.</strong> Eles não podem ser commitados. Resolva no checkout (edite o arquivo e rode <code>svn resolve --accept working &lt;arquivo&gt;</code>) e clique em Verificar.</p></div>`;
+  return `<div class="banner" data-tone="error"><p><strong>${count(conflicts, 'arquivo', 'arquivos')} em conflito.</strong> ${plural(conflicts, 'Ele não pode ser commitado', 'Eles não podem ser commitados')}. Clique ${plural(conflicts, 'no arquivo', 'em cada arquivo')} marcado com ! para escolher como resolver.</p></div>`;
 }
 
 async function renderDetail(): Promise<void> {
@@ -1294,6 +1470,24 @@ async function renderDetail(): Promise<void> {
     } else {
       detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', !desktop.log.loaded ? 'Carregando o histórico do servidor...' : desktop.log.entries.length > 0 ? 'Selecione um commit para ver a mensagem, os arquivos e o diff.' : 'Nenhum commit para mostrar.')}`;
     }
+    return;
+  }
+
+  // Pasta do projeto apagada ou movida: oferece apontar a nova pasta ou tirar da lista.
+  if (desktop.workingCopy?.errorCode === 'MISSING_FOLDER') {
+    const folder = desktop.environments?.selected?.svnCheckoutPath ?? '';
+    detail.innerHTML = `
+      ${renderBanner()}
+      ${blankSlate(
+        'A pasta do projeto não existe mais',
+        `O SVNFlow procurou em ${folder}. Ela pode ter sido movida, renomeada ou apagada.`,
+        `<div class="suggestions">
+           ${suggestion('Escolher a nova pasta', 'Aponte para onde o checkout está agora.', 'relocate-project', 'Escolher…')}
+           ${suggestion('Remover da lista', 'Tira o projeto do SVNFlow. Nenhuma pasta é apagada.', 'remove-missing-project', 'Remover')}
+         </div>`
+      )}
+    `;
+    bindDetailActions(detail);
     return;
   }
 
@@ -1331,7 +1525,7 @@ async function renderDetail(): Promise<void> {
   const svnPath = desktop.screen?.environment?.svnCheckoutPath ?? '';
   const title = items.length === 0
     ? 'Nenhuma alteração'
-    : isCopyStep() ? `${items.length} arquivo(s) diferentes do Git` : `${items.length} alteração(ões) no checkout`;
+    : isCopyStep() ? `${count(items.length, 'arquivo diferente', 'arquivos diferentes')} do Git` : `${count(items.length, 'alteração', 'alterações')} no checkout`;
   const message = items.length > 0
     ? (isCopyStep() ? 'Selecione um arquivo para ver o diff.' : 'Marque os arquivos que entram no commit e clique num arquivo para ver o diff.')
     : gitLinked ? plan?.message ?? '' : 'O checkout SVN não tem alterações locais.';
@@ -1451,7 +1645,7 @@ async function updateFromServer(): Promise<void> {
 
   if (localChanges > 0 && !(await confirmModal({
     title: 'Atualizar do servidor',
-    message: `${incoming > 0 ? `${incoming} revisão(ões) nova(s) serão baixadas. ` : ''}O checkout tem ${localChanges} alteração(ões) local(is): o SVN junta as mudanças do servidor com as suas. Se a mesma linha mudou dos dois lados, o arquivo fica em conflito para você resolver.`,
+    message: `${incoming > 0 ? `${count(incoming, 'revisão nova será baixada', 'revisões novas serão baixadas')}. ` : ''}O checkout tem ${count(localChanges, 'alteração local', 'alterações locais')}: o SVN junta as mudanças do servidor com as suas. Se a mesma linha mudou dos dois lados, o arquivo fica em conflito para você resolver.`,
     confirmLabel: 'Atualizar'
   }))) {
     return;
@@ -2162,6 +2356,11 @@ function renderRepoBrowser(): void {
     renderRepoBrowser();
   });
   bindClick(detail, '[data-role="remote-history-more"]', () => loadRemoteHistory(true));
+  bindClick(detail, '[data-checkout-revision]', (button) => {
+    if (repos.history?.url) {
+      void openCheckoutModal(repos.history.url, button.dataset.checkoutRevision);
+    }
+  });
   bindClick(detail, '[data-expand-revision]', (button) => {
     repos.expandedRevision = repos.expandedRevision === button.dataset.expandRevision ? undefined : button.dataset.expandRevision;
     renderRepoBrowser();
@@ -2194,6 +2393,7 @@ function renderRemoteHistory(): string {
             const shown = projectPath && projectPath !== '/' && item.path.startsWith(`${projectPath}/`) ? item.path.slice(projectPath.length + 1) : item.path;
             return `<li><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${escapeHtml(shown)}</li>`;
           }).join('')}</ul>
+          <p><button type="button" class="button small" data-checkout-revision="${escapeHtml(entry.revision)}">Checkout nesta revisão…</button></p>
         </td></tr>`
       : '';
 
@@ -2320,7 +2520,7 @@ function openAddRootModal(): void {
       const url = svnUrlBase(value('url'));
 
       if (!/^(svn|svn\+ssh|https?|file):\/\/\S+$/i.test(url)) {
-        error.textContent = 'Informe uma URL SVN começando com svn://, svn+ssh://, http(s):// ou file://.';
+        error.textContent = 'Informe uma URL SVN começando com svn://, svn+ssh://, http://, https:// ou file://.';
         error.hidden = false;
         return;
       }
@@ -2336,12 +2536,14 @@ function openAddRootModal(): void {
   });
 }
 
-function openCheckoutModal(url: string): void {
-  const name = suggestNameFromUrl(url);
+async function openCheckoutModal(url: string, revision?: string): Promise<void> {
+  // Aberto pelo Histórico, a tela de Repositórios pode ainda não ter carregado a pasta padrão.
+  repos.data ??= await api().getRepositoriesState();
+  const name = revision ? `${suggestNameFromUrl(url)}-r${revision}` : suggestNameFromUrl(url);
   const defaultDirectory = repos.data?.defaultCheckoutDirectory ?? '';
   const modal = openModal(`
     <form data-role="checkout-form">
-      <div class="modal-header">Fazer checkout</div>
+      <div class="modal-header">${revision ? `Checkout na revisão ${escapeHtml(revision)}` : 'Fazer checkout'}</div>
       <div class="modal-body">
         <label class="modal-field">URL
           <input class="input" type="text" value="${escapeHtml(url)}" readonly />
@@ -2356,6 +2558,7 @@ function openCheckoutModal(url: string): void {
         <label class="modal-field">Nome do projeto
           <input class="input" name="name" type="text" value="${escapeHtml(name)}" />
         </label>
+        ${revision ? `<p class="modal-hint">O projeto vem como estava na revisão ${escapeHtml(revision)}, numa pasta separada. Para trazer as mudanças mais novas depois, use Atualizar do servidor.</p>` : ''}
         <label class="modal-check" data-role="save-default-field" hidden>
           <input type="checkbox" name="saveDefault" />
           <span>Usar <strong data-role="picked-folder"></strong> como pasta padrão dos próximos checkouts</span>
@@ -2412,7 +2615,7 @@ function openCheckoutModal(url: string): void {
       const operationId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const stop = api().onSvnProgress((update) => {
         if (update.operationId === operationId) {
-          progress.textContent = `${update.files} item(ns) baixado(s) · ${update.line}`;
+          progress.textContent = `${count(update.files, 'item baixado', 'itens baixados')} · ${update.line}`;
         }
       });
 
@@ -2435,6 +2638,7 @@ function openCheckoutModal(url: string): void {
           url,
           destination: input('destination').value.trim(),
           name: input('name').value.trim() || undefined,
+          revision,
           credentials
         });
         return { ...result, errorCode: result.checkout.errorCode };
@@ -2519,6 +2723,12 @@ function bindDesktopShell(): void {
   });
 
   query<HTMLButtonElement>('[data-role="add-root"]')?.addEventListener('click', () => openAddRootModal());
+  query<HTMLButtonElement>('[data-role="busy-cancel"]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    const cancelled = await api().cancelSvnOperations();
+    setText('busy-label', cancelled > 0 ? 'Cancelando…' : 'Esta etapa não pode ser interrompida. Aguarde…');
+  });
   query<HTMLButtonElement>('[data-role="change-checkout-folder"]')?.addEventListener('click', () => void chooseCheckoutDirectory());
 
   query<HTMLButtonElement>('[data-role="appearance"]')?.addEventListener('click', () => {
@@ -2547,7 +2757,54 @@ function bindDesktopShell(): void {
   });
   window.addEventListener('blur', closeContextMenu);
 
+  // Volta para a janela: relê o checkout (como o GitHub Desktop), sem atropelar
+  // modal aberto, operação em andamento ou outra tela.
+  let lastAutoRefresh = 0;
+  window.addEventListener('focus', () => {
+    const busy = !query<HTMLElement>('[data-role="busy-indicator"]')?.hidden;
+    const onDesktop = !query<HTMLElement>('[data-role="desktop-view"]')?.hidden;
+
+    if (!busy && onDesktop && !closeActiveModal && state.selectedEnvironmentId && Date.now() - lastAutoRefresh > 3000) {
+      lastAutoRefresh = Date.now();
+      void loadDesktop({ quiet: true });
+    }
+  });
+
+  // Revisões novas no servidor, de tempos em tempos (sem pedir login sozinho).
+  window.setInterval(() => {
+    if (state.selectedEnvironmentId && document.visibilityState === 'visible') {
+      void checkIncoming();
+    }
+  }, 5 * 60 * 1000);
+
   document.addEventListener('keydown', (event) => {
+    const typing = (event.target as HTMLElement).closest('input, textarea');
+    const ctrl = event.ctrlKey || event.metaKey;
+
+    // F5 ou Ctrl+R: verificar alterações. Ctrl+1 / Ctrl+2: abas. Ctrl+Enter: publicar.
+    if (event.key === 'F5' || (ctrl && event.key.toLowerCase() === 'r')) {
+      event.preventDefault();
+      if (!closeActiveModal) {
+        query<HTMLButtonElement>('[data-role="refresh"]')?.click();
+      }
+      return;
+    }
+
+    if (ctrl && (event.key === '1' || event.key === '2') && !closeActiveModal) {
+      event.preventDefault();
+      query<HTMLButtonElement>(`.tab[data-tab="${event.key === '1' ? 'changes' : 'history'}"]`)?.click();
+      return;
+    }
+
+    if (ctrl && event.key === 'Enter' && !closeActiveModal && (!typing || typing.closest('[data-role="commit-box"]'))) {
+      const submit = query<HTMLButtonElement>('[data-role="commit-svn"], [data-role="copy-to-svn"]');
+      if (submit && !submit.disabled) {
+        event.preventDefault();
+        submit.click();
+      }
+      return;
+    }
+
     if (event.key === 'Escape') {
       const target = event.target as HTMLElement;
       const hadOverlay = Boolean(document.querySelector('.context-menu') || closeActiveModal

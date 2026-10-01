@@ -556,6 +556,12 @@ button.toolbar-button:hover,
   color: #ffffff;
 }
 
+.flow-step[data-status='blocked'] .flow-marker {
+  border-color: var(--removed);
+  background: var(--removed);
+  color: #ffffff;
+}
+
 .flow-step[data-status='pending'] .flow-marker {
   border-color: var(--modified);
   color: var(--modified);
@@ -1011,6 +1017,22 @@ button.toolbar-button:hover,
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.busy-cancel {
+  flex: none;
+  pointer-events: auto;
+  padding: 2px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.busy-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .busy-spinner {
@@ -2214,3 +2236,124 @@ body {
 .modal-check strong {
   word-break: break-all;
 }
+
+/* Fora do SVN: "?" neutro, diferente do "+" de adicionado. */
+.change-icon[data-kind='untracked'],
+[aria-selected='true'] .change-icon[data-kind='untracked'] {
+  color: var(--text-muted);
+  background: var(--bg-hover);
+}
+
+/* Resolver conflito --------------------------------------------------------- */
+
+.conflict-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.conflict-intro {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--removed-bg);
+  box-shadow: inset 3px 0 0 var(--removed);
+}
+
+.conflict-intro p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+.conflict-hunk {
+  display: grid;
+  gap: 6px;
+}
+
+.conflict-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.conflict-side {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.conflict-side-title {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.conflict-side pre {
+  max-height: 260px;
+  margin: 0;
+  padding: 8px 10px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.conflict-side:first-child pre {
+  background: var(--modified-bg);
+}
+
+.conflict-side:last-child pre {
+  background: var(--hunk-bg);
+}
+
+.conflict-empty,
+.conflict-note {
+  color: var(--text-muted);
+}
+
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .conflict-sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Ações da revisão no Histórico. */
+.revision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.modal-hint {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-subtle);
+  font-size: 12.5px;
+}
+
+/* Arquivo selecionado na revisão: mesma seleção discreta da lista principal. */
+.revision-file[aria-selected='true'] {
+  background: var(--accent-subtle);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.revision-file[aria-selected='true'] .change-dir {
+  color: var(--text-muted);
+}
+
+.revision-file[aria-selected='true'] .change-icon[data-kind='added'] { color: var(--added); }
+.revision-file[aria-selected='true'] .change-icon[data-kind='modified'] { color: var(--modified); }
+.revision-file[aria-selected='true'] .change-icon[data-kind='deleted'] { color: var(--removed); }

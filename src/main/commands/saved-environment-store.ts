@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { SavedEnvironment, SavedEnvironmentValidationStatus } from './saved-environments.js';
+import { count } from './text.js';
 
 export type SavedEnvironmentStorageErrorCode =
 	| 'INVALID_ENVIRONMENT'
@@ -51,6 +52,7 @@ export interface SavedEnvironmentChanges {
 	lastValidatedAt?: string;
 	lastValidationStatus?: Exclude<SavedEnvironmentValidationStatus, 'pending'>;
 	syncExclusions?: string[];
+	committedRevisions?: string[];
 }
 
 const STORAGE_FILE_NAME = 'saved-environments.json';
@@ -130,7 +132,10 @@ function sanitizeSavedEnvironment(environment: SavedEnvironment): SavedEnvironme
 		svnRevision: normalizeOptionalText(environment.svnRevision),
 		lastValidatedAt: normalizeOptionalText(environment.lastValidatedAt),
 		lastValidationStatus: environment.lastValidationStatus,
-		syncExclusions: normalizeExclusions(environment.syncExclusions)
+		syncExclusions: normalizeExclusions(environment.syncExclusions),
+		committedRevisions: Array.isArray(environment.committedRevisions)
+			? environment.committedRevisions.filter((revision) => typeof revision === 'string' && /^\d+$/.test(revision)).slice(-100)
+			: undefined
 	};
 }
 
@@ -257,7 +262,7 @@ export async function readSavedEnvironments(
 			storagePath,
 			cloneEnvironments(parsedContent.environments),
 			parsedContent.environments.length > 0
-				? `${parsedContent.environments.length} ambiente(s) salvo(s) carregado(s).`
+				? `${count(parsedContent.environments.length, 'projeto salvo carregado', 'projetos salvos carregados')}.`
 				: 'Nenhum ambiente salvo encontrado.'
 		);
 	} catch (error) {

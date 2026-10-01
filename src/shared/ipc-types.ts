@@ -6,7 +6,7 @@ import type { RepositoryRoot } from '../main/commands/app-settings.js';
 import type { CheckoutResult } from '../main/commands/svn-checkout.js';
 import type { SvnCredentials } from '../main/commands/svn-client.js';
 import type { RemoteEntry, RemoteListing } from '../main/commands/svn-repository-browser.js';
-import type { CommitSelectedResult, DiscardResult, IncomingResult, SimpleResult, UpdateResult, WorkingCopyChange, WorkingCopyStatus } from '../main/commands/svn-working-copy.js';
+import type { CommitSelectedResult, ConflictChoice, ConflictHunk, DiscardResult, RevertRevisionResult, IncomingResult, SimpleResult, UpdateResult, WorkingCopyChange, WorkingCopyStatus } from '../main/commands/svn-working-copy.js';
 import type { GitBranch, GitBranchList, SwitchGitBranchResult } from '../main/commands/git-branches.js';
 import type { ExecuteSyncResult, SyncFileDiff, SyncPlan } from '../main/commands/git-svn-sync.js';
 import type { SvnLogPage } from '../main/commands/svn-history.js';
@@ -18,6 +18,9 @@ export type {
   GitBranchList,
   CheckoutResult,
   CommitSelectedResult,
+  ConflictChoice,
+  ConflictHunk,
+  RevertRevisionResult,
   DiscardResult,
   SimpleResult,
   IncomingResult,
@@ -143,6 +146,13 @@ export interface SvnflowDesktopApi {
   getEnvironmentScreenState: (environmentId?: string) => Promise<EnvironmentScreenState>;
   registerEnvironment: (input: RegisterEnvironmentInput) => Promise<RegisterEnvironmentResponse>;
   removeEnvironment: (environmentId: string) => Promise<EnvironmentScreenState>;
+  relocateProject: (environmentId: string, svnCheckoutPath: string) => Promise<SimpleResult>;
+  getConflictHunks: (environmentId: string | undefined, path: string) => Promise<ConflictHunk[]>;
+  resolveConflict: (environmentId: string | undefined, path: string, choice: ConflictChoice) => Promise<SimpleResult>;
+  // Aplica no checkout o inverso da revisão; nada é publicado.
+  revertRevision: (environmentId: string | undefined, revision: string, credentials?: SvnCredentials) => Promise<RevertRevisionResult>;
+  // Interrompe checkout, update, listagem e histórico em andamento. Commit não é interrompido.
+  cancelSvnOperations: () => Promise<number>;
   selectDirectory: (title: string, defaultPath?: string) => Promise<string | undefined>;
   getSyncScreenState: (environmentId?: string) => Promise<SyncScreenState>;
   executeSync: (environmentId?: string) => Promise<SyncExecuteResponse>;

@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { buildSvnArgs, classifySvnError, runSvn } from '../svn-client';
+import { buildSvnArgs, cancelSvnOperations, classifySvnError, runSvn } from '../svn-client';
 import { startSvnserve } from './helpers/svnserve';
 import { parseInfoXml } from '../svn-xml';
 
@@ -52,6 +52,37 @@ describe('svn-client', () => {
     try {
       const result = await runSvn(['info'], { credentials: { username: 'pessoa', password: 'x'.repeat(1024 * 1024) } });
       expect(result.ok).toBe(true);
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(fakeBin, { recursive: true, force: true });
+    }
+  });
+
+  it('avisa que a pasta do projeto sumiu em vez de dizer que o svn não está instalado', async () => {
+    const result = await runSvn(['status'], { cwd: path.join(os.tmpdir(), 'svnflow-pasta-que-nao-existe') });
+    expect(result.errorCode).toBe('MISSING_FOLDER');
+    expect(result.message).toContain('não existe mais');
+  });
+
+  it('cancela só as operações marcadas como canceláveis', async () => {
+    const fakeBin = mkdtempSync(path.join(os.tmpdir(), 'svnflow-fake-svn-'));
+    // Como o svn real durante a conexão, o falso ignora o SIGTERM.
+    writeFileSync(path.join(fakeBin, 'svn'), "#!/bin/sh\ntrap '' TERM\nwhile :; do sleep 0.1; done\n", { mode: 0o755 });
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${fakeBin}${path.delimiter}${originalPath}`;
+
+    try {
+      const cancelable = runSvn(['list', 'svn://servidor/caminho'], { cancelable: true });
+      const protectedRun = runSvn(['commit'], { timeoutMs: 2500 });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const startedAt = Date.now();
+      expect(cancelSvnOperations()).toBe(1);
+      expect(await cancelable).toMatchObject({ ok: false, errorCode: 'CANCELLED' });
+      expect(Date.now() - startedAt).toBeLessThan(5000);
+      expect((await protectedRun).errorCode).toBe('TIMEOUT');
+      // O timeout também força a saída do svn que ignora o SIGTERM; espera para não deixar processo para trás.
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     } finally {
       process.env.PATH = originalPath;
       rmSync(fakeBin, { recursive: true, force: true });
