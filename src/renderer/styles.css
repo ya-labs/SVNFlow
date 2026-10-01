@@ -1494,3 +1494,42 @@ details summary {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Seleção para commit --------------------------------------------------- */
+
+.change-row {
+  cursor: pointer;
+}
+
+.change-check {
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.change-row[aria-selected='true'] .change-check {
+  accent-color: var(--accent-text);
+}
+
+.select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.select-all input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.change-icon[data-kind='conflicted'] {
+  color: var(--removed);
+  background: var(--removed-bg);
+}
+
+.banner code {
+  font-family: var(--mono);
+  font-size: 12px;
+}

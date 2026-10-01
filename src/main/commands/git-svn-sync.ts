@@ -469,7 +469,7 @@ export function suggestSyncCommitMessage(input: SuggestCommitMessageInput): stri
 }
 
 const MAX_DIFF_LINES = 4000;
-const MAX_DIFF_FILE_BYTES = 5 * 1024 * 1024;
+export const MAX_DIFF_FILE_BYTES = 5 * 1024 * 1024;
 
 function readGitBlob(gitWorkspacePath: string, filePath: string): Buffer | undefined {
   try {
@@ -479,7 +479,7 @@ function readGitBlob(gitWorkspacePath: string, filePath: string): Buffer | undef
   }
 }
 
-function isBinary(content: Buffer): boolean {
+export function isBinary(content: Buffer): boolean {
   return content.subarray(0, 8000).includes(0);
 }
 
@@ -508,7 +508,7 @@ function diffBuffers(oldContent: Buffer | undefined, newContent: Buffer | undefi
   }
 }
 
-function toDiffResult(filePath: string, source: SyncFileDiff['source'], diff: string): SyncFileDiff {
+export function toDiffResult(filePath: string, source: SyncFileDiff['source'], diff: string): SyncFileDiff {
   const start = diff.search(/^@@/m);
   const lines = start >= 0 ? diff.slice(start).replace(/\n$/, '').split('\n') : [];
 

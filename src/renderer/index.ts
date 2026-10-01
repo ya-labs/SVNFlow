@@ -1,4 +1,5 @@
 import type {
+  WorkingCopyStatus,
   RemoteListing,
   RepositoriesState,
   SvnCredentials,
@@ -1149,15 +1150,19 @@ function renderCommitStage(commit: CommitScreenState): void {
 // Visão principal (no estilo do GitHub Desktop)
 
 type DesktopTab = 'changes' | 'history';
-type ChangeKind = 'added' | 'modified' | 'deleted';
+type ChangeKind = 'added' | 'modified' | 'deleted' | 'conflicted';
 
 interface ChangeItem {
   path: string;
   kind: ChangeKind;
+  label: string;
+  // Itens do checkout SVN têm caixa de seleção para o commit.
+  checkable: boolean;
+  selectable: boolean;
 }
 
 interface CommitDraft {
-  commit: string;
+  key: string;
   summary: string;
   description: string;
 }
@@ -1166,41 +1171,97 @@ interface DesktopState {
   tab: DesktopTab;
   environments?: EnvironmentScreenState;
   screen?: SyncScreenState;
+  workingCopy?: WorkingCopyStatus;
   history?: PackageHistoryResult;
   selectedPath?: string;
   selectedRevision?: string;
+  // Caminhos marcados para o commit e caminhos já vistos (para aplicar o padrão só aos novos).
+  checked: Set<string>;
+  knownPaths: Set<string>;
   commitDraft?: CommitDraft;
   banner?: { tone: 'success' | 'warning' | 'error'; html: string };
   requestId: number;
 }
 
-const desktop: DesktopState = { tab: 'changes', requestId: 0 };
+const desktop: DesktopState = { tab: 'changes', requestId: 0, checked: new Set(), knownPaths: new Set() };
 
-const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', modified: '•', deleted: '−' };
-const CHANGE_LABELS: Record<ChangeKind, string> = { added: 'Criado', modified: 'Modificado', deleted: 'Removido' };
+const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', modified: '•', deleted: '−', conflicted: '!' };
 
-function pendingKind(item: string): ChangeKind {
-  if (item === 'added') return 'added';
-  if (item === 'deleted' || item === 'missing') return 'deleted';
-  return 'modified';
+const WORKING_COPY_LABELS: Record<string, { kind: ChangeKind; label: string }> = {
+  modified: { kind: 'modified', label: 'Modificado' },
+  replaced: { kind: 'modified', label: 'Substituído' },
+  added: { kind: 'added', label: 'Adicionado' },
+  unversioned: { kind: 'added', label: 'Novo (fora do SVN)' },
+  deleted: { kind: 'deleted', label: 'Removido' },
+  missing: { kind: 'deleted', label: 'Apagado do disco' },
+  conflicted: { kind: 'conflicted', label: 'Em conflito' },
+  obstructed: { kind: 'conflicted', label: 'Obstruído' }
+};
+
+const SYNC_LABELS: Record<'added' | 'modified' | 'deleted', string> = { added: 'Criar', modified: 'Atualizar', deleted: 'Remover' };
+
+// Projeto com Git vinculado e com diferenças: primeiro passo é copiar do Git.
+function isCopyStep(): boolean {
+  return desktop.screen?.plan?.status === 'ready';
 }
 
 function currentChangeItems(): ChangeItem[] {
-  const plan = desktop.screen?.plan;
-
-  if (!plan) {
-    return [];
+  if (isCopyStep()) {
+    return desktop.screen!.plan!.changes.map((change) => ({
+      path: change.path,
+      kind: change.kind,
+      label: SYNC_LABELS[change.kind],
+      checkable: false,
+      selectable: false
+    }));
   }
 
-  if (plan.status === 'ready') {
-    return plan.changes.map((change) => ({ path: change.path, kind: change.kind }));
+  return (desktop.workingCopy?.changes ?? []).map((change) => {
+    const mapped = WORKING_COPY_LABELS[change.kind] ?? { kind: 'modified' as ChangeKind, label: change.kind };
+    return {
+      path: change.path,
+      kind: mapped.kind,
+      label: change.isDirectory ? `${mapped.label} (pasta)` : mapped.label,
+      checkable: true,
+      selectable: change.selectable
+    };
+  });
+}
+
+function checkedItems(): ChangeItem[] {
+  return currentChangeItems().filter((item) => item.checkable && item.selectable && desktop.checked.has(item.path));
+}
+
+// Mantém a seleção entre recargas: caminhos novos recebem o padrão
+// (não versionados desmarcados), e caminhos que sumiram saem da seleção.
+function reconcileSelection(): void {
+  const changes = desktop.workingCopy?.changes ?? [];
+  const present = new Set(changes.map((change) => change.path));
+
+  for (const change of changes) {
+    if (!desktop.knownPaths.has(change.path)) {
+      desktop.knownPaths.add(change.path);
+      if (change.defaultSelected) {
+        desktop.checked.add(change.path);
+      }
+    }
+
+    if (!change.selectable) {
+      desktop.checked.delete(change.path);
+    }
   }
 
-  if (desktop.screen?.canCommit) {
-    return plan.pending.map((change) => ({ path: change.path, kind: pendingKind(change.item) }));
+  for (const known of [...desktop.knownPaths]) {
+    if (!present.has(known)) {
+      desktop.knownPaths.delete(known);
+      desktop.checked.delete(known);
+    }
   }
+}
 
-  return [];
+function resetSelection(): void {
+  desktop.checked = new Set();
+  desktop.knownPaths = new Set();
 }
 
 interface CommittedEntry {
@@ -1227,15 +1288,15 @@ function splitSuggestedMessage(message: string): { summary: string; description:
   return { summary: summary.trim(), description: rest.join('\n').trim() };
 }
 
-function ensureCommitDraft(): CommitDraft | undefined {
-  const source = desktop.screen?.plan?.source;
+function suggestedCommitMessage(): string {
+  return desktop.environments?.selected?.gitWorkspacePath ? desktop.screen?.suggestedCommitMessage ?? '' : '';
+}
 
-  if (!source) {
-    return undefined;
-  }
+function ensureCommitDraft(): CommitDraft {
+  const key = desktop.screen?.plan?.source?.commit ?? `svn:${state.selectedEnvironmentId ?? ''}`;
 
-  if (desktop.commitDraft?.commit !== source.commit) {
-    desktop.commitDraft = { commit: source.commit, ...splitSuggestedMessage(desktop.screen?.suggestedCommitMessage ?? '') };
+  if (desktop.commitDraft?.key !== key) {
+    desktop.commitDraft = { key, ...splitSuggestedMessage(suggestedCommitMessage()) };
   }
 
   return desktop.commitDraft;
@@ -1256,30 +1317,26 @@ function renderToolbar(): void {
   const screen = desktop.screen;
   const plan = screen?.plan;
   const source = plan?.source;
+  const gitLinked = Boolean(desktop.environments?.selected?.gitWorkspacePath);
+  const localChanges = desktop.workingCopy?.changes.length ?? 0;
 
   setText('environment-name', desktop.environments?.selected?.name ?? 'Nenhum projeto');
-  setText('git-branch', source ? `${source.branch ?? 'HEAD'} · ${source.shortCommit}` : '-');
+  setText('git-branch', source ? `${source.branch ?? 'HEAD'} · ${source.shortCommit}` : desktop.screen?.environment ? 'Sem Git vinculado' : '-');
+
   const branchPicker = query<HTMLButtonElement>('[data-role="branch-picker"]');
-  const gitLinked = Boolean(desktop.environments?.selected?.gitWorkspacePath);
   if (branchPicker) {
     branchPicker.disabled = !gitLinked;
   }
-  if (desktop.screen?.environment && !gitLinked) {
-    setText('git-branch', 'Sem Git vinculado');
-  }
 
-  if (plan?.status === 'ready') {
+  if (isCopyStep()) {
     setText('refresh-label', 'Diferenças com o Git');
-    setText('refresh-value', `${plan.changes.length} arquivo(s) a copiar`);
-  } else if (screen?.canCommit) {
-    setText('refresh-label', 'Pronto para commit');
-    setText('refresh-value', `${plan?.pendingSvnChanges ?? 0} alteração(ões) no SVN`);
-  } else if (plan?.status === 'up-to-date') {
-    setText('refresh-label', 'Verificar alterações');
-    setText('refresh-value', 'SVN igual ao Git');
+    setText('refresh-value', `${plan!.changes.length} arquivo(s) a copiar`);
+  } else if (localChanges > 0) {
+    setText('refresh-label', 'Alterações locais');
+    setText('refresh-value', `${localChanges} alteração(ões) no checkout`);
   } else {
     setText('refresh-label', 'Verificar alterações');
-    setText('refresh-value', 'Comparar Git com o SVN');
+    setText('refresh-value', gitLinked ? 'SVN igual ao Git' : 'Checkout sem alterações');
   }
 
   query<HTMLElement>('[data-role="toggle-advanced"]')?.setAttribute('aria-pressed', String(state.showAdvanced));
@@ -1291,12 +1348,16 @@ function renderChangeRow(item: ChangeItem): string {
   const slash = item.path.lastIndexOf('/');
   const directory = slash >= 0 ? item.path.slice(0, slash + 1) : '';
   const fileName = item.path.slice(slash + 1);
+  const checkbox = item.checkable
+    ? `<input type="checkbox" class="change-check" data-check-path="${escapeHtml(item.path)}" ${desktop.checked.has(item.path) ? 'checked' : ''} ${item.selectable ? '' : 'disabled'} aria-label="Incluir ${escapeHtml(item.path)} no commit" tabindex="-1" />`
+    : '';
 
   return `
-    <button type="button" class="change-row" data-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedPath}" title="${escapeHtml(`${CHANGE_LABELS[item.kind]}: ${item.path}`)}">
+    <div class="change-row" role="option" tabindex="0" data-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedPath}" title="${escapeHtml(`${item.label}: ${item.path}`)}">
+      ${checkbox}
       <span class="change-path"><bdi><span class="change-dir">${escapeHtml(directory)}</span>${escapeHtml(fileName)}</bdi></span>
-      <span class="change-icon" data-kind="${item.kind}" aria-label="${CHANGE_LABELS[item.kind]}">${CHANGE_ICONS[item.kind]}</span>
-    </button>
+      <span class="change-icon" data-kind="${item.kind}" aria-label="${escapeHtml(item.label)}">${CHANGE_ICONS[item.kind]}</span>
+    </div>
   `;
 }
 
@@ -1325,7 +1386,7 @@ function renderSidebar(): void {
   if (desktop.tab === 'history') {
     const entries = committedEntries();
     list.innerHTML = entries.length === 0
-      ? '<p class="list-empty">Nenhuma sincronização publicada ainda.</p>'
+      ? '<p class="list-empty">Nenhum commit publicado por aqui ainda.</p>'
       : entries.map((entry) => `
         <button type="button" class="history-row" data-revision="${escapeHtml(entry.revision)}" aria-selected="${entry.revision === desktop.selectedRevision}">
           <span class="history-title">${escapeHtml(entry.title)}</span>
@@ -1340,11 +1401,41 @@ function renderSidebar(): void {
     return;
   }
 
-  const header = desktop.screen.plan?.status === 'ready'
-    ? `${items.length} arquivo(s) diferentes do Git`
-    : `${items.length} alteração(ões) para publicar no SVN`;
+  let header: string;
 
-  list.innerHTML = `<div class="list-header">${escapeHtml(header)}</div>${items.map(renderChangeRow).join('')}`;
+  if (isCopyStep()) {
+    header = `<div class="list-header">${escapeHtml(`${items.length} arquivo(s) diferentes do Git`)}</div>`;
+  } else {
+    const selectable = items.filter((item) => item.selectable);
+    const checked = checkedItems().length;
+    const allChecked = selectable.length > 0 && checked === selectable.length;
+    header = `
+      <label class="list-header select-all">
+        <input type="checkbox" data-role="select-all" ${allChecked ? 'checked' : ''} ${selectable.length === 0 ? 'disabled' : ''} />
+        <span>${items.length} alteração(ões) · ${checked} selecionada(s)</span>
+      </label>
+    `;
+  }
+
+  list.innerHTML = `${header}${items.map(renderChangeRow).join('')}`;
+
+  const selectAll = query<HTMLInputElement>('[data-role="select-all"]', list);
+  if (selectAll && checkedItems().length > 0 && !selectAll.checked) {
+    selectAll.indeterminate = true;
+  }
+}
+
+function toggleChecked(filePath: string, checked?: boolean): void {
+  const shouldCheck = checked ?? !desktop.checked.has(filePath);
+
+  if (shouldCheck) {
+    desktop.checked.add(filePath);
+  } else {
+    desktop.checked.delete(filePath);
+  }
+
+  renderSidebar();
+  renderCommitBox();
 }
 
 function selectSidebarItem(element: HTMLElement): void {
@@ -1365,13 +1456,41 @@ function bindSidebar(): void {
   const list = query<HTMLElement>('[data-role="sidebar-list"]');
 
   list?.addEventListener('click', (event) => {
-    const row = (event.target as HTMLElement).closest<HTMLElement>('.change-row, .history-row');
+    const target = event.target as HTMLElement;
+
+    if (target.matches('[data-role="select-all"]')) {
+      const check = (target as HTMLInputElement).checked;
+      currentChangeItems().filter((item) => item.selectable).forEach((item) => (check ? desktop.checked.add(item.path) : desktop.checked.delete(item.path)));
+      renderSidebar();
+      renderCommitBox();
+      return;
+    }
+
+    if (target.matches('.change-check')) {
+      toggleChecked(target.dataset.checkPath ?? '', (target as HTMLInputElement).checked);
+      return;
+    }
+
+    const row = target.closest<HTMLElement>('.change-row, .history-row');
     if (row) {
       selectSidebarItem(row);
     }
   });
 
   list?.addEventListener('keydown', (event) => {
+    const focused = document.activeElement as HTMLElement | null;
+
+    // Espaço marca ou desmarca o arquivo em foco, como no GitHub Desktop.
+    if (event.key === ' ' && focused?.matches('.change-row')) {
+      const checkbox = query<HTMLInputElement>('.change-check', focused);
+      if (checkbox && !checkbox.disabled) {
+        event.preventDefault();
+        toggleChecked(focused.dataset.path ?? '');
+        query<HTMLElement>(`.change-row[data-path="${CSS.escape(focused.dataset.path ?? '')}"]`, list)?.focus();
+      }
+      return;
+    }
+
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
       return;
     }
@@ -1410,12 +1529,12 @@ function renderCommitBox(): void {
     return;
   }
 
-  if (desktop.tab !== 'changes' || !screen || !plan?.source) {
+  if (desktop.tab !== 'changes' || !screen?.environment) {
     box.innerHTML = '';
     return;
   }
 
-  if (plan.status === 'ready') {
+  if (isCopyStep() && plan?.source) {
     box.innerHTML = `
       <p class="commit-box-hint">O checkout SVN será atualizado para o commit <strong>${escapeHtml(plan.source.shortCommit)}</strong>. Nada é publicado nesta etapa.</p>
       <button type="button" class="button primary block" data-role="copy-to-svn">Copiar ${plan.changes.length} arquivo(s) para o SVN</button>
@@ -1424,18 +1543,20 @@ function renderCommitBox(): void {
     return;
   }
 
-  if (!screen.canCommit) {
+  if ((desktop.workingCopy?.changes.length ?? 0) === 0) {
     box.innerHTML = '';
     return;
   }
 
-  const draft = ensureCommitDraft()!;
+  const draft = ensureCommitDraft();
+  const count = checkedItems().length;
+  const hasSuggestion = suggestedCommitMessage().length > 0;
 
   box.innerHTML = `
     <input class="input" data-role="commit-summary" type="text" placeholder="Resumo (obrigatório)" value="${escapeHtml(draft.summary)}" aria-label="Resumo do commit SVN" />
     <textarea class="input" data-role="commit-description" placeholder="Descrição" aria-label="Descrição do commit SVN">${escapeHtml(draft.description)}</textarea>
-    <button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>
-    <button type="button" class="button primary block" data-role="commit-svn">Commit para o SVN</button>
+    ${hasSuggestion ? '<button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>' : ''}
+    <button type="button" class="button primary block" data-role="commit-svn">${count > 0 ? `Commit de ${count} arquivo(s) para o SVN` : 'Selecione arquivos para commitar'}</button>
   `;
 
   const summary = query<HTMLInputElement>('[data-role="commit-summary"]', box)!;
@@ -1445,7 +1566,7 @@ function renderCommitBox(): void {
   const refresh = () => {
     draft.summary = summary.value;
     draft.description = description.value;
-    submit.disabled = summary.value.trim().length === 0;
+    submit.disabled = summary.value.trim().length === 0 || count === 0;
   };
 
   summary.addEventListener('input', refresh);
@@ -1488,25 +1609,30 @@ async function copyToSvn(): Promise<void> {
   desktop.banner = errors.length > 0
     ? { tone: 'error', html: `<p><strong>Erros ao atualizar o checkout</strong></p><ul>${errors.map((error) => `<li>${escapeHtml(error)}</li>`).join('')}</ul>` }
     : undefined;
-  desktop.screen = response.screen;
   desktop.selectedPath = undefined;
+  // Depois da cópia, tudo vem marcado: é o espelho do commit Git.
+  resetSelection();
+  await loadDesktop({ quiet: true });
+  (desktop.workingCopy?.changes ?? []).filter((change) => change.selectable).forEach((change) => desktop.checked.add(change.path));
   setStatusMessage(response.result?.message ?? response.screen.message);
   renderDesktop();
 }
 
 async function commitToSvn(): Promise<void> {
   const draft = desktop.commitDraft;
-  const plan = desktop.screen?.plan;
+  const items = checkedItems();
+  const url = desktop.workingCopy?.url ?? '';
 
-  if (!draft || !plan) {
+  if (!draft || items.length === 0) {
     return;
   }
 
   const message = draft.description.trim() ? `${draft.summary.trim()}\n\n${draft.description.trim()}` : draft.summary.trim();
+  const preview = items.slice(0, 8).map((item) => `${CHANGE_ICONS[item.kind]} ${item.path}`).join('\n');
   const confirmed = await confirmModal({
     title: 'Publicar no SVN',
-    message: `${plan.pendingSvnChanges} alteração(ões) serão publicadas oficialmente a partir de ${plan.svnCheckoutPath}.`,
-    detail: message,
+    message: `${items.length} arquivo(s) serão publicados oficialmente a partir de ${desktop.screen?.environment?.svnCheckoutPath ?? 'checkout SVN'}.`,
+    detail: `${message}\n\n${preview}${items.length > 8 ? `\n… e mais ${items.length - 8}` : ''}`,
     confirmLabel: 'Commit para o SVN'
   });
 
@@ -1515,27 +1641,26 @@ async function commitToSvn(): Promise<void> {
   }
 
   setStatusMessage('Executando svn commit...');
-  const response = await api().commitSync(state.selectedEnvironmentId, message);
+  const paths = items.map((item) => item.path);
+  const result = await withCredentials(url, (credentials) => api().commitSelected({ environmentId: state.selectedEnvironmentId, paths, message, credentials }));
 
-  if (response.result.status === 'success') {
+  if (result.ok) {
     desktop.commitDraft = undefined;
     desktop.banner = {
       tone: 'success',
-      html: `<p><strong>Revisão ${escapeHtml(response.result.revision ?? '?')} publicada no SVN</strong> · ${escapeHtml(response.result.filesCommitted ?? 0)} caminho(s)</p>`
+      html: `<p><strong>${escapeHtml(result.message)}</strong></p>`
     };
-    desktop.selectedRevision = response.result.revision;
-    desktop.history = await api().readPackageHistory();
+    desktop.selectedRevision = result.revision;
   } else {
     desktop.banner = {
       tone: 'error',
-      html: `<p><strong>${response.result.status === 'conflict' ? 'Conflito no commit' : 'Commit não realizado'}</strong></p><p>${escapeHtml(response.result.message)}</p>${response.result.error ? `<pre class="review-markdown">${escapeHtml(response.result.error)}</pre>` : ''}`
+      html: `<p><strong>Commit não realizado.</strong> ${escapeHtml(result.message)}</p>${result.detail ? `<pre class="review-markdown">${escapeHtml(result.detail)}</pre>` : ''}`
     };
   }
 
-  desktop.screen = response.screen;
   desktop.selectedPath = undefined;
-  setStatusMessage(response.result.message);
-  renderDesktop();
+  setStatusMessage(result.message);
+  await loadDesktop({ quiet: true });
 }
 
 // Painel de detalhe ---------------------------------------------------------
@@ -1598,26 +1723,32 @@ function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="refresh-detail"]', () => loadDesktop());
   bindClick(detail, '[data-role="open-advanced"]', () => showAdvancedView('environment'));
   bindClick(detail, '[data-role="link-git"]', () => openLinkGitModal());
+  bindClick(detail, '[data-role="open-repositories-inline"]', () => showRepositoriesView());
 }
 
 async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId: number): Promise<void> {
   detail.innerHTML = `${renderBanner()}<div class="diff-header">${escapeHtml(item.path)}</div><p class="list-empty">Carregando diff...</p>`;
-  const diff = await api().getSyncFileDiff(state.selectedEnvironmentId, item.path);
+  const copyStep = isCopyStep();
+  const diff = copyStep
+    ? await api().getSyncFileDiff(state.selectedEnvironmentId, item.path)
+    : await api().getWorkingCopyDiff(state.selectedEnvironmentId, item.path);
 
   if (requestId !== desktop.requestId) {
     return;
   }
 
-  const sourceLabel = diff?.source === 'svn-pending' ? 'Será publicado no SVN' : 'Git → checkout SVN';
+  const sourceLabel = copyStep ? 'Git → checkout SVN' : item.label;
   const header = `<div class="diff-header"><span class="change-icon" data-kind="${item.kind}">${CHANGE_ICONS[item.kind]}</span>${escapeHtml(item.path)}<span class="diff-header-source">${escapeHtml(sourceLabel)}</span></div>`;
   let body: string;
 
-  if (!diff || diff.kind === 'empty') {
+  if (item.kind === 'conflicted') {
+    body = blankSlate('Arquivo em conflito', 'Resolva o conflito no checkout (edite o arquivo e rode svn resolve) antes de commitar. Depois clique em Verificar.');
+  } else if (!diff || diff.kind === 'empty') {
     body = blankSlate('Sem diferença de conteúdo', item.kind === 'deleted' ? 'O arquivo será removido do SVN.' : 'Não há diferença textual para mostrar.');
   } else if (diff.kind === 'binary') {
     body = blankSlate('Arquivo binário', 'O conteúdo binário não pode ser exibido como diff.');
   } else if (diff.kind === 'directory') {
-    body = blankSlate('Pasta', item.kind === 'deleted' ? 'A pasta e todo o conteúdo dela serão removidos do SVN.' : 'A pasta será adicionada ao SVN.');
+    body = blankSlate('Pasta', item.kind === 'deleted' ? 'A pasta e todo o conteúdo dela serão removidos do SVN.' : 'A pasta e os arquivos dentro dela serão adicionados ao SVN.');
   } else if (diff.kind === 'too-large') {
     body = blankSlate('Arquivo muito grande', 'O diff não é exibido para arquivos acima de 5 MB.');
   } else {
@@ -1659,6 +1790,16 @@ async function renderRevisionDetail(detail: HTMLElement, revision: string, reque
   `;
 }
 
+function renderConflictBanner(): string {
+  const conflicts = desktop.workingCopy?.conflicts ?? 0;
+
+  if (conflicts === 0 || isCopyStep()) {
+    return '';
+  }
+
+  return `<div class="banner" data-tone="error"><p><strong>${conflicts} arquivo(s) em conflito.</strong> Eles não podem ser commitados. Resolva no checkout (edite o arquivo e rode <code>svn resolve --accept working &lt;arquivo&gt;</code>) e clique em Verificar.</p></div>`;
+}
+
 async function renderDetail(): Promise<void> {
   const detail = query<HTMLElement>('[data-role="detail"]');
   const requestId = ++desktop.requestId;
@@ -1670,41 +1811,29 @@ async function renderDetail(): Promise<void> {
   if (!desktop.environments || desktop.environments.items.length === 0) {
     detail.innerHTML = blankSlate(
       'Comece adicionando um projeto',
-      'Um projeto é uma pasta de checkout SVN. Opcionalmente, você vincula um repositório Git para sincronizar o código dele com o SVN.',
-      `<div class="suggestions">${suggestion('Adicionar projeto', 'Escolha a pasta de um checkout SVN que você já tem.', 'add-environment', 'Adicionar…')}</div>`
+      'Um projeto é uma pasta de checkout SVN. Faça checkout pela tela Repositórios ou escolha uma pasta que você já tem.',
+      `<div class="suggestions">
+        ${suggestion('Baixar um projeto do servidor', 'Navegue pelos repositórios SVN e faça checkout.', 'open-repositories-inline', 'Repositórios')}
+        ${suggestion('Adicionar projeto existente', 'Escolha a pasta de um checkout SVN que você já tem.', 'add-environment', 'Adicionar…')}
+      </div>`
     );
     bindDetailActions(detail);
     return;
   }
 
   const plan = desktop.screen?.plan;
+  const gitLinked = Boolean(desktop.environments.selected?.gitWorkspacePath);
 
   if (desktop.tab === 'history') {
     if (desktop.selectedRevision) {
       await renderRevisionDetail(detail, desktop.selectedRevision, requestId);
     } else {
-      detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', committedEntries().length > 0 ? 'Selecione uma sincronização para ver os arquivos publicados.' : 'As sincronizações publicadas aparecem aqui.')}`;
+      detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', committedEntries().length > 0 ? 'Selecione um commit para ver os arquivos publicados.' : 'Os commits publicados por aqui aparecem nesta aba.')}`;
     }
     return;
   }
 
-  if (desktop.screen?.environment && !desktop.environments?.selected?.gitWorkspacePath && !plan) {
-    detail.innerHTML = `
-      ${renderBanner()}
-      ${blankSlate(
-        'Projeto SVN',
-        'Este projeto ainda não tem repositório Git vinculado.',
-        `<div class="suggestions">
-          ${suggestion('Abrir checkout SVN', desktop.screen.environment.svnCheckoutPath, 'open-svn', 'Abrir pasta')}
-          ${suggestion('Vincular repositório Git', 'Sincronize o último commit de um repositório Git com este checkout.', 'link-git', 'Vincular…')}
-        </div>`
-      )}
-    `;
-    bindDetailActions(detail);
-    return;
-  }
-
-  if (!plan || plan.status === 'blocked') {
+  if (gitLinked && (!plan || plan.status === 'blocked')) {
     detail.innerHTML = `
       ${renderBanner()}
       ${blankSlate(
@@ -1721,6 +1850,12 @@ async function renderDetail(): Promise<void> {
     return;
   }
 
+  if (!isCopyStep() && desktop.workingCopy && !desktop.workingCopy.ok) {
+    detail.innerHTML = `${renderBanner()}${blankSlate('Não foi possível ler o checkout', desktop.workingCopy.message, `<div class="banner" data-tone="error"><p>${escapeHtml(desktop.workingCopy.detail ?? '')}</p></div>`)}`;
+    bindDetailActions(detail);
+    return;
+  }
+
   const items = currentChangeItems();
   const selected = items.find((item) => item.path === desktop.selectedPath);
 
@@ -1729,20 +1864,27 @@ async function renderDetail(): Promise<void> {
     return;
   }
 
-  const title = items.length > 0
-    ? (plan.status === 'ready' ? `${items.length} arquivo(s) diferentes do Git` : 'Pronto para commit')
-    : 'Nenhuma alteração';
+  const svnPath = desktop.screen?.environment?.svnCheckoutPath ?? '';
+  const title = items.length === 0
+    ? 'Nenhuma alteração'
+    : isCopyStep() ? `${items.length} arquivo(s) diferentes do Git` : `${items.length} alteração(ões) no checkout`;
+  const message = items.length > 0
+    ? (isCopyStep() ? 'Selecione um arquivo para ver o diff.' : 'Marque os arquivos que entram no commit e clique num arquivo para ver o diff.')
+    : gitLinked ? plan?.message ?? '' : 'O checkout SVN não tem alterações locais.';
 
   detail.innerHTML = `
     ${renderBanner()}
+    ${renderConflictBanner()}
     ${renderWarnings(plan)}
     ${blankSlate(
       title,
-      items.length > 0 ? 'Selecione um arquivo para ver o diff.' : plan.message,
+      message,
       `<div class="suggestions">
-        ${suggestion('Abrir checkout SVN', plan.svnCheckoutPath, 'open-svn', 'Abrir pasta')}
-        ${suggestion('Abrir repositório Git', plan.gitWorkspacePath, 'open-git', 'Abrir pasta')}
-        ${items.length === 0 ? suggestion('Verificar novamente', 'Depois de um novo commit no Git, compare de novo.', 'refresh-detail', 'Verificar') : ''}
+        ${suggestion('Abrir checkout SVN', svnPath, 'open-svn', 'Abrir pasta')}
+        ${gitLinked
+          ? suggestion('Abrir repositório Git', plan?.gitWorkspacePath ?? '', 'open-git', 'Abrir pasta')
+          : suggestion('Vincular repositório Git', 'Sincronize o último commit de um repositório Git com este checkout.', 'link-git', 'Vincular…')}
+        ${items.length === 0 ? suggestion('Verificar novamente', 'Compare de novo depois de editar arquivos ou fazer um commit no Git.', 'refresh-detail', 'Verificar') : ''}
       </div>`
     )}
   `;
@@ -1758,9 +1900,10 @@ function renderDesktop(): void {
 
 async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
   if (!options.quiet) {
-    setStatusMessage('Comparando Git com o checkout SVN...');
+    setStatusMessage('Verificando alterações...');
   }
   const refresh = query<HTMLButtonElement>('[data-role="refresh"]');
+  const previousEnvironment = state.selectedEnvironmentId;
 
   if (refresh) {
     refresh.disabled = true;
@@ -1770,18 +1913,27 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
     desktop.environments = await api().getEnvironmentScreenState(state.selectedEnvironmentId);
     state.selectedEnvironmentId = desktop.environments.selectedEnvironmentId;
 
+    if (previousEnvironment !== state.selectedEnvironmentId) {
+      resetSelection();
+    }
+
     const hasEnvironment = desktop.environments.items.length > 0;
     [desktop.screen, desktop.history] = await Promise.all([
       hasEnvironment ? api().getSyncScreenState(state.selectedEnvironmentId) : Promise.resolve(undefined),
       api().readPackageHistory()
     ]);
 
+    desktop.workingCopy = hasEnvironment && !isCopyStep()
+      ? await api().getWorkingCopyStatus(state.selectedEnvironmentId)
+      : undefined;
+    reconcileSelection();
+
     if (!currentChangeItems().some((item) => item.path === desktop.selectedPath)) {
       desktop.selectedPath = undefined;
     }
 
     if (!options.quiet) {
-      setStatusMessage(desktop.screen?.message ?? 'Adicione um projeto para começar.');
+      setStatusMessage(isCopyStep() || !desktop.workingCopy ? desktop.screen?.message ?? 'Adicione um projeto para começar.' : desktop.workingCopy.message);
     }
   } catch (error) {
     setStatusMessage(`Falha ao carregar: ${error instanceof Error ? error.message : 'erro desconhecido'}`);
@@ -1793,6 +1945,7 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
 
   renderDesktop();
 }
+
 
 // Menu de projetos ---------------------------------------------------------
 
