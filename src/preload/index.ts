@@ -18,6 +18,8 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('svn:conflict-hunks', { environmentId, path }),
   resolveConflict: (environmentId, path, choice) =>
     ipcRenderer.invoke('svn:resolve', { environmentId, path, choice }),
+  revertRevision: (environmentId, revision, credentials) =>
+    ipcRenderer.invoke('svn:revert-revision', { environmentId, revision, credentials }),
   cancelSvnOperations: () =>
     ipcRenderer.invoke('svn:cancel'),
   relocateProject: (environmentId, svnCheckoutPath) =>

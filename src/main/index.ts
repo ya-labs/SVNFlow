@@ -19,7 +19,7 @@ import type {
 } from '../shared/ipc-types.js';
 import { isAppTheme, isSvnUrl, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
 import { checkoutProject } from './commands/svn-checkout.js';
-import { addToSvnIgnore, commitSelected, countIncoming, discardChanges, readConflictHunks, readWorkingCopyDiff, readWorkingCopyStatus, resolveConflict, setIgnoreOnCommit, updateWorkingCopy, type ConflictChoice, type ConflictHunk, type DiscardResult, type SimpleResult, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
+import { addToSvnIgnore, commitSelected, countIncoming, discardChanges, readConflictHunks, readWorkingCopyDiff, readWorkingCopyStatus, resolveConflict, revertRevision, setIgnoreOnCommit, type RevertRevisionResult, updateWorkingCopy, type ConflictChoice, type ConflictHunk, type DiscardResult, type SimpleResult, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
 import { cancelSvnOperations, type SvnCredentials } from './commands/svn-client.js';
 import { listRemote, type RemoteListing } from './commands/svn-repository-browser.js';
 import { listGitBranches, switchGitBranch, type GitBranchList, type SwitchGitBranchResult } from './commands/git-branches.js';
@@ -360,6 +360,16 @@ function registerIpcHandlers(): void {
     }
 
     return resolveConflict({ checkoutPath: selected.svnCheckoutPath, path: payload.path, choice: payload.choice });
+  });
+
+  ipcMain.handle('svn:revert-revision', async (_event, payload: { environmentId?: string; revision: string; credentials?: SvnCredentials }): Promise<RevertRevisionResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected) {
+      return { ok: false, message: 'Nenhum projeto selecionado.', changed: [], conflicts: [] };
+    }
+
+    return revertRevision({ checkoutPath: selected.svnCheckoutPath, revision: String(payload?.revision ?? ''), credentials: sanitizeCredentials(payload?.credentials) });
   });
 
   ipcMain.handle('svn:cancel', async (): Promise<number> => cancelSvnOperations());

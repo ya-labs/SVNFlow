@@ -745,3 +745,80 @@ export async function readConflictHunks(checkoutPath: string, filePath: string):
 
   return hunks;
 }
+
+// Desfazer revisão ---------------------------------------------------------------
+
+export interface RevertRevisionResult extends SimpleResult {
+  changed: string[];
+  conflicts: string[];
+  errorCode?: SvnErrorCode | 'INVALID_REVISION' | 'HAS_CONFLICTS' | 'NEEDS_UPDATE';
+}
+
+// Aplica no checkout o inverso da revisão (svn merge -c -N). Nada é publicado:
+// as mudanças aparecem em Alterações para a pessoa revisar e commitar.
+export async function revertRevision(input: { checkoutPath: string; revision: string; credentials?: SvnCredentials; configDir?: string }): Promise<RevertRevisionResult> {
+  const base = { changed: [] as string[], conflicts: [] as string[] };
+
+  if (!/^\d+$/.test(input.revision) || Number(input.revision) < 1) {
+    return { ...base, ok: false, message: 'Revisão inválida.', errorCode: 'INVALID_REVISION' };
+  }
+
+  const status = await readWorkingCopyStatus(input.checkoutPath, { configDir: input.configDir });
+
+  if (!status.ok) {
+    return { ...base, ok: false, message: status.message, detail: status.detail, errorCode: status.errorCode };
+  }
+
+  if (status.conflicts > 0) {
+    return { ...base, ok: false, message: 'Resolva os conflitos do checkout antes de desfazer uma revisão.', errorCode: 'HAS_CONFLICTS' };
+  }
+
+  const result = await runSvnInSession(['merge', '--accept', 'postpone', '-c', `-${input.revision}`, status.url ?? '', '.'], {
+    cwd: input.checkoutPath,
+    url: status.url,
+    credentials: input.credentials,
+    configDir: input.configDir,
+    timeoutMs: 10 * 60 * 1000
+  });
+
+  if (!result.ok) {
+    // Depois de um commit o checkout fica com revisões misturadas, e o merge exige um update antes.
+    if (/E195020|mixed-revision/i.test(result.stderr)) {
+      return { ...base, ok: false, message: 'O checkout tem partes em revisões diferentes (normal depois de um commit). Atualize do servidor e tente de novo.', errorCode: 'NEEDS_UPDATE' };
+    }
+
+    return { ...base, ok: false, message: result.message, detail: svnErrorDetail(result.stderr), errorCode: result.errorCode };
+  }
+
+  for (const line of result.stdout.split('\n')) {
+    const match = line.match(/^([ADUCGR ])([ADUCGR ]?)[ C]?\s+(.+)$/);
+
+    if (!match || /^(--- |Summary of conflicts|Text conflicts|Tree conflicts)/.test(line)) {
+      continue;
+    }
+
+    const changedPath = toPosix(match[3].trim().replace(/^\.\//, ''));
+
+    if (changedPath === '.' && !match[1].trim()) {
+      continue;
+    }
+
+    base.changed.push(changedPath);
+
+    if (match[1] === 'C' || match[2] === 'C') {
+      base.conflicts.push(changedPath);
+    }
+  }
+
+  if (base.changed.length === 0) {
+    return { ...base, ok: true, message: `A revisão ${input.revision} não alterou nada neste projeto.` };
+  }
+
+  return {
+    ...base,
+    ok: true,
+    message: base.conflicts.length > 0
+      ? `Revisão ${input.revision} desfeita no checkout com ${count(base.conflicts.length, 'conflito', 'conflitos')}. Resolva e revise antes de publicar.`
+      : `Revisão ${input.revision} desfeita no checkout: ${count(base.changed.length, 'arquivo', 'arquivos')}. Revise e publique em Alterações.`
+  };
+}

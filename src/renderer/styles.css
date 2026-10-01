@@ -2326,3 +2326,34 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Ações da revisão no Histórico. */
+.revision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.modal-hint {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-subtle);
+  font-size: 12.5px;
+}
+
+/* Arquivo selecionado na revisão: mesma seleção discreta da lista principal. */
+.revision-file[aria-selected='true'] {
+  background: var(--accent-subtle);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.revision-file[aria-selected='true'] .change-dir {
+  color: var(--text-muted);
+}
+
+.revision-file[aria-selected='true'] .change-icon[data-kind='added'] { color: var(--added); }
+.revision-file[aria-selected='true'] .change-icon[data-kind='modified'] { color: var(--modified); }
+.revision-file[aria-selected='true'] .change-icon[data-kind='deleted'] { color: var(--removed); }

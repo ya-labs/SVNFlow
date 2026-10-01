@@ -168,6 +168,7 @@ interface HistoryLogState {
   localRevisions?: string[];
   repositoryRoot?: string;
   projectPath?: string;
+  url?: string;
   error?: string;
   detail?: string;
 }
@@ -323,6 +324,7 @@ async function loadHistory(more = false): Promise<void> {
     log.workingCopyRevision = page.workingCopyRevision;
     log.localRevisions = page.localRevisions;
     log.repositoryRoot = page.repositoryRoot;
+    log.url = page.url;
     log.projectPath = page.projectPath;
   }
 
@@ -1350,6 +1352,10 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
       <h2>${escapeHtml(title.trim() || '(sem mensagem)')}</h2>
       <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(entry.author ?? 'sem autor')} · ${escapeHtml(formatDate(entry.date))} · ${count(paths.length, 'arquivo', 'arquivos')}${isNewOnServer(revision) ? ' · <span class="badge-new">Ainda não está no seu checkout</span>' : ''}</p>
       ${body ? `<p class="commit-message-view">${escapeHtml(body)}</p>` : ''}
+      <div class="revision-actions">
+        <button type="button" class="button small" data-role="revert-revision" ${isNewOnServer(revision) ? 'disabled title="Atualize do servidor antes: esta revisão ainda não está no seu checkout."' : 'title="Aplica no checkout o inverso desta revisão. Nada é publicado até você commitar."'}>Desfazer esta revisão…</button>
+        <button type="button" class="button small" data-role="checkout-revision" title="Baixa o projeto como estava nesta revisão, numa pasta separada.">Checkout nesta revisão…</button>
+      </div>
     </div>
     <div class="revision-layout">
       <ul class="path-list revision-files">
@@ -1364,6 +1370,14 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
 
   const diffContainer = query<HTMLElement>('[data-role="revision-diff"]', detail)!;
 
+  bindDetailActions(detail);
+  bindClick(detail, '[data-role="revert-revision"]', () => undoRevision(entry));
+  bindClick(detail, '[data-role="checkout-revision"]', () => {
+    if (desktop.log.url) {
+      void openCheckoutModal(desktop.log.url, revision);
+    }
+  });
+
   bindClick(detail, '[data-log-path]', (button) => {
     desktop.selectedLogPath = button.dataset.logPath;
     detail.querySelectorAll<HTMLElement>('[data-log-path]').forEach((item) => item.setAttribute('aria-selected', String(item === button)));
@@ -1375,6 +1389,45 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
   } else {
     diffContainer.innerHTML = blankSlate('Sem arquivos', 'Esta revisão só alterou propriedades ou pastas.');
   }
+}
+
+// Desfazer revisão: aplica o inverso no checkout e prepara a mensagem do commit.
+async function undoRevision(entry: SvnXmlLogEntry): Promise<void> {
+  const title = firstLine(entry.message) || '(sem mensagem)';
+  const localChanges = desktop.workingCopy?.changes.length ?? 0;
+  const confirmed = await confirmModal({
+    title: `Desfazer a revisão ${entry.revision}`,
+    message: `As mudanças de "${title}" serão desfeitas no seu checkout. Nada é publicado: você revisa em Alterações e publica com um novo commit.${localChanges > 0 ? ` O checkout já tem ${count(localChanges, 'alteração local', 'alterações locais')}, que vão se misturar com o desfazer.` : ''}`,
+    confirmLabel: 'Desfazer no checkout'
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  setStatusMessage(`Desfazendo a revisão ${entry.revision}...`);
+  const url = desktop.log.url ?? '';
+  const result = await withCredentials(url, (credentials) => api().revertRevision(state.selectedEnvironmentId, entry.revision, credentials));
+  setStatusMessage(result.message);
+
+  if (!result.ok) {
+    desktop.banner = {
+      tone: 'error',
+      html: `<p><strong>${escapeHtml(result.message)}</strong></p>${result.errorCode === 'NEEDS_UPDATE' ? '<p><button type="button" class="button primary" data-role="banner-update">Atualizar agora</button></p>' : ''}${result.detail ? `<pre class="review-markdown">${escapeHtml(result.detail)}</pre>` : ''}`
+    };
+    void renderDetail();
+    return;
+  }
+
+  desktop.banner = { tone: result.conflicts.length > 0 ? 'warning' : 'success', html: `<p><strong>${escapeHtml(result.message)}</strong></p>` };
+
+  if (result.changed.length > 0) {
+    desktop.commitDraft = { key: `svn:${state.selectedEnvironmentId ?? ''}`, summary: `Desfaz r${entry.revision}: ${title}`, description: `Reverte as mudanças da revisão ${entry.revision}.` };
+    desktop.tab = 'changes';
+    desktop.selectedRevision = undefined;
+  }
+
+  await loadDesktop({ quiet: true });
 }
 
 function renderConflictBanner(): string {
@@ -2303,6 +2356,11 @@ function renderRepoBrowser(): void {
     renderRepoBrowser();
   });
   bindClick(detail, '[data-role="remote-history-more"]', () => loadRemoteHistory(true));
+  bindClick(detail, '[data-checkout-revision]', (button) => {
+    if (repos.history?.url) {
+      void openCheckoutModal(repos.history.url, button.dataset.checkoutRevision);
+    }
+  });
   bindClick(detail, '[data-expand-revision]', (button) => {
     repos.expandedRevision = repos.expandedRevision === button.dataset.expandRevision ? undefined : button.dataset.expandRevision;
     renderRepoBrowser();
@@ -2335,6 +2393,7 @@ function renderRemoteHistory(): string {
             const shown = projectPath && projectPath !== '/' && item.path.startsWith(`${projectPath}/`) ? item.path.slice(projectPath.length + 1) : item.path;
             return `<li><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${escapeHtml(shown)}</li>`;
           }).join('')}</ul>
+          <p><button type="button" class="button small" data-checkout-revision="${escapeHtml(entry.revision)}">Checkout nesta revisão…</button></p>
         </td></tr>`
       : '';
 
@@ -2477,12 +2536,14 @@ function openAddRootModal(): void {
   });
 }
 
-function openCheckoutModal(url: string): void {
-  const name = suggestNameFromUrl(url);
+async function openCheckoutModal(url: string, revision?: string): Promise<void> {
+  // Aberto pelo Histórico, a tela de Repositórios pode ainda não ter carregado a pasta padrão.
+  repos.data ??= await api().getRepositoriesState();
+  const name = revision ? `${suggestNameFromUrl(url)}-r${revision}` : suggestNameFromUrl(url);
   const defaultDirectory = repos.data?.defaultCheckoutDirectory ?? '';
   const modal = openModal(`
     <form data-role="checkout-form">
-      <div class="modal-header">Fazer checkout</div>
+      <div class="modal-header">${revision ? `Checkout na revisão ${escapeHtml(revision)}` : 'Fazer checkout'}</div>
       <div class="modal-body">
         <label class="modal-field">URL
           <input class="input" type="text" value="${escapeHtml(url)}" readonly />
@@ -2497,6 +2558,7 @@ function openCheckoutModal(url: string): void {
         <label class="modal-field">Nome do projeto
           <input class="input" name="name" type="text" value="${escapeHtml(name)}" />
         </label>
+        ${revision ? `<p class="modal-hint">O projeto vem como estava na revisão ${escapeHtml(revision)}, numa pasta separada. Para trazer as mudanças mais novas depois, use Atualizar do servidor.</p>` : ''}
         <label class="modal-check" data-role="save-default-field" hidden>
           <input type="checkbox" name="saveDefault" />
           <span>Usar <strong data-role="picked-folder"></strong> como pasta padrão dos próximos checkouts</span>
@@ -2576,6 +2638,7 @@ function openCheckoutModal(url: string): void {
           url,
           destination: input('destination').value.trim(),
           name: input('name').value.trim() || undefined,
+          revision,
           credentials
         });
         return { ...result, errorCode: result.checkout.errorCode };
