@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import os from 'node:os';
 import path from 'node:path';
 
-import { executeCommit } from '../commit-executor';
 import { buildFileDiff, buildSyncPlan, executeSync, suggestSyncCommitMessage } from '../git-svn-sync';
 
 function commandAvailable(command: string, args: string[]): boolean {
@@ -23,6 +22,17 @@ const describeWithTools = commandAvailable('git', ['--version'])
 
 function run(command: string, args: string[], cwd: string): string {
   return execFileSync(command, args, { cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
+}
+
+// Commit SVN direto, só para preparar o cenário dos testes de espelhamento.
+function executeCommit(input: { checkoutPath: string; title: string }): { status: 'success' | 'failed'; revision?: string } {
+  try {
+    const output = run('svn', ['commit', '-m', input.title], input.checkoutPath);
+    run('svn', ['update', '--quiet'], input.checkoutPath);
+    return { status: 'success', revision: output.match(/(?:Committed revision|Revisão commitada|revisão) (\d+)/i)?.[1] ?? run('svn', ['info', '--show-item', 'revision'], input.checkoutPath).trim() };
+  } catch {
+    return { status: 'failed' };
+  }
 }
 
 function commitAll(gitPath: string, message: string): string {

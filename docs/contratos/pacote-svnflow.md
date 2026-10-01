@@ -1,5 +1,7 @@
 # Contrato do Pacote `.svnflow`
 
+> **Documento histórico.** O fluxo por patch e pacotes `.svnflow` saiu do app pela [ADR-009](../adrs/ADR-009-remocao-do-modo-avancado.md). Este texto fica só como registro.
+
 ## Objetivo
 
 O pacote `.svnflow` é o formato inicial de colaboração da v1.

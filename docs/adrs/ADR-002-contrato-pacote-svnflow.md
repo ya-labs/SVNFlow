@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceita para orientar a v1. O formato de arquivo (ZIP renomeado) foi substituído pela [ADR-006](ADR-006-pacote-svnflow-json-v1.md).
+Substituída pela [ADR-009](ADR-009-remocao-do-modo-avancado.md): o pacote `.svnflow` saiu do app. Antes disso, o formato de arquivo (ZIP renomeado) tinha sido substituído pela [ADR-006](ADR-006-pacote-svnflow-json-v1.md).
 
 ## Contexto
 

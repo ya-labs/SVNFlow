@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, w
 import os from 'node:os';
 import path from 'node:path';
 
-import { scheduleSvnFileOperations } from '../svn-apply-flow';
 import { addToSvnIgnore, commitSelected, discardChanges, readWorkingCopyDiff, readWorkingCopyStatus, setIgnoreOnCommit } from '../svn-working-copy';
 
 function hasCommand(command: string): boolean {
@@ -111,15 +110,5 @@ describeWithSvn('caminhos locais com @ no SVN', () => {
     expect((await addToSvnIgnore({ checkoutPath: wc, path: other, mode: 'item' })).ok).toBe(true);
     expect((await discardChanges({ checkoutPath: wc, paths: ['pasta@teste'], moveToTrash: async () => {} })).ok).toBe(true);
     expect(svn(['propget', 'svn:ignore', '--', 'pasta@teste@'], wc).trim()).toBe('rascunho@2x.tmp');
-  });
-
-  it('agenda adições e remoções de arquivos com @ no fluxo de aplicação', async () => {
-    const name = names[0];
-    writeFileSync(path.join(wc, name), 'inicial\n');
-    expect(scheduleSvnFileOperations(wc, { added: [name], deleted: [], modified: [] }).errors).toEqual([]);
-    expect((await commitSelected({ checkoutPath: wc, paths: [name], message: 'Inicial' })).ok).toBe(true);
-    rmSync(path.join(wc, name));
-    expect(scheduleSvnFileOperations(wc, { added: [], deleted: [name], modified: [] }).errors).toEqual([]);
-    expect((await readWorkingCopyStatus(wc)).changes[0].kind).toBe('deleted');
   });
 });

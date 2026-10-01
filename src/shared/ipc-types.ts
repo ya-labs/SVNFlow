@@ -1,14 +1,7 @@
 // Tipos compartilhados entre processo principal, preload e renderer.
 // Contém apenas tipos: nada deste arquivo existe em tempo de execução.
-import type { ExecuteCommitResult } from '../main/commands/commit-executor.js';
-import type { MiniPrDraft } from '../main/commands/mini-pr.js';
-import type { ExportPackageResult } from '../main/commands/package-exporter.js';
-import type { PackageHistoryResult } from '../main/commands/package-history.js';
-import type { ImportPackageResult } from '../main/commands/package-importer.js';
-import type { PackageLibraryResult } from '../main/commands/package-library.js';
 import type { RegisterSavedEnvironmentResult } from '../main/commands/register-saved-environment.js';
 import type { SavedEnvironmentValidationStatus } from '../main/commands/saved-environments.js';
-import type { ApplyPlan, ExecuteApplyResult } from '../main/commands/svn-apply-flow.js';
 import type { RepositoryRoot } from '../main/commands/app-settings.js';
 import type { CheckoutResult } from '../main/commands/svn-checkout.js';
 import type { SvnCredentials } from '../main/commands/svn-client.js';
@@ -20,17 +13,9 @@ import type { SvnLogPage } from '../main/commands/svn-history.js';
 import type { SvnXmlLogEntry } from '../main/commands/svn-xml.js';
 
 export type {
-  ApplyPlan,
-  ExecuteApplyResult,
-  ExecuteCommitResult,
   ExecuteSyncResult,
-  ExportPackageResult,
   GitBranch,
   GitBranchList,
-  ImportPackageResult,
-  MiniPrDraft,
-  PackageHistoryResult,
-  PackageLibraryResult,
   CheckoutResult,
   CommitSelectedResult,
   DiscardResult,
@@ -88,125 +73,6 @@ export interface RegisterEnvironmentInput {
 export interface RegisterEnvironmentResponse {
   registration: RegisterSavedEnvironmentResult;
   screen: EnvironmentScreenState;
-}
-
-export interface ScreenEnvironment {
-  environmentName: string;
-  gitWorkspacePath?: string;
-  svnCheckoutPath: string;
-  svnCheckoutRoot?: string;
-}
-
-export interface ScreenWorkspaceFile {
-  path: string;
-  previousPath?: string;
-  status: string;
-  description: string;
-  rawStatus: string;
-}
-
-export interface ScreenBlocker {
-  code: string;
-  message: string;
-  affectedFiles?: string[];
-}
-
-export interface ScreenAlert {
-  code: string;
-  message: string;
-  severity: 'info' | 'warning';
-  affectedFiles?: string[];
-}
-
-export interface PreviewScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: ScreenEnvironment;
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: ScreenWorkspaceFile[];
-    totals: ChangeTotals;
-  };
-  blockers: ScreenBlocker[];
-  alerts: ScreenAlert[];
-  canExportPackage: boolean;
-  canApplyInSvn: boolean;
-}
-
-export interface ChangeTotals {
-  added: number;
-  modified: number;
-  deleted: number;
-  renamed: number;
-  copied: number;
-  unknown: number;
-}
-
-export interface WorkspaceScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: ScreenEnvironment;
-  workspace?: {
-    branch?: string;
-    baseBranch: string;
-    totalAffectedFiles: number;
-    files: ScreenWorkspaceFile[];
-    totals: ChangeTotals;
-  };
-  blockers: ScreenBlocker[];
-  alerts: ScreenAlert[];
-  hasChanges: boolean;
-  canAdvanceToPreview: boolean;
-}
-
-export interface PackagesScreenState {
-  packagesDirectory: string;
-  preview: PreviewScreenState;
-  author?: string;
-  library: PackageLibraryResult;
-}
-
-export interface ExportPackageRequest {
-  environmentId?: string;
-  miniPr: MiniPrDraft;
-}
-
-export interface CommitScreenState {
-  status: 'ready' | 'blocked';
-  title: string;
-  message: string;
-  environment?: {
-    environmentName: string;
-    svnCheckoutPath: string;
-  };
-  commitValidation?: {
-    hasChanges: boolean;
-    affectedFilesCount: number;
-    blockers: Array<{ code: string; message: string }>;
-    canCommit: boolean;
-  };
-  checkoutFiles: Array<{ path: string; status: string; description: string }>;
-  canExecuteCommit: boolean;
-}
-
-export type ApplySourceRequest =
-  | { kind: 'workspace' }
-  | { kind: 'package'; packagePath: string };
-
-export interface ApplyPlanResponse {
-  ok: boolean;
-  message: string;
-  plan?: ApplyPlan;
-}
-
-export interface ExecuteApplyResponse {
-  ok: boolean;
-  message: string;
-  result?: ExecuteApplyResult;
 }
 
 export interface SyncScreenState {
@@ -275,11 +141,9 @@ export interface SvnflowDesktopApi {
   appName: string;
   appVersion: string;
   getEnvironmentScreenState: (environmentId?: string) => Promise<EnvironmentScreenState>;
-  revalidateEnvironment: (environmentId?: string) => Promise<EnvironmentScreenState>;
   registerEnvironment: (input: RegisterEnvironmentInput) => Promise<RegisterEnvironmentResponse>;
   removeEnvironment: (environmentId: string) => Promise<EnvironmentScreenState>;
   selectDirectory: (title: string, defaultPath?: string) => Promise<string | undefined>;
-  selectPackageFile: (defaultPath?: string) => Promise<string | undefined>;
   getSyncScreenState: (environmentId?: string) => Promise<SyncScreenState>;
   executeSync: (environmentId?: string) => Promise<SyncExecuteResponse>;
   getWorkingCopyStatus: (environmentId: string | undefined) => Promise<WorkingCopyStatus>;
@@ -308,16 +172,4 @@ export interface SvnflowDesktopApi {
   getTheme: () => Promise<AppTheme>;
   setTheme: (theme: AppTheme) => Promise<AppTheme>;
   setCheckoutDirectory: (directory: string) => Promise<string>;
-  getWorkspaceScreenState: (environmentId?: string) => Promise<WorkspaceScreenState>;
-  getPreviewScreenState: (environmentId?: string) => Promise<PreviewScreenState>;
-  getPackagesScreenState: (environmentId?: string) => Promise<PackagesScreenState>;
-  setPackagesDirectory: (directory: string) => Promise<string>;
-  previewMiniPrMarkdown: (request: ExportPackageRequest) => Promise<string>;
-  exportPackage: (request: ExportPackageRequest) => Promise<ExportPackageResult>;
-  importAndValidatePackage: (packagePath: string) => Promise<ImportPackageResult>;
-  readPackageHistory: () => Promise<PackageHistoryResult>;
-  getApplyPlan: (environmentId: string | undefined, source: ApplySourceRequest) => Promise<ApplyPlanResponse>;
-  executeApply: (environmentId: string | undefined, source: ApplySourceRequest) => Promise<ExecuteApplyResponse>;
-  getCommitScreenState: (environmentId?: string) => Promise<CommitScreenState>;
-  executeCommit: (environmentId: string, title: string, description?: string) => Promise<ExecuteCommitResult>;
 }

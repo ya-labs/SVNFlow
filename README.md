@@ -11,7 +11,7 @@ O projeto busca tornar esse processo mais visual, seguro e repetível, com foco 
 3. Em **Histórico**, consulte os commits do servidor e o diff de cada arquivo. Quando houver revisões novas, use **Atualizar do servidor**.
 4. Opcional: vincule um repositório Git ao projeto para copiar o último commit de uma branch para o checkout antes do commit SVN.
 
-O fluxo por patch e pacotes `.svnflow` continua disponível em **Modo avançado**.
+Os checkouts são sugeridos dentro de uma pasta padrão (`~/svn`, ou a que você escolher em **Repositórios**).
 
 ## Como instalar
 

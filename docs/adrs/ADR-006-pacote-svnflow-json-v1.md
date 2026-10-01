@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceita. Substitui a decisão de formato de arquivo (ZIP renomeado) da [ADR-002](ADR-002-contrato-pacote-svnflow.md). O restante da ADR-002 continua válido.
+Substituída pela [ADR-009](ADR-009-remocao-do-modo-avancado.md): o pacote `.svnflow` saiu do app. Antes disso, substituía a decisão de formato de arquivo (ZIP renomeado) da [ADR-002](ADR-002-contrato-pacote-svnflow.md).
 
 ## Contexto
 

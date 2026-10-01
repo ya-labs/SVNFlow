@@ -1,5 +1,7 @@
 # Contrato do `pr.md`
 
+> **Documento histórico.** O fluxo por patch e pacotes `.svnflow` saiu do app pela [ADR-009](../adrs/ADR-009-remocao-do-modo-avancado.md). Este texto fica só como registro.
+
 ## Objetivo
 
 Este documento define o papel do `pr.md` dentro do pacote `.svnflow`.
