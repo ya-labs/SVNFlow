@@ -3,7 +3,7 @@ export type SavedEnvironmentValidationStatus = 'ready' | 'blocked' | 'error' | '
 export interface SavedEnvironment {
   id: string;
   name: string;
-  gitWorkspacePath: string;
+  gitWorkspacePath?: string;
   svnCheckoutPath: string;
   baseBranch?: string;
   lastSyncedGitCommit?: string;
@@ -41,7 +41,7 @@ export interface SelectSavedEnvironmentInput {
 export interface SelectedEnvironment {
   id: string;
   name: string;
-  gitWorkspacePath: string;
+  gitWorkspacePath?: string;
   svnCheckoutPath: string;
   baseBranch?: string;
   lastSyncedGitCommit?: string;

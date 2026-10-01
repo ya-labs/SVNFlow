@@ -16,7 +16,7 @@ export interface InitialFlowGateResult {
 }
 
 export interface InitialFlowLoadedEnvironment {
-  gitRepositoryPath: string;
+  gitRepositoryPath?: string;
   svnCheckoutPath: string;
   selectedEnvironmentId: string;
   selectedEnvironmentName: string;

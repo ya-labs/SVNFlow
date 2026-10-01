@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 
 import { validateGitRepository } from './git.js';
 import { validateGitComparisonBase } from './workspace.js';
-import { saveSavedEnvironment, type SaveSavedEnvironmentInput, type SavedEnvironmentStorageErrorCode } from './saved-environment-store.js';
+import { saveSavedEnvironment, updateSavedEnvironment, type SaveSavedEnvironmentInput, type SavedEnvironmentStorageErrorCode } from './saved-environment-store.js';
 import type { SavedEnvironment } from './saved-environments.js';
 import { validateSvnCheckout } from './svn.js';
 
@@ -22,7 +22,7 @@ export interface RegisterSavedEnvironmentBlocker {
 
 export interface RegisterSavedEnvironmentInput {
   name?: string;
-  gitWorkspacePath: string;
+  gitWorkspacePath?: string;
   svnCheckoutPath: string;
   baseBranch?: string;
   storagePath?: string;
@@ -76,6 +76,31 @@ function buildSuggestedName(gitWorkspacePath: string): string {
   return workspaceName.length > 0 ? workspaceName : 'Ambiente Local';
 }
 
+function validateGitLink(
+  gitWorkspacePath: string,
+  baseBranch: string
+): { message: string; blocker: RegisterSavedEnvironmentBlocker } | undefined {
+  const gitValidation = validateGitRepository(gitWorkspacePath);
+
+  if (!gitValidation.valid) {
+    return {
+      message: 'Workspace Git inválido. Escolha uma pasta que contenha um repositório Git válido.',
+      blocker: { code: 'INVALID_GIT_WORKSPACE', message: gitValidation.message }
+    };
+  }
+
+  const baseValidation = validateGitComparisonBase({ gitRepositoryPath: gitWorkspacePath, baseBranch });
+
+  if (!baseValidation.valid) {
+    return {
+      message: `Base de comparação ${baseBranch} não encontrada no workspace Git. Informe uma branch local existente.`,
+      blocker: { code: 'INVALID_BASE_BRANCH', message: baseValidation.message }
+    };
+  }
+
+  return undefined;
+}
+
 function mapStorageErrorMessage(errorCode: SavedEnvironmentStorageErrorCode | undefined, fallback: string): string {
   if (errorCode === 'ALREADY_EXISTS') {
     return 'Já existe um ambiente salvo com este identificador. Tente novamente.';
@@ -97,7 +122,7 @@ export async function registerSavedEnvironmentFromLocalPaths(
 ): Promise<RegisterSavedEnvironmentResult> {
   const gitWorkspacePath = normalizeText(input.gitWorkspacePath);
   const svnCheckoutPath = normalizeText(input.svnCheckoutPath);
-  const suggestedName = buildSuggestedName(gitWorkspacePath);
+  const suggestedName = buildSuggestedName(gitWorkspacePath || svnCheckoutPath);
   const resolvedName = normalizeText(input.name) || suggestedName;
 
   if (!resolvedName) {
@@ -114,37 +139,14 @@ export async function registerSavedEnvironmentFromLocalPaths(
     };
   }
 
-  const gitValidation = validateGitRepository(gitWorkspacePath);
-
-  if (!gitValidation.valid) {
-    return {
-      canSave: false,
-      message: 'Workspace Git inválido. Escolha uma pasta que contenha um repositório Git válido.',
-      suggestedName,
-      blockers: [
-        {
-          code: 'INVALID_GIT_WORKSPACE',
-          message: gitValidation.message
-        }
-      ]
-    };
-  }
-
   const baseBranch = normalizeText(input.baseBranch) || 'main';
-  const baseValidation = validateGitComparisonBase({ gitRepositoryPath: gitWorkspacePath, baseBranch });
 
-  if (!baseValidation.valid) {
-    return {
-      canSave: false,
-      message: `Base de comparação ${baseBranch} não encontrada no workspace Git. Informe uma branch local existente.`,
-      suggestedName,
-      blockers: [
-        {
-          code: 'INVALID_BASE_BRANCH',
-          message: baseValidation.message
-        }
-      ]
-    };
+  if (gitWorkspacePath) {
+    const gitBlocker = validateGitLink(gitWorkspacePath, baseBranch);
+
+    if (gitBlocker) {
+      return { canSave: false, message: gitBlocker.message, suggestedName, blockers: [gitBlocker.blocker] };
+    }
   }
 
   const svnValidation = validateSvnCheckout(svnCheckoutPath);
@@ -169,9 +171,9 @@ export async function registerSavedEnvironmentFromLocalPaths(
   const environment: SavedEnvironment = {
     id: randomUUID(),
     name: resolvedName,
-    gitWorkspacePath,
+    gitWorkspacePath: gitWorkspacePath || undefined,
     svnCheckoutPath,
-    baseBranch,
+    baseBranch: gitWorkspacePath ? baseBranch : undefined,
     svnUrl: metadata.svnUrl,
     svnCheckoutRoot: metadata.svnCheckoutRoot ?? svnValidation.checkoutRoot,
     svnRevision: metadata.svnRevision,
@@ -209,5 +211,51 @@ export async function registerSavedEnvironmentFromLocalPaths(
     savedEnvironment: environment,
     blockers: [],
     storagePath: saveResult.storagePath
+  };
+}
+export interface LinkGitInput {
+  environmentId: string;
+  // Vazio desvincula o Git do projeto.
+  gitWorkspacePath?: string;
+  baseBranch?: string;
+  storagePath?: string;
+}
+
+export interface LinkGitResult {
+  ok: boolean;
+  message: string;
+  blockers: RegisterSavedEnvironmentBlocker[];
+}
+
+export async function linkGitToSavedEnvironment(input: LinkGitInput): Promise<LinkGitResult> {
+  const gitWorkspacePath = normalizeText(input.gitWorkspacePath);
+  const baseBranch = normalizeText(input.baseBranch) || 'main';
+
+  if (gitWorkspacePath) {
+    const gitBlocker = validateGitLink(gitWorkspacePath, baseBranch);
+
+    if (gitBlocker) {
+      return { ok: false, message: gitBlocker.message, blockers: [gitBlocker.blocker] };
+    }
+  }
+
+  const result = await updateSavedEnvironment({
+    storagePath: input.storagePath,
+    environmentId: input.environmentId,
+    changes: {
+      gitWorkspacePath: gitWorkspacePath || '',
+      baseBranch: gitWorkspacePath ? baseBranch : '',
+      lastSyncedGitCommit: ''
+    }
+  });
+
+  if (!result.ok) {
+    return { ok: false, message: mapStorageErrorMessage(result.errorCode, result.message), blockers: [{ code: 'STORAGE_ERROR', message: result.message }] };
+  }
+
+  return {
+    ok: true,
+    message: gitWorkspacePath ? 'Repositório Git vinculado ao projeto.' : 'Repositório Git desvinculado do projeto.',
+    blockers: []
   };
 }

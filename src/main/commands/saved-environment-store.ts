@@ -111,7 +111,7 @@ function sanitizeSavedEnvironment(environment: SavedEnvironment): SavedEnvironme
 	return {
 		id: normalizeText(environment.id),
 		name: normalizeText(environment.name),
-		gitWorkspacePath: normalizeText(environment.gitWorkspacePath),
+		gitWorkspacePath: normalizeOptionalText(environment.gitWorkspacePath),
 		svnCheckoutPath: normalizeText(environment.svnCheckoutPath),
 		baseBranch: normalizeOptionalText(environment.baseBranch),
 		lastSyncedGitCommit: normalizeOptionalText(environment.lastSyncedGitCommit),
@@ -130,10 +130,6 @@ function validateSavedEnvironment(environment: SavedEnvironment): string | undef
 
 	if (!isNonEmptyText(environment.name)) {
 		return 'O ambiente salvo precisa de um nome válido.';
-	}
-
-	if (!isNonEmptyText(environment.gitWorkspacePath)) {
-		return 'O ambiente salvo precisa de um caminho válido para o workspace Git.';
 	}
 
 	if (!isNonEmptyText(environment.svnCheckoutPath)) {

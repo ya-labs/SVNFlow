@@ -202,4 +202,30 @@ describe('registerSavedEnvironmentFromLocalPaths', () => {
     expect(result.blockers[0].code).toBe('STORAGE_ERROR');
     expect(result.message).toContain('Falha ao acessar o armazenamento local');
   });
+
+  it('cadastra projeto só SVN sem validar Git e sugere o nome da pasta do checkout', async () => {
+    mockValidateSvnCheckout.mockReturnValue({
+      valid: true,
+      message: 'Checkout SVN válido.',
+      checkoutRoot: '/home/pessoa/svn/projeto-mobile'
+    });
+    mockExecSync.mockReturnValue('' as never);
+    mockSaveSavedEnvironment.mockResolvedValue({
+      ok: true,
+      storagePath: '/tmp/saved-environments.json',
+      environments: [],
+      message: 'Ambientes salvos atualizados com sucesso.'
+    });
+
+    const result = await registerSavedEnvironmentFromLocalPaths({
+      svnCheckoutPath: '/home/pessoa/svn/projeto-mobile'
+    });
+
+    expect(result.canSave).toBe(true);
+    expect(result.savedEnvironment?.name).toBe('projeto-mobile');
+    expect(result.savedEnvironment?.gitWorkspacePath).toBeUndefined();
+    expect(result.savedEnvironment?.baseBranch).toBeUndefined();
+    expect(mockValidateGitRepository).not.toHaveBeenCalled();
+    expect(mockValidateGitComparisonBase).not.toHaveBeenCalled();
+  });
 });

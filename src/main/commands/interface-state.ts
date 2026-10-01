@@ -18,7 +18,7 @@ export interface MainInterfaceState {
     active?: {
       id: string;
       name: string;
-      gitWorkspacePath: string;
+      gitWorkspacePath?: string;
       svnCheckoutPath: string;
     };
     message: string;

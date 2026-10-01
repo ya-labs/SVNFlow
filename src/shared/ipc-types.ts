@@ -49,7 +49,7 @@ export interface EnvironmentScreenState {
   selected?: {
     id: string;
     name: string;
-    gitWorkspacePath: string;
+    gitWorkspacePath?: string;
     svnCheckoutPath: string;
     baseBranch: string;
     visualStatus: EnvironmentVisualStatus;
@@ -60,7 +60,7 @@ export interface EnvironmentScreenState {
 
 export interface RegisterEnvironmentInput {
   name?: string;
-  gitWorkspacePath: string;
+  gitWorkspacePath?: string;
   svnCheckoutPath: string;
   baseBranch?: string;
 }
@@ -72,7 +72,7 @@ export interface RegisterEnvironmentResponse {
 
 export interface ScreenEnvironment {
   environmentName: string;
-  gitWorkspacePath: string;
+  gitWorkspacePath?: string;
   svnCheckoutPath: string;
   svnCheckoutRoot?: string;
 }
@@ -194,7 +194,7 @@ export interface SyncScreenState {
   environment?: {
     id: string;
     name: string;
-    gitWorkspacePath: string;
+    gitWorkspacePath?: string;
     svnCheckoutPath: string;
   };
   plan?: SyncPlan;
@@ -215,6 +215,12 @@ export interface SyncCommitResponse {
 
 export type AppTheme = 'system' | 'light' | 'dark';
 
+export interface LinkGitResponse {
+  ok: boolean;
+  message: string;
+  blockers: Array<{ code: string; message: string }>;
+}
+
 export interface SvnflowDesktopApi {
   appName: string;
   appVersion: string;
@@ -230,6 +236,7 @@ export interface SvnflowDesktopApi {
   getSyncFileDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   getSvnRevisionLog: (environmentId: string | undefined, revision: string) => Promise<SvnRevisionLog>;
   openEnvironmentFolder: (environmentId: string | undefined, which: 'git' | 'svn') => Promise<void>;
+  linkGit: (environmentId: string, gitWorkspacePath: string, baseBranch?: string) => Promise<LinkGitResponse>;
   listGitBranches: (environmentId: string | undefined) => Promise<GitBranchList>;
   switchGitBranch: (environmentId: string | undefined, branch: string, kind: 'local' | 'remote') => Promise<SwitchGitBranchResult>;
   getTheme: () => Promise<AppTheme>;
