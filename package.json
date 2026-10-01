@@ -12,7 +12,7 @@
     "dev": "tsc -p tsconfig.build.json --watch",
     "app": "npm run build && electron .",
     "app:dev": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --linux"
+    "dist": "npm run build && electron-builder --linux --publish never"
   },
   "keywords": [
     "git",
