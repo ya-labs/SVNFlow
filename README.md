@@ -7,7 +7,7 @@ O projeto busca tornar esse processo mais visual, seguro e repetível, com foco 
 ## Como funciona
 
 1. Cadastre uma vez o repositório Git e a pasta do checkout SVN.
-2. Em **Sincronizar**, veja o que mudou entre o último commit do Git e o checkout SVN e confirme a cópia.
+2. Escolha a branch Git no menu **Branch Git** da barra superior. Em **Alterações**, veja o que mudou entre o último commit dessa branch e o checkout SVN e confirme a cópia.
 3. Revise ou edite a mensagem sugerida a partir dos commits Git e confirme o commit SVN.
 
 O fluxo por patch e pacotes `.svnflow` continua disponível em **Modo avançado**.

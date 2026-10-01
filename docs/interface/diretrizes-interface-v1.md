@@ -74,7 +74,7 @@ Quando a issue exigir interface e regras internas na mesma entrega, use `full-st
 
 O layout principal segue o padrão de clientes Git desktop, com o GitHub Desktop como referência:
 
-- barra superior escura com o ambiente atual (menu para trocar, adicionar ou remover), a branch e o commit Git, e a ação de verificar alterações;
+- barra superior escura com o ambiente atual (menu para trocar, adicionar ou remover), a branch e o commit Git (menu para trocar de branch, com filtro, branches locais e remotas), e a ação de verificar alterações;
 - barra lateral com as abas *Alterações* e *Histórico*;
 - lista de arquivos com ícone de status: criado (`+`), modificado (`•`) ou removido (`−`);
 - caixa de commit no rodapé da barra lateral, com resumo e descrição editáveis;
@@ -84,6 +84,8 @@ O layout principal segue o padrão de clientes Git desktop, com o GitHub Desktop
 - tema claro e escuro, escolhido em *Aparência* (Sistema, Claro ou Escuro). O padrão segue o sistema.
 
 Operações sensíveis (atualizar o checkout SVN e publicar commit) sempre passam por um modal de confirmação que descreve o efeito.
+
+A troca de branch acontece direto pelo menu, como no GitHub Desktop, mas é bloqueada quando há alterações não commitadas em arquivos versionados. Assim nada é levado de uma branch para outra sem querer.
 
 O fluxo por patch e pacotes `.svnflow` fica em *Modo avançado*, com navegação própria por etapas.
 
