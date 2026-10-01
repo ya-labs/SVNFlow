@@ -2236,3 +2236,10 @@ body {
 .modal-check strong {
   word-break: break-all;
 }
+
+/* Fora do SVN: "?" neutro, diferente do "+" de adicionado. */
+.change-icon[data-kind='untracked'],
+[aria-selected='true'] .change-icon[data-kind='untracked'] {
+  color: var(--text-muted);
+  background: var(--bg-hover);
+}

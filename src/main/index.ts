@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -663,6 +663,10 @@ function createMainWindow(): BrowserWindow {
       additionalArguments: [`--svnflow-version=${app.getVersion()}`]
     }
   });
+
+  // Sem o menu padrão do Electron: Ctrl+R recarregava a página e perdia a tela.
+  // Copiar, colar e desfazer continuam funcionando nos campos de texto.
+  Menu.setApplicationMenu(null);
 
   const rendererEntry = path.join(__dirname, '..', 'renderer', 'index.html');
   window.loadFile(rendererEntry);

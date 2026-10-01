@@ -110,7 +110,7 @@ function bindClick(root: ParentNode, selector: string, handler: (button: HTMLBut
 // Visão principal (no estilo do GitHub Desktop)
 
 type DesktopTab = 'changes' | 'history';
-type ChangeKind = 'added' | 'modified' | 'deleted' | 'conflicted';
+type ChangeKind = 'added' | 'untracked' | 'modified' | 'deleted' | 'conflicted';
 
 interface ChangeItem {
   path: string;
@@ -176,13 +176,13 @@ function emptyHistoryLog(): HistoryLogState {
 
 const desktop: DesktopState = { tab: 'changes', requestId: 0, checked: new Set(), knownPaths: new Set(), knownIgnored: new Set(), log: emptyHistoryLog() };
 
-const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', modified: '•', deleted: '−', conflicted: '!' };
+const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', untracked: '?', modified: '•', deleted: '−', conflicted: '!' };
 
 const WORKING_COPY_LABELS: Record<string, { kind: ChangeKind; label: string }> = {
   modified: { kind: 'modified', label: 'Modificado' },
   replaced: { kind: 'modified', label: 'Substituído' },
   added: { kind: 'added', label: 'Adicionado' },
-  unversioned: { kind: 'added', label: 'Novo (fora do SVN)' },
+  unversioned: { kind: 'untracked', label: 'Novo (fora do SVN)' },
   deleted: { kind: 'deleted', label: 'Removido' },
   missing: { kind: 'deleted', label: 'Apagado do disco' },
   conflicted: { kind: 'conflicted', label: 'Em conflito' },
@@ -920,7 +920,7 @@ function renderCommitBox(): void {
     box.innerHTML = `
       ${renderFlowSteps(1)}
       <p class="commit-box-hint">Atualiza só os arquivos locais do checkout SVN para o commit <strong>${escapeHtml(plan.source.shortCommit)}</strong>. <strong>Nada é publicado no servidor nesta etapa.</strong></p>
-      <button type="button" class="button block copy-action" data-role="copy-to-svn">⇣ Copiar ${count(plan.changes.length, 'arquivo', 'arquivos')} para o checkout</button>
+      <button type="button" class="button block copy-action" data-role="copy-to-svn" title="Ctrl+Enter">⇣ Copiar ${count(plan.changes.length, 'arquivo', 'arquivos')} para o checkout</button>
     `;
     bindClick(box, '[data-role="copy-to-svn"]', copyToSvn);
     return;
@@ -941,7 +941,7 @@ function renderCommitBox(): void {
     <input class="input" data-role="commit-summary" type="text" placeholder="Resumo (obrigatório)" value="${escapeHtml(draft.summary)}" aria-label="Resumo do commit SVN" />
     <textarea class="input" data-role="commit-description" placeholder="Descrição" aria-label="Descrição do commit SVN">${escapeHtml(draft.description)}</textarea>
     ${hasSuggestion ? '<button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>' : ''}
-    <button type="button" class="button success block" data-role="commit-svn">${selectedCount > 0 ? `⇡ Publicar ${count(selectedCount, 'arquivo', 'arquivos')} no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
+    <button type="button" class="button success block" data-role="commit-svn" title="Ctrl+Enter">${selectedCount > 0 ? `⇡ Publicar ${count(selectedCount, 'arquivo', 'arquivos')} no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
   `;
 
   const summary = query<HTMLInputElement>('[data-role="commit-summary"]', box)!;
@@ -956,11 +956,6 @@ function renderCommitBox(): void {
 
   summary.addEventListener('input', refresh);
   description.addEventListener('input', refresh);
-  summary.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !submit.disabled) {
-      submit.click();
-    }
-  });
   refresh();
 
   bindClick(box, '[data-role="reset-message"]', () => {
@@ -1007,7 +1002,7 @@ async function copyToSvn(): Promise<void> {
 // para a equipe, então a confirmação mostra tudo o que vai ser publicado.
 function publishReviewModal(items: ChangeItem[], draft: CommitDraft, url: string): Promise<boolean> {
   const ofKind = (kind: ChangeKind): number => items.filter((item) => item.kind === kind).length;
-  const totals = ([['added', 'novo', 'novos'], ['modified', 'alterado', 'alterados'], ['deleted', 'removido', 'removidos']] as Array<[ChangeKind, string, string]>)
+  const totals = ([['added', 'novo', 'novos'], ['untracked', 'novo fora do SVN', 'novos fora do SVN'], ['modified', 'alterado', 'alterados'], ['deleted', 'removido', 'removidos']] as Array<[ChangeKind, string, string]>)
     .filter(([kind]) => ofKind(kind) > 0)
     .map(([kind, singular, pluralForm]) => `<span class="review-chip" data-kind="${kind}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${count(ofKind(kind), singular, pluralForm)}</span>`)
     .join('');
@@ -2637,7 +2632,54 @@ function bindDesktopShell(): void {
   });
   window.addEventListener('blur', closeContextMenu);
 
+  // Volta para a janela: relê o checkout (como o GitHub Desktop), sem atropelar
+  // modal aberto, operação em andamento ou outra tela.
+  let lastAutoRefresh = 0;
+  window.addEventListener('focus', () => {
+    const busy = !query<HTMLElement>('[data-role="busy-indicator"]')?.hidden;
+    const onDesktop = !query<HTMLElement>('[data-role="desktop-view"]')?.hidden;
+
+    if (!busy && onDesktop && !closeActiveModal && state.selectedEnvironmentId && Date.now() - lastAutoRefresh > 3000) {
+      lastAutoRefresh = Date.now();
+      void loadDesktop({ quiet: true });
+    }
+  });
+
+  // Revisões novas no servidor, de tempos em tempos (sem pedir login sozinho).
+  window.setInterval(() => {
+    if (state.selectedEnvironmentId && document.visibilityState === 'visible') {
+      void checkIncoming();
+    }
+  }, 5 * 60 * 1000);
+
   document.addEventListener('keydown', (event) => {
+    const typing = (event.target as HTMLElement).closest('input, textarea');
+    const ctrl = event.ctrlKey || event.metaKey;
+
+    // F5 ou Ctrl+R: verificar alterações. Ctrl+1 / Ctrl+2: abas. Ctrl+Enter: publicar.
+    if (event.key === 'F5' || (ctrl && event.key.toLowerCase() === 'r')) {
+      event.preventDefault();
+      if (!closeActiveModal) {
+        query<HTMLButtonElement>('[data-role="refresh"]')?.click();
+      }
+      return;
+    }
+
+    if (ctrl && (event.key === '1' || event.key === '2') && !closeActiveModal) {
+      event.preventDefault();
+      query<HTMLButtonElement>(`.tab[data-tab="${event.key === '1' ? 'changes' : 'history'}"]`)?.click();
+      return;
+    }
+
+    if (ctrl && event.key === 'Enter' && !closeActiveModal && (!typing || typing.closest('[data-role="commit-box"]'))) {
+      const submit = query<HTMLButtonElement>('[data-role="commit-svn"], [data-role="copy-to-svn"]');
+      if (submit && !submit.disabled) {
+        event.preventDefault();
+        submit.click();
+      }
+      return;
+    }
+
     if (event.key === 'Escape') {
       const target = event.target as HTMLElement;
       const hadOverlay = Boolean(document.querySelector('.context-menu') || closeActiveModal
