@@ -7,6 +7,7 @@ import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-cl
 import { runSvnInSession } from './svn-session.js';
 import { svnLocalTarget } from './svn-path.js';
 import { parseInfoXml, parseStatusXml } from './svn-xml.js';
+import { count } from './text.js';
 
 export type WorkingCopyKind = 'modified' | 'added' | 'deleted' | 'missing' | 'unversioned' | 'conflicted' | 'replaced' | 'obstructed';
 
@@ -146,7 +147,7 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
     conflicts,
     message: changes.length === 0
       ? 'Nenhuma alteração local no checkout SVN.'
-      : `${changes.length} alteração(ões) local(is) no checkout SVN.`
+      : `${count(changes.length, 'alteração local', 'alterações locais')} no checkout SVN.`
   };
 }
 
@@ -322,7 +323,7 @@ export async function commitSelected(input: CommitSelectedInput): Promise<Commit
     ok: true,
     revision,
     committed: targets,
-    message: revision ? `Revisão ${revision} publicada no SVN com ${targets.length} caminho(s).` : 'Commit concluído.'
+    message: revision ? `Revisão ${revision} publicada no SVN com ${count(targets.length, 'caminho', 'caminhos')}.` : 'Commit concluído.'
   };
 }
 
@@ -382,7 +383,7 @@ export async function countIncoming(checkoutPath: string, options: WorkingCopyOp
 
   const incoming = log.stdout.split('\n').filter((line) => /^r\d+ \|/.test(line)).length;
 
-  return { ...base, incoming, message: `${incoming} revisão(ões) nova(s) no servidor.` };
+  return { ...base, incoming, message: `${count(incoming, 'revisão nova', 'revisões novas')} no servidor.` };
 }
 
 export async function updateWorkingCopy(checkoutPath: string, options: WorkingCopyOptions = {}): Promise<UpdateResult> {
@@ -441,10 +442,10 @@ export async function updateWorkingCopy(checkoutPath: string, options: WorkingCo
     updated,
     conflicts,
     message: conflicts.length > 0
-      ? `Atualizado para a revisão ${revision ?? '?'} com ${conflicts.length} conflito(s). Resolva antes de commitar.`
+      ? `Atualizado para a revisão ${revision ?? '?'} com ${count(conflicts.length, 'conflito', 'conflitos')}. Resolva antes de commitar.`
       : updated.length === 0
         ? `O checkout já estava na revisão ${revision ?? '?'}.`
-        : `Atualizado para a revisão ${revision ?? '?'}: ${updated.length} arquivo(s).`
+        : `Atualizado para a revisão ${revision ?? '?'}: ${count(updated.length, 'arquivo', 'arquivos')}.`
   };
 }
 
@@ -544,8 +545,8 @@ export async function discardChanges(input: DiscardInput): Promise<DiscardResult
     ...base,
     ok,
     message: ok
-      ? `${base.discarded.length} alteração(ões) descartada(s). Uma cópia do conteúdo foi para a Lixeira.`
-      : `${base.discarded.length} descartada(s), ${base.errors.length} com erro.`
+      ? `${count(base.discarded.length, 'alteração descartada', 'alterações descartadas')}. Uma cópia do conteúdo foi para a Lixeira.`
+      : `${count(base.discarded.length, 'descartada', 'descartadas')}, ${base.errors.length} com erro.`
   };
 }
 

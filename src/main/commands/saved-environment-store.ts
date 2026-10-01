@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { SavedEnvironment, SavedEnvironmentValidationStatus } from './saved-environments.js';
+import { count } from './text.js';
 
 export type SavedEnvironmentStorageErrorCode =
 	| 'INVALID_ENVIRONMENT'
@@ -257,7 +258,7 @@ export async function readSavedEnvironments(
 			storagePath,
 			cloneEnvironments(parsedContent.environments),
 			parsedContent.environments.length > 0
-				? `${parsedContent.environments.length} ambiente(s) salvo(s) carregado(s).`
+				? `${count(parsedContent.environments.length, 'projeto salvo carregado', 'projetos salvos carregados')}.`
 				: 'Nenhum ambiente salvo encontrado.'
 		);
 	} catch (error) {

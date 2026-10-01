@@ -3,6 +3,7 @@ import { toDiffResult, type SyncFileDiff } from './git-svn-sync.js';
 import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-client.js';
 import { runSvnInSession } from './svn-session.js';
 import { parseInfoXml, parseLogXml, type SvnXmlLogEntry } from './svn-xml.js';
+import { count } from './text.js';
 
 export interface SvnLogPage {
   ok: boolean;
@@ -97,7 +98,7 @@ export async function readLog(input: ReadLogInput): Promise<SvnLogPage> {
     workingCopyRevision: input.url ? undefined : parsedInfo.revision,
     entries: entries.slice(0, limit),
     hasMore: entries.length > limit,
-    message: entries.length === 0 ? 'Nenhum commit no histórico.' : `${Math.min(entries.length, limit)} commit(s) carregado(s).`
+    message: entries.length === 0 ? 'Nenhum commit no histórico.' : `${count(Math.min(entries.length, limit), 'commit carregado', 'commits carregados')}.`
   };
 }
 

@@ -1,3 +1,5 @@
+import { count } from './text.js';
+
 export type SavedEnvironmentValidationStatus = 'ready' | 'blocked' | 'error' | 'pending';
 
 export interface SavedEnvironment {
@@ -124,8 +126,8 @@ export function listSavedEnvironments(input: ListSavedEnvironmentsInput): ListSa
   return {
     items,
     message: pendingCount > 0
-      ? `${items.length} ambiente(s) carregado(s), ${pendingCount} pendente(s) de revalidação.`
-      : `${items.length} ambiente(s) carregado(s).`
+      ? `${count(items.length, 'projeto carregado', 'projetos carregados')}, ${count(pendingCount, 'pendente', 'pendentes')} de revalidação.`
+      : `${count(items.length, 'projeto carregado', 'projetos carregados')}.`
   };
 }
 

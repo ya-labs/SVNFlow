@@ -33,6 +33,15 @@ function api(): SvnflowDesktopApi {
   return window.svnflowDesktop;
 }
 
+// Concordância de número: "1 arquivo", "3 arquivos".
+function plural(value: number, singular: string, pluralForm: string): string {
+  return value === 1 ? singular : pluralForm;
+}
+
+function count(value: number, singular: string, pluralForm: string): string {
+  return `${value} ${plural(value, singular, pluralForm)}`;
+}
+
 function escapeHtml(value: string | number | undefined): string {
   return String(value ?? '')
     .split('&').join('&amp;')
@@ -359,13 +368,13 @@ function renderToolbar(): void {
 
   if (incoming > 0) {
     setText('refresh-label', 'Atualizar do servidor');
-    setText('refresh-value', `${incoming} revisão(ões) nova(s)`);
+    setText('refresh-value', count(incoming, 'revisão nova', 'revisões novas'));
   } else if (isCopyStep()) {
     setText('refresh-label', 'Diferenças com o Git');
-    setText('refresh-value', `${plan!.changes.length} arquivo(s) a copiar`);
+    setText('refresh-value', `${count(plan!.changes.length, 'arquivo', 'arquivos')} a copiar`);
   } else if (localChanges > 0) {
     setText('refresh-label', 'Alterações locais');
-    setText('refresh-value', `${localChanges} alteração(ões) no checkout`);
+    setText('refresh-value', `${count(localChanges, 'alteração', 'alterações')} no checkout`);
   } else {
     setText('refresh-label', 'Verificar alterações');
     setText('refresh-value', gitLinked ? 'SVN igual ao Git' : 'Checkout sem alterações');
@@ -466,7 +475,7 @@ function renderSidebar(): void {
   const switcher = isCopyStep()
     ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-svn-changes" title="Descartar, ignorar e commitar o que já está no checkout SVN">Ver alterações do checkout SVN</button></div>`
     : hasGitDifferences()
-      ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-copy-step">← Voltar às ${desktop.screen!.plan!.changes.length} diferença(s) do Git</button></div>`
+      ? `<div class="list-switch"><button type="button" class="link-button" data-role="show-copy-step">← Voltar ${plural(desktop.screen!.plan!.changes.length, 'à', 'às')} ${count(desktop.screen!.plan!.changes.length, 'diferença', 'diferenças')} do Git</button></div>`
       : '';
 
   const exclusions = desktop.screen?.plan?.exclusions ?? [];
@@ -486,7 +495,7 @@ function renderSidebar(): void {
   let header: string;
 
   if (isCopyStep()) {
-    header = `<div class="list-header">${escapeHtml(`${items.length} arquivo(s) diferentes do Git`)}</div>${switcher}`;
+    header = `<div class="list-header">${escapeHtml(`${count(items.length, 'arquivo diferente', 'arquivos diferentes')} do Git`)}</div>${switcher}`;
   } else {
     const selectable = items.filter((item) => item.selectable);
     const checked = checkedItems().length;
@@ -495,7 +504,7 @@ function renderSidebar(): void {
       <div class="list-header list-toolbar">
         <label class="select-all">
           <input type="checkbox" data-role="select-all" ${allChecked ? 'checked' : ''} ${selectable.length === 0 ? 'disabled' : ''} />
-          <span>${items.length} alteração(ões) · ${checked} selecionada(s)</span>
+          <span>${count(items.length, 'alteração', 'alterações')} · ${count(checked, 'selecionada', 'selecionadas')}</span>
         </label>
         <button type="button" class="button small danger" data-role="discard-selected" ${checked === 0 ? 'disabled' : ''} title="Descartar as alterações marcadas">Descartar</button>
       </div>${switcher}
@@ -878,7 +887,7 @@ function renderCommitBox(): void {
     box.innerHTML = `
       ${renderFlowSteps(1)}
       <p class="commit-box-hint">Atualiza só os arquivos locais do checkout SVN para o commit <strong>${escapeHtml(plan.source.shortCommit)}</strong>. <strong>Nada é publicado no servidor nesta etapa.</strong></p>
-      <button type="button" class="button block copy-action" data-role="copy-to-svn">⇣ Copiar ${plan.changes.length} arquivo(s) para o checkout</button>
+      <button type="button" class="button block copy-action" data-role="copy-to-svn">⇣ Copiar ${count(plan.changes.length, 'arquivo', 'arquivos')} para o checkout</button>
     `;
     bindClick(box, '[data-role="copy-to-svn"]', copyToSvn);
     return;
@@ -891,7 +900,7 @@ function renderCommitBox(): void {
   }
 
   const draft = ensureCommitDraft();
-  const count = checkedItems().length;
+  const selectedCount = checkedItems().length;
   const hasSuggestion = suggestedCommitMessage().length > 0;
 
   box.innerHTML = `
@@ -899,7 +908,7 @@ function renderCommitBox(): void {
     <input class="input" data-role="commit-summary" type="text" placeholder="Resumo (obrigatório)" value="${escapeHtml(draft.summary)}" aria-label="Resumo do commit SVN" />
     <textarea class="input" data-role="commit-description" placeholder="Descrição" aria-label="Descrição do commit SVN">${escapeHtml(draft.description)}</textarea>
     ${hasSuggestion ? '<button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>' : ''}
-    <button type="button" class="button success block" data-role="commit-svn">${count > 0 ? `⇡ Publicar ${count} arquivo(s) no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
+    <button type="button" class="button success block" data-role="commit-svn">${selectedCount > 0 ? `⇡ Publicar ${count(selectedCount, 'arquivo', 'arquivos')} no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
   `;
 
   const summary = query<HTMLInputElement>('[data-role="commit-summary"]', box)!;
@@ -909,7 +918,7 @@ function renderCommitBox(): void {
   const refresh = () => {
     draft.summary = summary.value;
     draft.description = description.value;
-    submit.disabled = summary.value.trim().length === 0 || count === 0;
+    submit.disabled = summary.value.trim().length === 0 || selectedCount === 0;
   };
 
   summary.addEventListener('input', refresh);
@@ -937,7 +946,7 @@ async function copyToSvn(): Promise<void> {
 
   const confirmed = await confirmModal({
     title: 'Etapa 1 de 2 · Copiar do Git para o checkout',
-    message: `${plan.totals.added} arquivo(s) serão criados, ${plan.totals.modified} atualizados e ${plan.totals.deleted} removidos em ${plan.svnCheckoutPath}, para ficar igual ao commit ${plan.source.shortCommit}. Nada será publicado no SVN ainda.`,
+    message: `${count(plan.totals.added, 'arquivo criado', 'arquivos criados')}, ${count(plan.totals.modified, 'atualizado', 'atualizados')} e ${count(plan.totals.deleted, 'removido', 'removidos')} em ${plan.svnCheckoutPath}, para ficar igual ao commit ${plan.source.shortCommit}. Nada será publicado no SVN ainda.`,
     confirmLabel: 'Copiar arquivos'
   });
 
@@ -964,10 +973,10 @@ async function copyToSvn(): Promise<void> {
 // Revisão final antes do commit: o commit cria uma revisão no servidor, visível
 // para a equipe, então a confirmação mostra tudo o que vai ser publicado.
 function publishReviewModal(items: ChangeItem[], draft: CommitDraft, url: string): Promise<boolean> {
-  const count = (kind: ChangeKind): number => items.filter((item) => item.kind === kind).length;
-  const totals = ([['added', 'novo(s)'], ['modified', 'alterado(s)'], ['deleted', 'removido(s)']] as Array<[ChangeKind, string]>)
-    .filter(([kind]) => count(kind) > 0)
-    .map(([kind, label]) => `<span class="review-chip" data-kind="${kind}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${count(kind)} ${label}</span>`)
+  const ofKind = (kind: ChangeKind): number => items.filter((item) => item.kind === kind).length;
+  const totals = ([['added', 'novo', 'novos'], ['modified', 'alterado', 'alterados'], ['deleted', 'removido', 'removidos']] as Array<[ChangeKind, string, string]>)
+    .filter(([kind]) => ofKind(kind) > 0)
+    .map(([kind, singular, pluralForm]) => `<span class="review-chip" data-kind="${kind}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${count(ofKind(kind), singular, pluralForm)}</span>`)
     .join('');
   const title = desktop.screen?.environment?.gitWorkspacePath ? 'Etapa 2 de 2 · Publicar no servidor SVN' : 'Publicar no servidor SVN';
 
@@ -985,14 +994,14 @@ function publishReviewModal(items: ChangeItem[], draft: CommitDraft, url: string
           <div class="review-message"><strong>${escapeHtml(draft.summary.trim())}</strong>${draft.description.trim() ? `<p>${escapeHtml(draft.description.trim())}</p>` : ''}</div>
         </div>
         <div class="review-field">
-          <span class="review-label">${items.length} arquivo(s)</span>
+          <span class="review-label">${count(items.length, 'arquivo', 'arquivos')}</span>
           <div class="review-chips">${totals}</div>
           <ul class="review-files">${items.map((item) => `<li title="${escapeHtml(item.path)}"><span class="change-icon" data-kind="${item.kind}">${CHANGE_ICONS[item.kind]}</span>${renderSplitPath(item.path)}</li>`).join('')}</ul>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="button" data-role="modal-cancel">Voltar e revisar</button>
-        <button type="button" class="button success" data-role="modal-confirm">⇡ Publicar ${items.length} arquivo(s) no SVN</button>
+        <button type="button" class="button success" data-role="modal-confirm">⇡ Publicar ${count(items.length, 'arquivo', 'arquivos')} no SVN</button>
       </div>
     `);
     modal.classList.add('modal-wide');
@@ -1225,7 +1234,7 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
     ${renderBanner()}
     <div class="detail-section">
       <h2>${escapeHtml(title.trim() || '(sem mensagem)')}</h2>
-      <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(entry.author ?? 'sem autor')} · ${escapeHtml(formatDate(entry.date))} · ${paths.length} arquivo(s)${isNewOnServer(revision) ? ' · <span class="badge-new">Ainda não está no seu checkout</span>' : ''}</p>
+      <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(entry.author ?? 'sem autor')} · ${escapeHtml(formatDate(entry.date))} · ${count(paths.length, 'arquivo', 'arquivos')}${isNewOnServer(revision) ? ' · <span class="badge-new">Ainda não está no seu checkout</span>' : ''}</p>
       ${body ? `<p class="commit-message-view">${escapeHtml(body)}</p>` : ''}
     </div>
     <div class="revision-layout">
@@ -1261,7 +1270,7 @@ function renderConflictBanner(): string {
     return '';
   }
 
-  return `<div class="banner" data-tone="error"><p><strong>${conflicts} arquivo(s) em conflito.</strong> Eles não podem ser commitados. Resolva no checkout (edite o arquivo e rode <code>svn resolve --accept working &lt;arquivo&gt;</code>) e clique em Verificar.</p></div>`;
+  return `<div class="banner" data-tone="error"><p><strong>${count(conflicts, 'arquivo', 'arquivos')} em conflito.</strong> ${plural(conflicts, 'Ele não pode ser commitado', 'Eles não podem ser commitados')}. Resolva no checkout (edite o arquivo e rode <code>svn resolve --accept working &lt;arquivo&gt;</code>) e clique em Verificar.</p></div>`;
 }
 
 async function renderDetail(): Promise<void> {
@@ -1331,7 +1340,7 @@ async function renderDetail(): Promise<void> {
   const svnPath = desktop.screen?.environment?.svnCheckoutPath ?? '';
   const title = items.length === 0
     ? 'Nenhuma alteração'
-    : isCopyStep() ? `${items.length} arquivo(s) diferentes do Git` : `${items.length} alteração(ões) no checkout`;
+    : isCopyStep() ? `${count(items.length, 'arquivo diferente', 'arquivos diferentes')} do Git` : `${count(items.length, 'alteração', 'alterações')} no checkout`;
   const message = items.length > 0
     ? (isCopyStep() ? 'Selecione um arquivo para ver o diff.' : 'Marque os arquivos que entram no commit e clique num arquivo para ver o diff.')
     : gitLinked ? plan?.message ?? '' : 'O checkout SVN não tem alterações locais.';
@@ -1451,7 +1460,7 @@ async function updateFromServer(): Promise<void> {
 
   if (localChanges > 0 && !(await confirmModal({
     title: 'Atualizar do servidor',
-    message: `${incoming > 0 ? `${incoming} revisão(ões) nova(s) serão baixadas. ` : ''}O checkout tem ${localChanges} alteração(ões) local(is): o SVN junta as mudanças do servidor com as suas. Se a mesma linha mudou dos dois lados, o arquivo fica em conflito para você resolver.`,
+    message: `${incoming > 0 ? `${count(incoming, 'revisão nova será baixada', 'revisões novas serão baixadas')}. ` : ''}O checkout tem ${count(localChanges, 'alteração local', 'alterações locais')}: o SVN junta as mudanças do servidor com as suas. Se a mesma linha mudou dos dois lados, o arquivo fica em conflito para você resolver.`,
     confirmLabel: 'Atualizar'
   }))) {
     return;
@@ -2320,7 +2329,7 @@ function openAddRootModal(): void {
       const url = svnUrlBase(value('url'));
 
       if (!/^(svn|svn\+ssh|https?|file):\/\/\S+$/i.test(url)) {
-        error.textContent = 'Informe uma URL SVN começando com svn://, svn+ssh://, http(s):// ou file://.';
+        error.textContent = 'Informe uma URL SVN começando com svn://, svn+ssh://, http://, https:// ou file://.';
         error.hidden = false;
         return;
       }
@@ -2412,7 +2421,7 @@ function openCheckoutModal(url: string): void {
       const operationId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const stop = api().onSvnProgress((update) => {
         if (update.operationId === operationId) {
-          progress.textContent = `${update.files} item(ns) baixado(s) · ${update.line}`;
+          progress.textContent = `${count(update.files, 'item baixado', 'itens baixados')} · ${update.line}`;
         }
       });
 

@@ -120,7 +120,7 @@ describeWithTools('sincronização Git -> SVN por espelhamento', () => {
     expect(upToDate.pending.map((change) => change.path)).toEqual(expect.arrayContaining(['src/app.js', 'src/novo.js', 'remover.txt']));
 
     const message = suggestSyncCommitMessage({ gitWorkspacePath: gitPath, commit: lastCommit, lastSyncedCommit: firstCommit });
-    expect(message.split('\n')[0]).toBe('feat: adiciona `novo` e $(rm -rf /) de mentira (+1 commit(s))');
+    expect(message.split('\n')[0]).toBe('feat: adiciona `novo` e $(rm -rf /) de mentira (+1 commit)');
     expect(message).toContain('fix: ajusta app');
 
     const commit = executeCommit({ checkoutPath: svnPath, title: message });
@@ -172,7 +172,7 @@ describeWithTools('sincronização Git -> SVN por espelhamento', () => {
     expect(plan.changes).toEqual([{ path: 'config/publico.json', kind: 'added' }]);
     expect(plan.exclusions).toEqual(exclusions);
     expect(plan.warnings.join(' ')).toContain('.svn');
-    expect(plan.warnings.join(' ')).toContain('2 arquivo(s) do Git ficam fora da cópia');
+    expect(plan.warnings.join(' ')).toContain('2 arquivos do Git ficam fora da cópia');
 
     expect(executeSync({ gitWorkspacePath: gitPath, svnCheckoutPath: svnPath, exclusions, confirmed: true }).errors).toEqual([]);
     expect(existsSync(path.join(svnPath, '.svn', 'pristine', 'ab', 'abc.svn-base'))).toBe(false);

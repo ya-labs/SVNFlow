@@ -7,6 +7,7 @@ import path from 'path';
 import { validateSvnCheckout } from './svn.js';
 import { parseStatusXml } from './svn-xml.js';
 import { svnLocalTarget } from './svn-path.js';
+import { count, plural } from './text.js';
 
 export interface SyncFileChange {
   path: string;
@@ -264,7 +265,7 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
 
   const conflicted = [...svnEntries].filter(([, entry]) => entry.item === 'conflicted' || entry.item === 'obstructed');
   if (conflicted.length > 0) {
-    blockers.push(`O checkout SVN tem ${conflicted.length} item(ns) em conflito. Resolva com svn resolve antes de sincronizar.`);
+    blockers.push(`O checkout SVN tem ${count(conflicted.length, 'item', 'itens')} em conflito. Resolva ${plural(conflicted.length, 'o conflito', 'os conflitos')} antes de copiar do Git.`);
   }
 
   const pending = [...svnEntries]
@@ -326,25 +327,25 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
   }
 
   if (svnMetadata > 0) {
-    warnings.push(`${svnMetadata} arquivo(s) de pastas .svn versionados no Git não são copiados (são metadados do checkout).`);
+    warnings.push(`${count(svnMetadata, 'arquivo', 'arquivos')} de pastas .svn ${plural(svnMetadata, 'versionado no Git não é copiado', 'versionados no Git não são copiados')} (são metadados do checkout).`);
   }
 
   if (excluded > 0) {
-    warnings.push(`${excluded} arquivo(s) do Git ficam fora da cópia pelas regras "Não copiar para o SVN" do projeto.`);
+    warnings.push(`${count(excluded, 'arquivo', 'arquivos')} do Git ${plural(excluded, 'fica', 'ficam')} fora da cópia pelas regras "Não copiar para o SVN" do projeto.`);
   }
 
   if (skipped.length > 0) {
-    warnings.push(`${skipped.length} link(s) simbólico(s) ou submódulo(s) não são copiados: ${skipped.slice(0, 5).join(', ')}${skipped.length > 5 ? '…' : ''}`);
+    warnings.push(`${count(skipped.length, 'link simbólico ou submódulo não é copiado', 'links simbólicos ou submódulos não são copiados')}: ${skipped.slice(0, 5).join(', ')}${skipped.length > 5 ? '…' : ''}`);
   }
 
   const uncommitted = readUncommittedChanges(input.gitWorkspacePath);
   if (uncommitted.count > 0) {
-    warnings.push(`${uncommitted.count} alteração(ões) não commitada(s) no Git ficam de fora. A sincronização usa o último commit (${source.shortCommit}).`);
+    warnings.push(`${count(uncommitted.count, 'alteração não commitada', 'alterações não commitadas')} no Git ${plural(uncommitted.count, 'fica', 'ficam')} de fora. A sincronização usa o último commit (${source.shortCommit}).`);
   }
 
   const unversioned = [...svnEntries].filter(([entryPath, entry]) => entry.item === 'unversioned' && !tree.has(entryPath)).length;
   if (unversioned > 0) {
-    warnings.push(`${unversioned} item(ns) não versionado(s) no checkout SVN que não existem no Git serão mantidos e não entram no commit.`);
+    warnings.push(`${count(unversioned, 'item não versionado', 'itens não versionados')} no checkout SVN que não ${plural(unversioned, 'existe', 'existem')} no Git ${plural(unversioned, 'será mantido e não entra', 'serão mantidos e não entram')} no commit.`);
   }
 
   changes.sort((a, b) => a.path.localeCompare(b.path));
@@ -376,7 +377,7 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
       ...base,
       status: 'up-to-date',
       message: pendingSvnChanges > 0
-        ? `Os arquivos do checkout já estão iguais ao commit ${source.shortCommit}. Há ${pendingSvnChanges} alteração(ões) aguardando commit SVN.`
+        ? `Os arquivos do checkout já estão iguais ao commit ${source.shortCommit}. Há ${count(pendingSvnChanges, 'alteração aguardando', 'alterações aguardando')} commit SVN.`
         : `O checkout SVN já está igual ao commit ${source.shortCommit}. Nada a sincronizar.`,
       canSync: false
     };
@@ -385,7 +386,7 @@ export function buildSyncPlan(input: SyncPlanInput): SyncPlan {
   return {
     ...base,
     status: 'ready',
-    message: `${changes.length} arquivo(s) diferem entre o commit ${source.shortCommit} e o checkout SVN.`,
+    message: `${count(changes.length, 'arquivo difere', 'arquivos diferem')} entre o commit ${source.shortCommit} e o checkout SVN.`,
     canSync: true
   };
 }
@@ -476,8 +477,8 @@ export function executeSync(input: SyncPlanInput & { confirmed: boolean }): Exec
   return {
     ok: errors.length === 0,
     message: errors.length === 0
-      ? `Checkout SVN atualizado com o commit ${plan.source?.shortCommit}: ${plan.totals.added} criado(s), ${plan.totals.modified} modificado(s), ${plan.totals.deleted} removido(s). Revise e faça o commit SVN.`
-      : `Sincronização concluída com ${errors.length} erro(s). Revise o checkout antes do commit.`,
+      ? `Checkout SVN atualizado com o commit ${plan.source?.shortCommit}: ${count(plan.totals.added, 'criado', 'criados')}, ${count(plan.totals.modified, 'modificado', 'modificados')}, ${count(plan.totals.deleted, 'removido', 'removidos')}. Revise e faça o commit SVN.`
+      : `Sincronização concluída com ${count(errors.length, 'erro', 'erros')}. Revise o checkout antes do commit.`,
     plan,
     errors
   };
@@ -516,7 +517,7 @@ export function suggestSyncCommitMessage(input: SuggestCommitMessageInput): stri
   }
 
   return [
-    `${firstSubject} (+${subjects.length - 1} commit(s))`,
+    `${firstSubject} (+${count(subjects.length - 1, 'commit', 'commits')})`,
     '',
     'Commits Git incluídos:',
     ...subjects.map((subject) => `- ${subject}`),

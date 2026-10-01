@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { count } from './text.js';
 
 export type GitWorkspaceStateStatus = 'ready' | 'blocked' | 'error';
 
@@ -186,7 +187,7 @@ export function listGitChangedFiles(input: GitWorkspaceStateInput): GitChangedFi
     return {
       status: 'ready',
       message: files.length > 0
-        ? `${files.length} arquivo(s) alterado(s) em relação à base ${baseBranch}.`
+        ? `${count(files.length, 'arquivo alterado', 'arquivos alterados')} em relação à base ${baseBranch}.`
         : `Nenhum arquivo alterado em relação à base ${baseBranch}.`,
       path: input.gitRepositoryPath,
       baseBranch,

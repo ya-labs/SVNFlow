@@ -4,6 +4,7 @@ import path from 'node:path';
 import { isSvnUrl, normalizeSvnUrl } from './app-settings.js';
 import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-client.js';
 import { runSvnInSession } from './svn-session.js';
+import { count } from './text.js';
 
 export type CheckoutErrorCode = SvnErrorCode | 'INVALID_URL' | 'INVALID_DESTINATION' | 'DESTINATION_NOT_EMPTY' | 'INVALID_REVISION';
 
@@ -93,6 +94,6 @@ export async function checkoutProject(input: CheckoutInput): Promise<CheckoutRes
     ok: true,
     files,
     revision: checkedOut,
-    message: `Checkout concluído${checkedOut ? ` na revisão ${checkedOut}` : ''}: ${files} arquivo(s).`
+    message: `Checkout concluído${checkedOut ? ` na revisão ${checkedOut}` : ''}: ${count(files, 'arquivo', 'arquivos')}.`
   };
 }

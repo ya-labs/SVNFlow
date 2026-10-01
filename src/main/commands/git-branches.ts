@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import { count } from './text.js';
 
 export interface GitBranch {
   name: string;
@@ -84,7 +85,7 @@ export function listGitBranches(gitRepositoryPath: string): GitBranchList {
 
     return {
       ok: true,
-      message: `${local.length} branch(es) local(is).`,
+      message: `${count(local.length, 'branch local', 'branches locais')}.`,
       current,
       detached: !current,
       local,
@@ -128,7 +129,7 @@ export function switchGitBranch(input: SwitchGitBranchInput): SwitchGitBranchRes
   if (changedFiles.length > 0) {
     return {
       ok: false,
-      message: `Há ${changedFiles.length} alteração(ões) não commitada(s) no Git. Faça commit ou git stash antes de trocar de branch.`,
+      message: `Há ${count(changedFiles.length, 'alteração não commitada', 'alterações não commitadas')} no Git. Faça commit ou git stash antes de trocar de branch.`,
       errorCode: 'UNCOMMITTED_CHANGES',
       changedFiles
     };

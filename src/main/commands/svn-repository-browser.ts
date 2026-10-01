@@ -2,6 +2,7 @@ import { normalizeSvnUrl } from './app-settings.js';
 import { svnErrorDetail, type SvnCredentials, type SvnErrorCode } from './svn-client.js';
 import { runSvnInSession } from './svn-session.js';
 import { parseListXml } from './svn-xml.js';
+import { count } from './text.js';
 
 export interface RemoteEntry {
   name: string;
@@ -82,6 +83,6 @@ export async function listRemote(url: string, options: ListRemoteOptions = {}): 
     url: target,
     entries,
     layout: { trunk: directories.has('trunk'), branches: directories.has('branches'), tags: directories.has('tags') },
-    message: `${entries.length} item(ns) em ${target}.`
+    message: `${count(entries.length, 'item', 'itens')} em ${target}.`
   };
 }
