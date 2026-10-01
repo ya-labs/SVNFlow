@@ -663,3 +663,85 @@ export async function addToSvnIgnore(input: SvnIgnoreInput): Promise<SimpleResul
     message: `${pattern} adicionado ao svn:ignore ${where}. Commite a alteração ${where} (aparece na lista) para valer para a equipe.`
   };
 }
+
+// Conflitos --------------------------------------------------------------------
+
+export type ConflictChoice = 'mine' | 'theirs' | 'edited';
+
+export interface ResolveConflictInput {
+  checkoutPath: string;
+  path: string;
+  choice: ConflictChoice;
+  configDir?: string;
+}
+
+// "mine" e "theirs" valem para o arquivo inteiro; "edited" aceita o arquivo como
+// está, depois de a pessoa editar os trechos marcados.
+const ACCEPT_BY_CHOICE: Record<ConflictChoice, string> = { mine: 'mine-full', theirs: 'theirs-full', edited: 'working' };
+
+export async function resolveConflict(input: ResolveConflictInput): Promise<SimpleResult> {
+  if (!isSafeRelative(input.path) || !(input.choice in ACCEPT_BY_CHOICE)) {
+    return { ok: false, message: 'Arquivo ou escolha inválidos.' };
+  }
+
+  const status = await readWorkingCopyStatus(input.checkoutPath, { configDir: input.configDir });
+  const change = status.changes.find((item) => item.path === input.path);
+
+  if (!change || change.kind !== 'conflicted') {
+    return { ok: false, message: 'Este arquivo não está mais em conflito. Atualize a lista.' };
+  }
+
+  if (input.choice === 'edited' && !change.isDirectory) {
+    const content = await readFile(path.join(input.checkoutPath, input.path), 'utf8').catch(() => '');
+    if (/^(<{7}|>{7}) /m.test(content)) {
+      return { ok: false, message: 'O arquivo ainda tem marcas de conflito (<<<<<<< e >>>>>>>). Edite os trechos e tente de novo.' };
+    }
+  }
+
+  const result = await runSvnInSession(['resolve', '--accept', ACCEPT_BY_CHOICE[input.choice], '--', svnLocalTarget(input.path)], {
+    cwd: input.checkoutPath,
+    configDir: input.configDir
+  });
+
+  if (!result.ok) {
+    return { ok: false, message: result.message, detail: svnErrorDetail(result.stderr) };
+  }
+
+  const label = { mine: 'com a sua versão', theirs: 'com a versão do servidor', edited: 'com a sua edição' }[input.choice];
+  return { ok: true, message: `Conflito em ${input.path} resolvido ${label}.` };
+}
+
+export interface ConflictHunk {
+  mine: string[];
+  theirs: string[];
+}
+
+// Trechos em conflito do arquivo, para a pessoa comparar antes de escolher.
+export async function readConflictHunks(checkoutPath: string, filePath: string): Promise<ConflictHunk[]> {
+  if (!isSafeRelative(filePath)) {
+    return [];
+  }
+
+  const content = await readFile(path.join(checkoutPath, filePath), 'utf8').catch(() => '');
+  const hunks: ConflictHunk[] = [];
+  let current: ConflictHunk | undefined;
+  let side: 'mine' | 'base' | 'theirs' = 'mine';
+
+  for (const line of content.split(/\r?\n/)) {
+    if (line.startsWith('<<<<<<< ')) {
+      current = { mine: [], theirs: [] };
+      side = 'mine';
+    } else if (current && line.startsWith('||||||| ')) {
+      side = 'base';
+    } else if (current && line === '=======') {
+      side = 'theirs';
+    } else if (current && line.startsWith('>>>>>>> ')) {
+      hunks.push(current);
+      current = undefined;
+    } else if (current && side !== 'base') {
+      current[side].push(line);
+    }
+  }
+
+  return hunks;
+}

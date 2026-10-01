@@ -19,7 +19,7 @@ import type {
 } from '../shared/ipc-types.js';
 import { isAppTheme, isSvnUrl, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
 import { checkoutProject } from './commands/svn-checkout.js';
-import { addToSvnIgnore, commitSelected, countIncoming, discardChanges, readWorkingCopyDiff, readWorkingCopyStatus, setIgnoreOnCommit, updateWorkingCopy, type DiscardResult, type SimpleResult, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
+import { addToSvnIgnore, commitSelected, countIncoming, discardChanges, readConflictHunks, readWorkingCopyDiff, readWorkingCopyStatus, resolveConflict, setIgnoreOnCommit, updateWorkingCopy, type ConflictChoice, type ConflictHunk, type DiscardResult, type SimpleResult, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
 import { cancelSvnOperations, type SvnCredentials } from './commands/svn-client.js';
 import { listRemote, type RemoteListing } from './commands/svn-repository-browser.js';
 import { listGitBranches, switchGitBranch, type GitBranchList, type SwitchGitBranchResult } from './commands/git-branches.js';
@@ -345,6 +345,21 @@ function registerIpcHandlers(): void {
 
     const saved = await updateSavedEnvironment({ environmentId: payload.environmentId, changes: { svnCheckoutPath: folder } });
     return saved.ok ? { ok: true, message: `Projeto agora aponta para ${folder}.` } : { ok: false, message: saved.message };
+  });
+
+  ipcMain.handle('svn:conflict-hunks', async (_event, payload: { environmentId?: string; path: string }): Promise<ConflictHunk[]> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+    return selected && isSafeRelativePath(payload?.path) ? readConflictHunks(selected.svnCheckoutPath, payload.path) : [];
+  });
+
+  ipcMain.handle('svn:resolve', async (_event, payload: { environmentId?: string; path: string; choice: ConflictChoice }): Promise<SimpleResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected || !isSafeRelativePath(payload?.path)) {
+      return { ok: false, message: 'Projeto ou caminho inválidos.' };
+    }
+
+    return resolveConflict({ checkoutPath: selected.svnCheckoutPath, path: payload.path, choice: payload.choice });
   });
 
   ipcMain.handle('svn:cancel', async (): Promise<number> => cancelSvnOperations());

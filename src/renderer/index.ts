@@ -5,6 +5,8 @@ import type {
   RemoteListing,
   RepositoriesState,
   SvnCredentials,
+  ConflictChoice,
+  ConflictHunk,
   GitBranch,
   EnvironmentScreenState,
   AppTheme,
@@ -1222,7 +1224,11 @@ async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId
   let body: string;
 
   if (item.kind === 'conflicted') {
-    body = blankSlate('Arquivo em conflito', 'Resolva o conflito no checkout (edite o arquivo e rode svn resolve) antes de commitar. Depois clique em Verificar.');
+    body = renderConflictPanel(item, await api().getConflictHunks(state.selectedEnvironmentId, item.path));
+
+    if (requestId !== desktop.requestId) {
+      return;
+    }
   } else if (!diff || diff.kind === 'empty') {
     body = blankSlate('Sem diferença de conteúdo', item.kind === 'deleted' ? 'O arquivo será removido do SVN.' : 'Não há diferença textual para mostrar.');
   } else if (diff.kind === 'binary') {
@@ -1236,6 +1242,62 @@ async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId
   }
 
   detail.innerHTML = `${renderBanner()}${header}${body}`;
+  bindConflictActions(detail, item);
+}
+
+// Conflito: mostra os trechos dos dois lados e deixa escolher como resolver.
+function renderConflictPanel(item: ChangeItem, hunks: ConflictHunk[]): string {
+  const side = (title: string, lines: string[]): string => `
+    <div class="conflict-side">
+      <div class="conflict-side-title">${title}</div>
+      <pre>${lines.length > 0 ? escapeHtml(lines.join('\n')) : '<span class="conflict-empty">(vazio)</span>'}</pre>
+    </div>`;
+  const comparison = hunks.length > 0
+    ? hunks.map((hunk, index) => `
+        <div class="conflict-hunk">
+          ${hunks.length > 1 ? `<div class="review-label">Trecho ${index + 1} de ${hunks.length}</div>` : ''}
+          <div class="conflict-sides">${side('Sua versão', hunk.mine)}${side('Versão do servidor', hunk.theirs)}</div>
+        </div>`).join('')
+    : `<p class="conflict-note">${item.isDirectory ? 'Conflito de estrutura (pasta movida, apagada ou criada dos dois lados).' : 'Não há trechos marcados para comparar (arquivo binário ou conflito de estrutura).'}</p>`;
+
+  return `
+    <div class="conflict-panel">
+      <div class="conflict-intro">
+        <strong>${escapeHtml(item.path)} mudou no seu checkout e no servidor.</strong>
+        <p>Escolha qual versão fica, ou edite o arquivo e marque como resolvido. Até resolver, ele não pode ser commitado.</p>
+      </div>
+      ${comparison}
+      <div class="conflict-actions">
+        <button type="button" class="button" data-conflict-choice="mine">Ficar com a minha</button>
+        <button type="button" class="button" data-conflict-choice="theirs">Ficar com a do servidor</button>
+        <button type="button" class="button" data-role="conflict-editor">Abrir no VS Code</button>
+        <button type="button" class="button primary" data-conflict-choice="edited">Já editei, marcar como resolvido</button>
+      </div>
+    </div>`;
+}
+
+function bindConflictActions(detail: HTMLElement, item: ChangeItem): void {
+  bindClick(detail, '[data-role="conflict-editor"]', () => openInEditor('svn', item.path));
+  bindClick(detail, '[data-conflict-choice]', async (button) => {
+    const choice = button.dataset.conflictChoice as ConflictChoice;
+
+    if (choice !== 'edited') {
+      const confirmed = await confirmModal({
+        title: choice === 'mine' ? 'Ficar com a sua versão' : 'Ficar com a versão do servidor',
+        message: choice === 'mine'
+          ? `As mudanças do servidor em ${item.path} serão ignoradas. O arquivo fica como estava no seu checkout antes do update.`
+          : `As suas mudanças em ${item.path} serão perdidas. O arquivo fica igual ao do servidor.`,
+        confirmLabel: 'Resolver',
+        danger: choice === 'theirs'
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    await runWorkingCopyAction(() => api().resolveConflict(state.selectedEnvironmentId, item.path, choice));
+  });
 }
 
 const LOG_ACTION_KIND: Record<string, ChangeKind> = { A: 'added', D: 'deleted', M: 'modified', R: 'modified' };
@@ -1322,7 +1384,7 @@ function renderConflictBanner(): string {
     return '';
   }
 
-  return `<div class="banner" data-tone="error"><p><strong>${count(conflicts, 'arquivo', 'arquivos')} em conflito.</strong> ${plural(conflicts, 'Ele não pode ser commitado', 'Eles não podem ser commitados')}. Resolva no checkout (edite o arquivo e rode <code>svn resolve --accept working &lt;arquivo&gt;</code>) e clique em Verificar.</p></div>`;
+  return `<div class="banner" data-tone="error"><p><strong>${count(conflicts, 'arquivo', 'arquivos')} em conflito.</strong> ${plural(conflicts, 'Ele não pode ser commitado', 'Eles não podem ser commitados')}. Clique ${plural(conflicts, 'no arquivo', 'em cada arquivo')} marcado com ! para escolher como resolver.</p></div>`;
 }
 
 async function renderDetail(): Promise<void> {
