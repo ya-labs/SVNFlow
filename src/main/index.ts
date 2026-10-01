@@ -28,7 +28,7 @@ import type {
   SyncScreenState,
   WorkspaceScreenState
 } from '../shared/ipc-types.js';
-import { isAppTheme, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
+import { isAppTheme, isSvnUrl, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
 import { checkoutProject } from './commands/svn-checkout.js';
 import { commitSelected, readWorkingCopyDiff, readWorkingCopyStatus, type CommitSelectedResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
 import type { SvnCredentials } from './commands/svn-client.js';
@@ -37,7 +37,8 @@ import { validateCommitPreConditions } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { generateGitPatch, readGitAuthor } from './commands/git-patch.js';
 import { listGitBranches, switchGitBranch, type GitBranchList, type SwitchGitBranchResult } from './commands/git-branches.js';
-import { buildFileDiff, buildSyncPlan, executeSync, readSvnRevisionLog, suggestSyncCommitMessage, type SvnRevisionLog, type SyncFileDiff } from './commands/git-svn-sync.js';
+import { buildFileDiff, buildSyncPlan, executeSync, suggestSyncCommitMessage, type SyncFileDiff } from './commands/git-svn-sync.js';
+import { readLog, readRevisionDiff, type SvnLogPage } from './commands/svn-history.js';
 import { buildMiniPrMarkdown, normalizeMiniPrDraft } from './commands/mini-pr.js';
 import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
 import { appendPackageHistory, readPackageHistory, type PackageHistoryResult } from './commands/package-history.js';
@@ -857,14 +858,36 @@ function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle('sync:revision-log', async (_event, payload: { environmentId?: string; revision: string }): Promise<SvnRevisionLog> => {
-    const selected = await resolveSelectedEnvironmentById(payload.environmentId);
+  ipcMain.handle('svn:log', async (_event, payload: { environmentId?: string; url?: string; before?: string; credentials?: SvnCredentials }): Promise<SvnLogPage> => {
+    const credentials = sanitizeCredentials(payload?.credentials);
+    const before = typeof payload?.before === 'string' ? payload.before : undefined;
 
-    if (!selected) {
-      return { ok: false, message: 'Nenhum ambiente selecionado.', revision: payload.revision, paths: [] };
+    if (typeof payload?.url === 'string') {
+      if (!isSvnUrl(payload.url)) {
+        return { ok: false, message: 'URL SVN inválida.', entries: [], hasMore: false };
+      }
+
+      return readLog({ url: payload.url, before, credentials });
     }
 
-    return readSvnRevisionLog(selected.svnCheckoutPath, payload.revision);
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected) {
+      return { ok: false, message: 'Nenhum projeto selecionado.', entries: [], hasMore: false };
+    }
+
+    return readLog({ checkoutPath: selected.svnCheckoutPath, before, credentials });
+  });
+
+  ipcMain.handle('svn:revision-diff', async (_event, payload: { repositoryRoot: string; revision: string; path: string; credentials?: SvnCredentials }): Promise<SyncFileDiff> => {
+    const repositoryRoot = typeof payload?.repositoryRoot === 'string' && isSvnUrl(payload.repositoryRoot) ? payload.repositoryRoot : '';
+
+    return readRevisionDiff({
+      repositoryRoot,
+      revision: typeof payload?.revision === 'string' ? payload.revision : '',
+      path: typeof payload?.path === 'string' ? payload.path : '',
+      credentials: sanitizeCredentials(payload?.credentials)
+    });
   });
 
   ipcMain.handle('shell:open-environment-folder', async (_event, payload: { environmentId?: string; which: 'git' | 'svn' }) => {

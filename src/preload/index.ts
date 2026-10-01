@@ -34,8 +34,10 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('svn:commit-selected', request),
   getSyncFileDiff: (environmentId, filePath) =>
     ipcRenderer.invoke('sync:file-diff', { environmentId, filePath }),
-  getSvnRevisionLog: (environmentId, revision) =>
-    ipcRenderer.invoke('sync:revision-log', { environmentId, revision }),
+  readSvnLog: (request) =>
+    ipcRenderer.invoke('svn:log', request),
+  readRevisionDiff: (request) =>
+    ipcRenderer.invoke('svn:revision-diff', request),
   openEnvironmentFolder: (environmentId, which) =>
     ipcRenderer.invoke('shell:open-environment-folder', { environmentId, which }),
   linkGit: (environmentId, gitWorkspacePath, baseBranch) =>

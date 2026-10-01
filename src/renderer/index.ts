@@ -1,4 +1,5 @@
 import type {
+  SvnXmlLogEntry,
   WorkingCopyStatus,
   RemoteListing,
   RepositoriesState,
@@ -1172,9 +1173,10 @@ interface DesktopState {
   environments?: EnvironmentScreenState;
   screen?: SyncScreenState;
   workingCopy?: WorkingCopyStatus;
-  history?: PackageHistoryResult;
+  log: HistoryLogState;
   selectedPath?: string;
   selectedRevision?: string;
+  selectedLogPath?: string;
   // Caminhos marcados para o commit e caminhos já vistos (para aplicar o padrão só aos novos).
   checked: Set<string>;
   knownPaths: Set<string>;
@@ -1183,7 +1185,23 @@ interface DesktopState {
   requestId: number;
 }
 
-const desktop: DesktopState = { tab: 'changes', requestId: 0, checked: new Set(), knownPaths: new Set() };
+interface HistoryLogState {
+  loaded: boolean;
+  loading: boolean;
+  entries: SvnXmlLogEntry[];
+  hasMore: boolean;
+  workingCopyRevision?: string;
+  repositoryRoot?: string;
+  projectPath?: string;
+  error?: string;
+  detail?: string;
+}
+
+function emptyHistoryLog(): HistoryLogState {
+  return { loaded: false, loading: false, entries: [], hasMore: false };
+}
+
+const desktop: DesktopState = { tab: 'changes', requestId: 0, checked: new Set(), knownPaths: new Set(), log: emptyHistoryLog() };
 
 const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', modified: '•', deleted: '−', conflicted: '!' };
 
@@ -1264,23 +1282,58 @@ function resetSelection(): void {
   desktop.knownPaths = new Set();
 }
 
-interface CommittedEntry {
-  revision: string;
-  title: string;
-  recordedAt: string;
+function firstLine(message: string): string {
+  return message.split('\n')[0].trim();
 }
 
-function committedEntries(): CommittedEntry[] {
-  const environmentName = desktop.screen?.environment?.name;
+function isNewOnServer(revision: string): boolean {
+  const current = desktop.log.workingCopyRevision;
+  return current !== undefined && Number(revision) > Number(current);
+}
 
-  return (desktop.history?.entries ?? [])
-    .filter((entry) => entry.kind === 'committed' && /^r\d+$/.test(entry.packageId))
-    .filter((entry) => !environmentName || entry.environmentName === environmentName)
-    .map((entry) => ({
-      revision: entry.packageId.slice(1),
-      title: entry.detail ?? `Revisão ${entry.packageId.slice(1)}`,
-      recordedAt: entry.recordedAt
-    }));
+function relativeLogPath(logPath: string): string {
+  const projectPath = desktop.log.projectPath;
+  return projectPath && projectPath !== '/' && logPath.startsWith(`${projectPath}/`) ? logPath.slice(projectPath.length + 1) : logPath;
+}
+
+async function loadHistory(more = false): Promise<void> {
+  const log = desktop.log;
+
+  if (log.loading || !state.selectedEnvironmentId) {
+    return;
+  }
+
+  log.loading = true;
+  renderSidebar();
+
+  const last = log.entries[log.entries.length - 1];
+  const before = more && last ? String(Number(last.revision) - 1) : undefined;
+  const page = await withCredentials(desktop.workingCopy?.url ?? '', (credentials) =>
+    api().readSvnLog({ environmentId: state.selectedEnvironmentId, before, credentials })
+  );
+
+  log.loading = false;
+  log.loaded = true;
+
+  if (!page.ok) {
+    log.error = page.message;
+    log.detail = page.detail;
+  } else {
+    log.error = undefined;
+    log.entries = more ? [...log.entries, ...page.entries] : page.entries;
+    log.hasMore = page.hasMore;
+    log.workingCopyRevision = page.workingCopyRevision;
+    log.repositoryRoot = page.repositoryRoot;
+    log.projectPath = page.projectPath;
+  }
+
+  if (!log.entries.some((entry) => entry.revision === desktop.selectedRevision)) {
+    desktop.selectedRevision = log.entries[0]?.revision;
+    desktop.selectedLogPath = undefined;
+  }
+
+  setStatusMessage(page.message);
+  renderDesktop();
 }
 
 function splitSuggestedMessage(message: string): { summary: string; description: string } {
@@ -1384,15 +1437,22 @@ function renderSidebar(): void {
   }
 
   if (desktop.tab === 'history') {
-    const entries = committedEntries();
-    list.innerHTML = entries.length === 0
-      ? '<p class="list-empty">Nenhum commit publicado por aqui ainda.</p>'
-      : entries.map((entry) => `
+    const log = desktop.log;
+
+    if (log.error) {
+      list.innerHTML = `<p class="list-empty">${escapeHtml(log.error)}</p><p class="list-empty"><button type="button" class="button" data-role="retry-history">Tentar de novo</button></p>`;
+    } else if (!log.loaded) {
+      list.innerHTML = '<p class="list-empty">Carregando histórico...</p>';
+    } else if (log.entries.length === 0) {
+      list.innerHTML = '<p class="list-empty">Nenhum commit no histórico.</p>';
+    } else {
+      list.innerHTML = `${log.entries.map((entry) => `
         <button type="button" class="history-row" data-revision="${escapeHtml(entry.revision)}" aria-selected="${entry.revision === desktop.selectedRevision}">
-          <span class="history-title">${escapeHtml(entry.title)}</span>
-          <span class="history-meta">r${escapeHtml(entry.revision)} · ${escapeHtml(formatDate(entry.recordedAt))}</span>
+          <span class="history-title">${escapeHtml(firstLine(entry.message) || '(sem mensagem)')}</span>
+          <span class="history-meta">${isNewOnServer(entry.revision) ? '<span class="badge-new">Novo</span> ' : ''}r${escapeHtml(entry.revision)} · ${escapeHtml(entry.author ?? 'sem autor')} · ${escapeHtml(formatDate(entry.date))}</span>
         </button>
-      `).join('');
+      `).join('')}${log.hasMore ? `<p class="list-empty"><button type="button" class="button" data-role="load-more" ${log.loading ? 'disabled' : ''}>${log.loading ? 'Carregando...' : 'Carregar mais'}</button></p>` : ''}`;
+    }
     return;
   }
 
@@ -1443,6 +1503,7 @@ function selectSidebarItem(element: HTMLElement): void {
     desktop.selectedPath = element.dataset.path;
   } else if (element.dataset.revision) {
     desktop.selectedRevision = element.dataset.revision;
+    desktop.selectedLogPath = undefined;
   } else {
     return;
   }
@@ -1463,6 +1524,17 @@ function bindSidebar(): void {
       currentChangeItems().filter((item) => item.selectable).forEach((item) => (check ? desktop.checked.add(item.path) : desktop.checked.delete(item.path)));
       renderSidebar();
       renderCommitBox();
+      return;
+    }
+
+    if (target.matches('[data-role="load-more"]')) {
+      void loadHistory(true);
+      return;
+    }
+
+    if (target.matches('[data-role="retry-history"]')) {
+      desktop.log = emptyHistoryLog();
+      void loadHistory();
       return;
     }
 
@@ -1509,11 +1581,11 @@ function bindSidebar(): void {
     tab.addEventListener('click', () => {
       desktop.tab = tab.dataset.tab === 'history' ? 'history' : 'changes';
 
-      if (desktop.tab === 'history' && !desktop.selectedRevision) {
-        desktop.selectedRevision = committedEntries()[0]?.revision;
-      }
-
       renderDesktop();
+
+      if (desktop.tab === 'history' && !desktop.log.loaded) {
+        void loadHistory();
+      }
     });
   });
 }
@@ -1651,6 +1723,8 @@ async function commitToSvn(): Promise<void> {
       html: `<p><strong>${escapeHtml(result.message)}</strong></p>`
     };
     desktop.selectedRevision = result.revision;
+    desktop.selectedLogPath = undefined;
+    desktop.log = emptyHistoryLog();
   } else {
     desktop.banner = {
       tone: 'error',
@@ -1758,36 +1832,81 @@ async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId
   detail.innerHTML = `${renderBanner()}${header}${body}`;
 }
 
-async function renderRevisionDetail(detail: HTMLElement, revision: string, requestId: number): Promise<void> {
-  detail.innerHTML = '<p class="list-empty">Carregando revisão...</p>';
-  const log = await api().getSvnRevisionLog(state.selectedEnvironmentId, revision);
+const LOG_ACTION_KIND: Record<string, ChangeKind> = { A: 'added', D: 'deleted', M: 'modified', R: 'modified' };
 
-  if (requestId !== desktop.requestId) {
+async function renderRevisionDiff(container: HTMLElement, revision: string, logPath: string): Promise<void> {
+  const root = desktop.log.repositoryRoot;
+  container.innerHTML = '<p class="list-empty">Carregando diff...</p>';
+
+  if (!root) {
+    container.innerHTML = blankSlate('Diff indisponível', 'Não foi possível descobrir a raiz do repositório.');
     return;
   }
 
-  if (!log.ok) {
-    detail.innerHTML = `${renderBanner()}${blankSlate(`Revisão ${revision}`, log.message)}`;
+  const diff = await withCredentials(root, (credentials) => api().readRevisionDiff({ repositoryRoot: root, revision, path: logPath, credentials }).then((result) => ({ ...result, errorCode: undefined })));
+
+  if (desktop.selectedRevision !== revision || desktop.selectedLogPath !== logPath) {
     return;
   }
 
-  const [title, ...rest] = (log.logMessage ?? '').split('\n');
-  const actionKind: Record<string, ChangeKind> = { A: 'added', D: 'deleted', M: 'modified', R: 'modified' };
+  const header = `<div class="diff-header">${escapeHtml(relativeLogPath(logPath))}<span class="diff-header-source">r${escapeHtml(revision)}</span></div>`;
+
+  if (diff.kind === 'binary') {
+    container.innerHTML = header + blankSlate('Arquivo binário', 'O conteúdo binário não pode ser exibido como diff.');
+  } else if (diff.kind !== 'text') {
+    container.innerHTML = header + blankSlate('Sem diff para mostrar', 'Pasta, arquivo copiado sem alteração ou arquivo removido.');
+  } else {
+    container.innerHTML = `${header}${renderDiffTable(diff.lines)}${diff.truncated ? '<p class="list-empty">Diff truncado para exibição.</p>' : ''}`;
+  }
+}
+
+function renderRevisionDetail(detail: HTMLElement, revision: string): void {
+  const entry = desktop.log.entries.find((item) => item.revision === revision);
+
+  if (!entry) {
+    detail.innerHTML = `${renderBanner()}${blankSlate(`Revisão ${revision}`, 'Revisão não carregada.')}`;
+    return;
+  }
+
+  const [title, ...rest] = entry.message.split('\n');
+  const body = rest.join('\n').trim();
+  const paths = entry.paths.filter((item) => item.kind !== 'dir' || item.action === 'D');
+
+  if (!desktop.selectedLogPath && paths.length > 0) {
+    desktop.selectedLogPath = paths[0].path;
+  }
 
   detail.innerHTML = `
     ${renderBanner()}
     <div class="detail-section">
-      <h2>${escapeHtml(title || `Revisão ${revision}`)}</h2>
-      <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(log.author ?? 'autor desconhecido')} · ${escapeHtml(formatDate(log.date))} · ${log.paths.length} caminho(s)</p>
-      ${rest.join('\n').trim() ? `<p class="commit-message-view">${escapeHtml(rest.join('\n').trim())}</p>` : ''}
+      <h2>${escapeHtml(title.trim() || '(sem mensagem)')}</h2>
+      <p class="detail-meta">r${escapeHtml(revision)} · ${escapeHtml(entry.author ?? 'sem autor')} · ${escapeHtml(formatDate(entry.date))} · ${paths.length} arquivo(s)${isNewOnServer(revision) ? ' · <span class="badge-new">Ainda não está no seu checkout</span>' : ''}</p>
+      ${body ? `<p class="commit-message-view">${escapeHtml(body)}</p>` : ''}
     </div>
-    <ul class="path-list">
-      ${log.paths.map((entry) => {
-        const kind = actionKind[entry.action] ?? 'modified';
-        return `<li><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${escapeHtml(entry.path)}</li>`;
-      }).join('')}
-    </ul>
+    <div class="revision-layout">
+      <ul class="path-list revision-files">
+        ${paths.map((item) => {
+          const kind = LOG_ACTION_KIND[item.action] ?? 'modified';
+          return `<li><button type="button" class="revision-file" data-log-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedLogPath}" title="${escapeHtml(item.path)}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span><span class="change-path"><bdi>${escapeHtml(relativeLogPath(item.path))}</bdi></span></button></li>`;
+        }).join('')}
+      </ul>
+      <div class="revision-diff" data-role="revision-diff"></div>
+    </div>
   `;
+
+  const diffContainer = query<HTMLElement>('[data-role="revision-diff"]', detail)!;
+
+  bindClick(detail, '[data-log-path]', (button) => {
+    desktop.selectedLogPath = button.dataset.logPath;
+    detail.querySelectorAll<HTMLElement>('[data-log-path]').forEach((item) => item.setAttribute('aria-selected', String(item === button)));
+    void renderRevisionDiff(diffContainer, revision, button.dataset.logPath ?? '');
+  });
+
+  if (desktop.selectedLogPath) {
+    void renderRevisionDiff(diffContainer, revision, desktop.selectedLogPath);
+  } else {
+    diffContainer.innerHTML = blankSlate('Sem arquivos', 'Esta revisão só alterou propriedades ou pastas.');
+  }
 }
 
 function renderConflictBanner(): string {
@@ -1826,9 +1945,9 @@ async function renderDetail(): Promise<void> {
 
   if (desktop.tab === 'history') {
     if (desktop.selectedRevision) {
-      await renderRevisionDetail(detail, desktop.selectedRevision, requestId);
+      renderRevisionDetail(detail, desktop.selectedRevision);
     } else {
-      detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', committedEntries().length > 0 ? 'Selecione um commit para ver os arquivos publicados.' : 'Os commits publicados por aqui aparecem nesta aba.')}`;
+      detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', desktop.log.loaded ? 'Nenhum commit para mostrar.' : 'Carregando o histórico do servidor...')}`;
     }
     return;
   }
@@ -1915,13 +2034,12 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
 
     if (previousEnvironment !== state.selectedEnvironmentId) {
       resetSelection();
+      desktop.log = emptyHistoryLog();
+      desktop.selectedRevision = undefined;
     }
 
     const hasEnvironment = desktop.environments.items.length > 0;
-    [desktop.screen, desktop.history] = await Promise.all([
-      hasEnvironment ? api().getSyncScreenState(state.selectedEnvironmentId) : Promise.resolve(undefined),
-      api().readPackageHistory()
-    ]);
+    desktop.screen = hasEnvironment ? await api().getSyncScreenState(state.selectedEnvironmentId) : undefined;
 
     desktop.workingCopy = hasEnvironment && !isCopyStep()
       ? await api().getWorkingCopyStatus(state.selectedEnvironmentId)
@@ -1944,6 +2062,10 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
   }
 
   renderDesktop();
+
+  if (desktop.tab === 'history' && !desktop.log.loaded && state.selectedEnvironmentId) {
+    void loadHistory();
+  }
 }
 
 
@@ -2374,9 +2496,13 @@ interface ReposViewState {
   currentUrl?: string;
   listing?: RemoteListing;
   loading: boolean;
+  // Histórico remoto da pasta atual, sem precisar de checkout.
+  showHistory: boolean;
+  history?: { url: string; entries: SvnXmlLogEntry[]; hasMore: boolean; projectPath?: string; error?: string; loading: boolean };
+  expandedRevision?: string;
 }
 
-const repos: ReposViewState = { loading: false };
+const repos: ReposViewState = { loading: false, showHistory: false };
 
 function svnUrlBase(url: string): string {
   return url.trim().replace(/\/+$/, '');
@@ -2537,13 +2663,16 @@ function renderRepoBrowser(): void {
     <div class="diff-header repo-header">
       <span class="breadcrumb">${breadcrumb()}</span>
       <span class="diff-header-source">
+        <button type="button" class="button" data-role="toggle-remote-history">${repos.showHistory ? 'Ver arquivos' : 'Ver histórico'}</button>
         <button type="button" class="button" data-role="checkout-current">Fazer checkout desta pasta…</button>
       </span>
     </div>
   `;
   let body: string;
 
-  if (repos.loading) {
+  if (repos.showHistory) {
+    body = renderRemoteHistory();
+  } else if (repos.loading) {
     body = '<p class="list-empty">Carregando...</p>';
   } else if (!listing || !listing.ok) {
     body = `<div class="banner" data-tone="error"><p><strong>${escapeHtml(listing?.message ?? 'Não foi possível listar.')}</strong></p>${listing?.detail ? `<p>${escapeHtml(listing.detail)}</p>` : ''}</div>`;
@@ -2580,6 +2709,94 @@ function renderRepoBrowser(): void {
   bindClick(detail, '[data-checkout-url]', (button) => openCheckoutModal(button.dataset.checkoutUrl ?? ''));
   bindClick(detail, '[data-role="checkout-current"]', () => openCheckoutModal(repos.currentUrl ?? ''));
   bindClick(detail, '[data-role="checkout-trunk"]', () => openCheckoutModal(`${svnUrlBase(repos.currentUrl ?? '')}/trunk`));
+  bindClick(detail, '[data-role="toggle-remote-history"]', () => {
+    repos.showHistory = !repos.showHistory;
+    if (repos.showHistory && repos.history?.url !== repos.currentUrl) {
+      void loadRemoteHistory(false);
+    }
+    renderRepoBrowser();
+  });
+  bindClick(detail, '[data-role="remote-history-more"]', () => loadRemoteHistory(true));
+  bindClick(detail, '[data-expand-revision]', (button) => {
+    repos.expandedRevision = repos.expandedRevision === button.dataset.expandRevision ? undefined : button.dataset.expandRevision;
+    renderRepoBrowser();
+  });
+}
+
+function renderRemoteHistory(): string {
+  const history = repos.history;
+
+  if (!history || (history.loading && history.entries.length === 0)) {
+    return '<p class="list-empty">Carregando histórico...</p>';
+  }
+
+  if (history.error) {
+    return `<div class="banner" data-tone="error"><p>${escapeHtml(history.error)}</p></div>`;
+  }
+
+  if (history.entries.length === 0) {
+    return '<p class="list-empty">Nenhum commit nesta pasta.</p>';
+  }
+
+  const rows = history.entries.map((entry) => {
+    const expanded = repos.expandedRevision === entry.revision;
+    const projectPath = history.projectPath;
+    const files = expanded
+      ? `<tr class="remote-history-detail"><td colspan="4">
+          ${entry.message.includes('\n') ? `<p class="commit-message-view">${escapeHtml(entry.message.split('\n').slice(1).join('\n').trim())}</p>` : ''}
+          <ul class="path-list">${entry.paths.filter((item) => item.kind !== 'dir' || item.action === 'D').map((item) => {
+            const kind = LOG_ACTION_KIND[item.action] ?? 'modified';
+            const shown = projectPath && projectPath !== '/' && item.path.startsWith(`${projectPath}/`) ? item.path.slice(projectPath.length + 1) : item.path;
+            return `<li><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${escapeHtml(shown)}</li>`;
+          }).join('')}</ul>
+        </td></tr>`
+      : '';
+
+    return `
+      <tr>
+        <td><button type="button" class="link-button" data-expand-revision="${escapeHtml(entry.revision)}" aria-expanded="${expanded}">${escapeHtml(firstLine(entry.message) || '(sem mensagem)')}</button></td>
+        <td>r${escapeHtml(entry.revision)}</td>
+        <td>${escapeHtml(entry.author ?? '')}</td>
+        <td>${escapeHtml(formatDate(entry.date))}</td>
+      </tr>
+      ${files}
+    `;
+  }).join('');
+
+  return `
+    <table class="history-table repo-table"><thead><tr><th>Mensagem</th><th>Revisão</th><th>Autor</th><th>Data</th></tr></thead><tbody>${rows}</tbody></table>
+    ${history.hasMore ? `<p class="list-empty"><button type="button" class="button" data-role="remote-history-more" ${history.loading ? 'disabled' : ''}>${history.loading ? 'Carregando...' : 'Carregar mais'}</button></p>` : ''}
+  `;
+}
+
+async function loadRemoteHistory(more: boolean): Promise<void> {
+  const url = repos.currentUrl;
+
+  if (!url) {
+    return;
+  }
+
+  const current = more && repos.history?.url === url ? repos.history : { url, entries: [], hasMore: false, loading: false };
+  const last = current.entries[current.entries.length - 1];
+  current.loading = true;
+  repos.history = current;
+  renderRepoBrowser();
+
+  const page = await withCredentials(url, (credentials) =>
+    api().readSvnLog({ url, before: more && last ? String(Number(last.revision) - 1) : undefined, credentials })
+  );
+
+  if (repos.currentUrl !== url) {
+    return;
+  }
+
+  current.loading = false;
+  current.error = page.ok ? undefined : [page.message, page.detail].filter(Boolean).join(' ');
+  current.entries = page.ok ? [...current.entries, ...page.entries] : current.entries;
+  current.hasMore = page.ok && page.hasMore;
+  current.projectPath = page.projectPath;
+  setStatusMessage(page.message);
+  renderRepoBrowser();
 }
 
 async function browseRemote(url: string): Promise<void> {
@@ -2589,6 +2806,8 @@ async function browseRemote(url: string): Promise<void> {
 
   repos.currentUrl = svnUrlBase(url);
   repos.loading = true;
+  repos.showHistory = false;
+  repos.expandedRevision = undefined;
   renderRepoRoots();
   renderRepoBrowser();
   setStatusMessage(`Listando ${repos.currentUrl}...`);
@@ -2803,6 +3022,7 @@ function bindDesktopShell(): void {
 
   query<HTMLButtonElement>('[data-role="refresh"]')?.addEventListener('click', () => {
     desktop.banner = undefined;
+    desktop.log = emptyHistoryLog();
     if (state.showAdvanced) {
       void renderActiveStage();
     } else {
