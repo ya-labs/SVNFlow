@@ -1,4 +1,7 @@
 import type {
+  RemoteListing,
+  RepositoriesState,
+  SvnCredentials,
   GitBranch,
   ApplyPlan,
   ApplySourceRequest,
@@ -2042,7 +2045,7 @@ function openAddEnvironmentModal(): void {
             <button type="button" class="button" data-role="pick-svn">Escolher…</button>
           </span>
         </label>
-        <label class="modal-field">Repositório Git <small>(opcional)</small>
+        <label class="modal-field"><span>Repositório Git <small>(opcional)</small></span>
           <span class="input-row">
             <input class="input" name="gitWorkspacePath" type="text" placeholder="Vincule para sincronizar o código do Git com o SVN" />
             <button type="button" class="button" data-role="pick-git">Escolher…</button>
@@ -2210,11 +2213,413 @@ function openLinkGitModal(): void {
 
 // Troca de visão ------------------------------------------------------------
 
+// Repositórios SVN -----------------------------------------------------------
+
+interface ReposViewState {
+  data?: RepositoriesState;
+  rootUrl?: string;
+  currentUrl?: string;
+  listing?: RemoteListing;
+  loading: boolean;
+}
+
+const repos: ReposViewState = { loading: false };
+
+function svnUrlBase(url: string): string {
+  return url.trim().replace(/\/+$/, '');
+}
+
+function suggestNameFromUrl(url: string): string {
+  const segments = svnUrlBase(url).split('/').filter(Boolean);
+  const last = segments[segments.length - 1] ?? 'projeto';
+  return decodeURIComponent(last === 'trunk' && segments.length > 1 ? segments[segments.length - 2] : last);
+}
+
+// Pede usuário e senha quando o servidor exige. A senha fica só na memória da sessão.
+function askCredentials(url: string, failedBefore: boolean): Promise<SvnCredentials | undefined> {
+  return new Promise((resolve) => {
+    const host = url.match(/^[a-z+]+:\/\/([^/]+)/i)?.[1] ?? url;
+    const modal = openModal(`
+      <form data-role="credentials-form">
+        <div class="modal-header">Entrar no servidor SVN</div>
+        <div class="modal-body">
+          <p>O servidor <strong>${escapeHtml(host)}</strong> pediu usuário e senha.</p>
+          ${failedBefore ? '<p class="modal-error">Usuário ou senha não aceitos. Tente de novo.</p>' : ''}
+          <label class="modal-field">Usuário
+            <input class="input" name="username" type="text" autocomplete="username" required />
+          </label>
+          <label class="modal-field">Senha
+            <input class="input" name="password" type="password" autocomplete="current-password" required />
+            <small>O SVNFlow mantém a senha só enquanto o app estiver aberto. O SVN pode guardá-la no cache dele, conforme a configuração da máquina.</small>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="button" data-role="modal-cancel">Cancelar</button>
+          <button type="submit" class="button primary">Entrar</button>
+        </div>
+      </form>
+    `);
+    const form = query<HTMLFormElement>('form', modal)!;
+    const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value;
+    const finish = (credentials: SvnCredentials | undefined) => {
+      closeModal();
+      resolve(credentials);
+    };
+
+    closeActiveModal = () => finish(undefined);
+    bindClick(modal, '[data-role="modal-cancel"]', () => finish(undefined));
+    (form.elements.namedItem('username') as HTMLInputElement).focus();
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      finish({ username: value('username'), password: value('password') });
+    });
+  });
+}
+
+// Executa a operação e, se o servidor pedir login, pergunta e tenta de novo.
+async function withCredentials<T extends { errorCode?: string }>(url: string, run: (credentials?: SvnCredentials) => Promise<T>): Promise<T> {
+  let result = await run();
+
+  for (let attempt = 0; attempt < 3 && result.errorCode === 'AUTH_REQUIRED'; attempt += 1) {
+    const credentials = await askCredentials(url, attempt > 0);
+
+    if (!credentials) {
+      return result;
+    }
+
+    result = await run(credentials);
+  }
+
+  return result;
+}
+
+function renderRepoRoots(): void {
+  const container = query<HTMLElement>('[data-role="repo-roots"]');
+  const roots = repos.data?.roots ?? [];
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = roots.length === 0
+    ? '<p class="list-empty">Nenhuma URL cadastrada. Adicione a URL base do servidor SVN.</p>'
+    : roots.map((root) => `
+      <div class="root-row" aria-selected="${root.url === repos.rootUrl}">
+        <button type="button" class="root-open" data-root-url="${escapeHtml(root.url)}" title="${escapeHtml(root.url)}">
+          <span class="history-title">${escapeHtml(root.name)}</span>
+          <span class="history-meta">${escapeHtml(root.url)}</span>
+        </button>
+        <button type="button" class="root-remove" data-remove-root="${escapeHtml(root.url)}" aria-label="Remover ${escapeHtml(root.name)}" title="Remover">×</button>
+      </div>
+    `).join('');
+
+  bindClick(container, '[data-root-url]', (button) => {
+    repos.rootUrl = button.dataset.rootUrl;
+    void browseRemote(button.dataset.rootUrl ?? '');
+  });
+
+  bindClick(container, '[data-remove-root]', async (button) => {
+    const url = button.dataset.removeRoot ?? '';
+    const root = roots.find((item) => item.url === url);
+
+    if (!root || !(await confirmModal({ title: 'Remover URL', message: `Remover "${root.name}" da lista? Nenhum checkout é apagado.`, confirmLabel: 'Remover', danger: true }))) {
+      return;
+    }
+
+    const next = await api().saveRepositoryRoots(roots.filter((item) => item.url !== url));
+    repos.data = { ...repos.data!, roots: next };
+
+    if (repos.rootUrl === url) {
+      repos.rootUrl = undefined;
+      repos.currentUrl = undefined;
+      repos.listing = undefined;
+    }
+
+    renderRepoRoots();
+    renderRepoBrowser();
+  });
+}
+
+function breadcrumb(): string {
+  const root = (repos.data?.roots ?? []).find((item) => item.url === repos.rootUrl);
+  const current = repos.currentUrl ?? '';
+
+  if (!root || !current.startsWith(root.url)) {
+    return escapeHtml(current);
+  }
+
+  const parts = current.slice(root.url.length).split('/').filter(Boolean);
+  const links = [`<button type="button" class="crumb" data-crumb="${escapeHtml(root.url)}">${escapeHtml(root.name)}</button>`];
+  let url = root.url;
+
+  for (const part of parts) {
+    url = `${url}/${part}`;
+    links.push(`<span class="crumb-sep">/</span><button type="button" class="crumb" data-crumb="${escapeHtml(url)}">${escapeHtml(decodeURIComponent(part))}</button>`);
+  }
+
+  return links.join('');
+}
+
+function renderRepoBrowser(): void {
+  const detail = query<HTMLElement>('[data-role="repo-browser"]');
+
+  if (!detail) {
+    return;
+  }
+
+  if (!repos.currentUrl) {
+    detail.innerHTML = blankSlate(
+      'Repositórios SVN',
+      (repos.data?.roots.length ?? 0) > 0
+        ? 'Escolha um servidor na lista para ver os projetos.'
+        : 'Adicione a URL base do servidor SVN da sua equipe. Ela fica salva só neste computador.',
+      `<div class="suggestions">${suggestion('Adicionar URL', 'Exemplo: svn://servidor/caminho/projetos', 'add-root-inline', 'Adicionar…')}</div>`
+    );
+    bindClick(detail, '[data-role="add-root-inline"]', () => openAddRootModal());
+    return;
+  }
+
+  const listing = repos.listing;
+  const header = `
+    <div class="diff-header repo-header">
+      <span class="breadcrumb">${breadcrumb()}</span>
+      <span class="diff-header-source">
+        <button type="button" class="button" data-role="checkout-current">Fazer checkout desta pasta…</button>
+      </span>
+    </div>
+  `;
+  let body: string;
+
+  if (repos.loading) {
+    body = '<p class="list-empty">Carregando...</p>';
+  } else if (!listing || !listing.ok) {
+    body = `<div class="banner" data-tone="error"><p><strong>${escapeHtml(listing?.message ?? 'Não foi possível listar.')}</strong></p>${listing?.detail ? `<p>${escapeHtml(listing.detail)}</p>` : ''}</div>`;
+  } else {
+    const layout = listing.layout.trunk
+      ? `<div class="banner" data-tone="success"><p>Este projeto segue o padrão <strong>trunk/branches/tags</strong>. O desenvolvimento principal fica em <strong>trunk</strong>.</p><p><button type="button" class="button primary" data-role="checkout-trunk">Fazer checkout do trunk…</button></p></div>`
+      : '';
+    const rows = listing.entries.map((entry) => `
+      <tr>
+        <td class="repo-name">
+          ${entry.kind === 'dir'
+            ? `<button type="button" class="link-button" data-open-dir="${escapeHtml(entry.url)}"><span class="repo-icon" aria-hidden="true">📁</span>${escapeHtml(entry.name)}</button>`
+            : `<span class="repo-icon" aria-hidden="true">📄</span>${escapeHtml(entry.name)}`}
+        </td>
+        <td>${escapeHtml(entry.revision ? `r${entry.revision}` : '')}</td>
+        <td>${escapeHtml(entry.author ?? '')}</td>
+        <td>${escapeHtml(formatDate(entry.date))}</td>
+        <td>${entry.kind === 'dir' ? `<button type="button" class="button" data-checkout-url="${escapeHtml(entry.url)}">Checkout…</button>` : ''}</td>
+      </tr>
+    `).join('');
+
+    body = `
+      ${layout}
+      ${listing.entries.length === 0
+        ? '<p class="list-empty">Pasta vazia.</p>'
+        : `<table class="history-table repo-table"><thead><tr><th>Nome</th><th>Revisão</th><th>Autor</th><th>Última alteração</th><th></th></tr></thead><tbody>${rows}</tbody></table>`}
+    `;
+  }
+
+  detail.innerHTML = `${header}<div class="repo-body">${body}</div>`;
+
+  bindClick(detail, '[data-crumb]', (button) => browseRemote(button.dataset.crumb ?? ''));
+  bindClick(detail, '[data-open-dir]', (button) => browseRemote(button.dataset.openDir ?? ''));
+  bindClick(detail, '[data-checkout-url]', (button) => openCheckoutModal(button.dataset.checkoutUrl ?? ''));
+  bindClick(detail, '[data-role="checkout-current"]', () => openCheckoutModal(repos.currentUrl ?? ''));
+  bindClick(detail, '[data-role="checkout-trunk"]', () => openCheckoutModal(`${svnUrlBase(repos.currentUrl ?? '')}/trunk`));
+}
+
+async function browseRemote(url: string): Promise<void> {
+  if (!url) {
+    return;
+  }
+
+  repos.currentUrl = svnUrlBase(url);
+  repos.loading = true;
+  renderRepoRoots();
+  renderRepoBrowser();
+  setStatusMessage(`Listando ${repos.currentUrl}...`);
+
+  repos.listing = await withCredentials(repos.currentUrl, (credentials) => api().listRemote(repos.currentUrl!, credentials));
+  repos.loading = false;
+  setStatusMessage(repos.listing.message);
+  renderRepoBrowser();
+}
+
+function openAddRootModal(): void {
+  const modal = openModal(`
+    <form data-role="add-root-form">
+      <div class="modal-header">Adicionar servidor SVN</div>
+      <div class="modal-body">
+        <label class="modal-field">URL base
+          <input class="input" name="url" type="text" placeholder="svn://servidor/caminho/projetos" required />
+          <small>Os projetos que estão dentro desta URL aparecem para checkout. A URL fica salva só neste computador.</small>
+        </label>
+        <label class="modal-field">Nome
+          <input class="input" name="name" type="text" placeholder="Ex.: Projetos da equipe" />
+        </label>
+        <p class="modal-error" data-role="add-root-error" hidden></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button" data-role="modal-cancel">Cancelar</button>
+        <button type="submit" class="button primary">Adicionar</button>
+      </div>
+    </form>
+  `);
+  const form = query<HTMLFormElement>('form', modal)!;
+  const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value.trim();
+  const error = query<HTMLElement>('[data-role="add-root-error"]', modal)!;
+
+  closeActiveModal = closeModal;
+  bindClick(modal, '[data-role="modal-cancel"]', closeModal);
+  (form.elements.namedItem('url') as HTMLInputElement).focus();
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      const url = svnUrlBase(value('url'));
+
+      if (!/^(svn|svn\+ssh|https?|file):\/\/\S+$/i.test(url)) {
+        error.textContent = 'Informe uma URL SVN começando com svn://, svn+ssh://, http(s):// ou file://.';
+        error.hidden = false;
+        return;
+      }
+
+      const roots = [...(repos.data?.roots ?? []), { name: value('name') || suggestNameFromUrl(url), url }];
+      const saved = await api().saveRepositoryRoots(roots);
+      repos.data = { ...(repos.data ?? { defaultCheckoutDirectory: '' }), roots: saved };
+      closeModal();
+      repos.rootUrl = url;
+      renderRepoRoots();
+      await browseRemote(url);
+    })();
+  });
+}
+
+function openCheckoutModal(url: string): void {
+  const name = suggestNameFromUrl(url);
+  const defaultDirectory = repos.data?.defaultCheckoutDirectory ?? '';
+  const modal = openModal(`
+    <form data-role="checkout-form">
+      <div class="modal-header">Fazer checkout</div>
+      <div class="modal-body">
+        <label class="modal-field">URL
+          <input class="input" type="text" value="${escapeHtml(url)}" readonly />
+        </label>
+        <label class="modal-field">Pasta de destino
+          <span class="input-row">
+            <input class="input" name="destination" type="text" value="${escapeHtml(defaultDirectory ? `${defaultDirectory}/${name}` : '')}" required />
+            <button type="button" class="button" data-role="pick-destination">Escolher…</button>
+          </span>
+          <small>A pasta não pode existir com arquivos dentro. Ela será criada se não existir.</small>
+        </label>
+        <label class="modal-field">Nome do projeto
+          <input class="input" name="name" type="text" value="${escapeHtml(name)}" />
+        </label>
+        <label class="modal-field"><span>Revisão <small>(opcional)</small></span>
+          <input class="input" name="revision" type="text" placeholder="Mais recente (HEAD)" />
+        </label>
+        <p class="checkout-progress" data-role="checkout-progress" hidden></p>
+        <p class="modal-error" data-role="checkout-error" hidden></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button" data-role="modal-cancel">Cancelar</button>
+        <button type="submit" class="button primary">Fazer checkout</button>
+      </div>
+    </form>
+  `);
+  const form = query<HTMLFormElement>('form', modal)!;
+  const input = (field: string) => form.elements.namedItem(field) as HTMLInputElement;
+  const progress = query<HTMLElement>('[data-role="checkout-progress"]', modal)!;
+  const error = query<HTMLElement>('[data-role="checkout-error"]', modal)!;
+  const submit = query<HTMLButtonElement>('button[type="submit"]', form)!;
+  let running = false;
+
+  closeActiveModal = () => {
+    if (!running) {
+      closeModal();
+    }
+  };
+  bindClick(modal, '[data-role="modal-cancel"]', () => closeActiveModal?.());
+  bindClick(modal, '[data-role="pick-destination"]', async () => {
+    const picked = await api().selectDirectory('Escolher a pasta onde o projeto será baixado', defaultDirectory || undefined);
+    if (picked) input('destination').value = `${picked.replace(/\/+$/, '')}/${input('name').value.trim() || name}`;
+  });
+  input('destination').focus();
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      const operationId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const stop = api().onSvnProgress((update) => {
+        if (update.operationId === operationId) {
+          progress.textContent = `${update.files} item(ns) baixado(s) · ${update.line}`;
+        }
+      });
+
+      running = true;
+      submit.disabled = true;
+      error.hidden = true;
+      progress.hidden = false;
+      progress.textContent = 'Conectando ao servidor...';
+      setStatusMessage(`Fazendo checkout de ${url}...`);
+
+      const response = await withCredentials(url, async (credentials) => {
+        const result = await api().checkout({
+          operationId,
+          url,
+          destination: input('destination').value.trim(),
+          revision: input('revision').value.trim() || undefined,
+          name: input('name').value.trim() || undefined,
+          credentials
+        });
+        return { ...result, errorCode: result.checkout.errorCode };
+      });
+
+      stop();
+      running = false;
+
+      if (!response.checkout.ok || !response.registration?.canSave) {
+        error.textContent = response.checkout.ok
+          ? `Checkout feito, mas o projeto não foi cadastrado: ${response.registration?.message ?? ''}`
+          : [response.checkout.message, response.checkout.detail].filter(Boolean).join(' ');
+        error.hidden = false;
+        progress.hidden = true;
+        submit.disabled = false;
+        setStatusMessage(response.checkout.message);
+        return;
+      }
+
+      closeModal();
+      state.selectedEnvironmentId = response.registration.savedEnvironment?.id;
+      desktop.selectedPath = undefined;
+      desktop.commitDraft = undefined;
+      desktop.banner = { tone: 'success', html: `<p><strong>${escapeHtml(response.checkout.message)}</strong> Projeto adicionado.</p>` };
+      showDesktopView();
+    })();
+  });
+}
+
+async function showRepositoriesView(): Promise<void> {
+  setActiveView('repos');
+  repos.data = await api().getRepositoriesState();
+  renderRepoRoots();
+  renderRepoBrowser();
+}
+
+type ActiveView = 'desktop' | 'advanced' | 'repos';
+
+function setActiveView(view: ActiveView): void {
+  closeMenus();
+  query<HTMLElement>('[data-role="desktop-view"]')!.hidden = view !== 'desktop';
+  query<HTMLElement>('[data-role="advanced-view"]')!.hidden = view !== 'advanced';
+  query<HTMLElement>('[data-role="repos-view"]')!.hidden = view !== 'repos';
+  query<HTMLElement>('[data-role="open-repositories"]')?.setAttribute('aria-pressed', String(view === 'repos'));
+}
+
 function showDesktopView(): void {
   state.showAdvanced = false;
   writeShowAdvanced(false);
-  query<HTMLElement>('[data-role="desktop-view"]')!.hidden = false;
-  query<HTMLElement>('[data-role="advanced-view"]')!.hidden = true;
+  setActiveView('desktop');
   void loadDesktop();
 }
 
@@ -2222,9 +2627,7 @@ function showAdvancedView(stage: StageKey = state.activeStage): void {
   state.showAdvanced = true;
   writeShowAdvanced(true);
   state.activeStage = stage;
-  closeMenus();
-  query<HTMLElement>('[data-role="desktop-view"]')!.hidden = true;
-  query<HTMLElement>('[data-role="advanced-view"]')!.hidden = false;
+  setActiveView('advanced');
   renderToolbar();
   renderNavigation();
   void renderActiveStage();
@@ -2253,6 +2656,21 @@ function bindDesktopShell(): void {
       void loadDesktop();
     }
   });
+
+  query<HTMLButtonElement>('[data-role="open-repositories"]')?.addEventListener('click', () => {
+    if (!query<HTMLElement>('[data-role="repos-view"]')!.hidden) {
+      if (state.showAdvanced) {
+        showAdvancedView();
+      } else {
+        showDesktopView();
+      }
+      return;
+    }
+
+    void showRepositoriesView();
+  });
+
+  query<HTMLButtonElement>('[data-role="add-root"]')?.addEventListener('click', () => openAddRootModal());
 
   query<HTMLButtonElement>('[data-role="appearance"]')?.addEventListener('click', () => {
     closeMenus();

@@ -39,6 +39,7 @@
           </span>
         </button>
         <span class="toolbar-spacer"></span>
+        <button type="button" class="toolbar-link" data-role="open-repositories">Repositórios</button>
         <button type="button" class="toolbar-link" data-role="appearance">Aparência</button>
         <button type="button" class="toolbar-link" data-role="toggle-advanced">Modo avançado</button>
       </header>
@@ -56,6 +57,17 @@
           <div class="commit-box" data-role="commit-box"></div>
         </aside>
         <section class="detail" data-role="detail" aria-live="polite"></section>
+      </main>
+
+      <main class="repos" data-role="repos-view" hidden>
+        <aside class="sidebar">
+          <div class="list-header">Servidores SVN</div>
+          <div class="sidebar-list" data-role="repo-roots"></div>
+          <div class="commit-box">
+            <button type="button" class="button primary block" data-role="add-root">Adicionar URL…</button>
+          </div>
+        </aside>
+        <section class="detail" data-role="repo-browser" aria-live="polite"></section>
       </main>
 
       <main class="advanced" data-role="advanced-view" hidden>

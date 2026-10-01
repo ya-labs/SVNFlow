@@ -9,6 +9,10 @@ import type { PackageLibraryResult } from '../main/commands/package-library.js';
 import type { RegisterSavedEnvironmentResult } from '../main/commands/register-saved-environment.js';
 import type { SavedEnvironmentValidationStatus } from '../main/commands/saved-environments.js';
 import type { ApplyPlan, ExecuteApplyResult } from '../main/commands/svn-apply-flow.js';
+import type { RepositoryRoot } from '../main/commands/app-settings.js';
+import type { CheckoutResult } from '../main/commands/svn-checkout.js';
+import type { SvnCredentials } from '../main/commands/svn-client.js';
+import type { RemoteEntry, RemoteListing } from '../main/commands/svn-repository-browser.js';
 import type { GitBranch, GitBranchList, SwitchGitBranchResult } from '../main/commands/git-branches.js';
 import type { ExecuteSyncResult, SvnRevisionLog, SyncFileDiff, SyncPlan } from '../main/commands/git-svn-sync.js';
 
@@ -24,7 +28,12 @@ export type {
   MiniPrDraft,
   PackageHistoryResult,
   PackageLibraryResult,
+  CheckoutResult,
   RegisterSavedEnvironmentResult,
+  RemoteEntry,
+  RemoteListing,
+  RepositoryRoot,
+  SvnCredentials,
   SvnRevisionLog,
   SwitchGitBranchResult,
   SyncFileDiff,
@@ -221,6 +230,31 @@ export interface LinkGitResponse {
   blockers: Array<{ code: string; message: string }>;
 }
 
+export interface RepositoriesState {
+  roots: RepositoryRoot[];
+  defaultCheckoutDirectory: string;
+}
+
+export interface CheckoutRequest {
+  operationId: string;
+  url: string;
+  destination: string;
+  revision?: string;
+  name?: string;
+  credentials?: SvnCredentials;
+}
+
+export interface CheckoutResponse {
+  checkout: CheckoutResult;
+  registration?: RegisterSavedEnvironmentResult;
+}
+
+export interface SvnProgressEvent {
+  operationId: string;
+  files: number;
+  line: string;
+}
+
 export interface SvnflowDesktopApi {
   appName: string;
   appVersion: string;
@@ -237,6 +271,11 @@ export interface SvnflowDesktopApi {
   getSvnRevisionLog: (environmentId: string | undefined, revision: string) => Promise<SvnRevisionLog>;
   openEnvironmentFolder: (environmentId: string | undefined, which: 'git' | 'svn') => Promise<void>;
   linkGit: (environmentId: string, gitWorkspacePath: string, baseBranch?: string) => Promise<LinkGitResponse>;
+  getRepositoriesState: () => Promise<RepositoriesState>;
+  saveRepositoryRoots: (roots: RepositoryRoot[]) => Promise<RepositoryRoot[]>;
+  listRemote: (url: string, credentials?: SvnCredentials) => Promise<RemoteListing>;
+  checkout: (request: CheckoutRequest) => Promise<CheckoutResponse>;
+  onSvnProgress: (listener: (event: SvnProgressEvent) => void) => () => void;
   listGitBranches: (environmentId: string | undefined) => Promise<GitBranchList>;
   switchGitBranch: (environmentId: string | undefined, branch: string, kind: 'local' | 'remote') => Promise<SwitchGitBranchResult>;
   getTheme: () => Promise<AppTheme>;

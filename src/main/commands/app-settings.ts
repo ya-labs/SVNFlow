@@ -6,21 +6,66 @@ import { resolveSvnflowPackagesDirectory } from './package-exporter.js';
 
 export type AppTheme = 'system' | 'light' | 'dark';
 
+// URL base de um servidor SVN informada pela pessoa. Fica só neste arquivo local.
+export interface RepositoryRoot {
+  name: string;
+  url: string;
+}
+
 export interface AppSettings {
   packagesDirectory: string;
   theme: AppTheme;
+  repositoryRoots: RepositoryRoot[];
 }
 
 interface AppSettingsFile {
   version: 1;
   packagesDirectory?: string;
   theme?: AppTheme;
+  repositoryRoots?: RepositoryRoot[];
 }
 
 const THEMES: AppTheme[] = ['system', 'light', 'dark'];
+const SVN_URL_PATTERN = /^(svn|svn\+ssh|https?|file):\/\/\S+$/i;
 
 export function isAppTheme(value: unknown): value is AppTheme {
   return typeof value === 'string' && (THEMES as string[]).includes(value);
+}
+
+export function normalizeSvnUrl(url: string): string {
+  return url.trim().replace(/\/+$/, '');
+}
+
+export function isSvnUrl(url: string): boolean {
+  return SVN_URL_PATTERN.test(url.trim());
+}
+
+function sanitizeRoots(value: unknown): RepositoryRoot[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') {
+      return [];
+    }
+
+    const candidate = item as Partial<RepositoryRoot>;
+    const url = typeof candidate.url === 'string' ? normalizeSvnUrl(candidate.url) : '';
+
+    if (!isSvnUrl(url) || seen.has(url)) {
+      return [];
+    }
+
+    seen.add(url);
+    const name = typeof candidate.name === 'string' && candidate.name.trim()
+      ? candidate.name.trim()
+      : url.slice(url.lastIndexOf('/') + 1) || url;
+
+    return [{ name, url }];
+  });
 }
 
 export interface AppSettingsOptions {
@@ -35,7 +80,8 @@ export function resolveAppSettingsPath(baseDirectory: string = os.homedir()): st
 function defaultSettings(baseDirectory?: string): AppSettings {
   return {
     packagesDirectory: resolveSvnflowPackagesDirectory(baseDirectory),
-    theme: 'system'
+    theme: 'system',
+    repositoryRoots: []
   };
 }
 
@@ -49,7 +95,11 @@ export async function readAppSettings(options: AppSettingsOptions = {}): Promise
       ? parsed.packagesDirectory.trim()
       : defaults.packagesDirectory;
 
-    return { packagesDirectory, theme: isAppTheme(parsed.theme) ? parsed.theme : defaults.theme };
+    return {
+      packagesDirectory,
+      theme: isAppTheme(parsed.theme) ? parsed.theme : defaults.theme,
+      repositoryRoots: sanitizeRoots(parsed.repositoryRoots)
+    };
   } catch {
     return defaults;
   }
@@ -63,9 +113,15 @@ export async function updateAppSettings(
   const current = await readAppSettings(options);
   const next: AppSettings = {
     packagesDirectory: changes.packagesDirectory?.trim() || current.packagesDirectory,
-    theme: isAppTheme(changes.theme) ? changes.theme : current.theme
+    theme: isAppTheme(changes.theme) ? changes.theme : current.theme,
+    repositoryRoots: changes.repositoryRoots ? sanitizeRoots(changes.repositoryRoots) : current.repositoryRoots
   };
-  const file: AppSettingsFile = { version: 1, packagesDirectory: next.packagesDirectory, theme: next.theme };
+  const file: AppSettingsFile = {
+    version: 1,
+    packagesDirectory: next.packagesDirectory,
+    theme: next.theme,
+    repositoryRoots: next.repositoryRoots
+  };
 
   await mkdir(path.dirname(storagePath), { recursive: true });
   await writeFile(`${storagePath}.tmp`, `${JSON.stringify(file, null, 2)}\n`, 'utf8');
