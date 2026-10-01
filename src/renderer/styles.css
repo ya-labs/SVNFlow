@@ -26,6 +26,8 @@
   --hunk-bg: #f1f8ff;
   --hunk-text: #586069;
   --shadow: 0 8px 24px rgba(149, 157, 165, 0.25);
+  --scrollbar-thumb: rgba(106, 115, 125, 0.35);
+  --scrollbar-thumb-hover: rgba(106, 115, 125, 0.6);
   --backdrop: rgba(27, 31, 35, 0.5);
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
@@ -57,6 +59,8 @@
     --hunk-bg: rgba(33, 136, 255, 0.12);
     --hunk-text: #959da5;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --scrollbar-thumb: rgba(149, 157, 165, 0.3);
+    --scrollbar-thumb-hover: rgba(149, 157, 165, 0.55);
     --backdrop: rgba(0, 0, 0, 0.6);
   }
 }
@@ -383,17 +387,37 @@ button.toolbar-button:hover,
 }
 
 .change-path {
+  display: flex;
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  direction: rtl;
-  text-align: left;
+  white-space: nowrap;
 }
 
-.change-path bdi {
-  direction: ltr;
+/* Caminho que não cabe: o meio vira "…/" (classe definida em fitChangePaths),
+   mantendo a pasta de primeiro nível, a pasta pai e o arquivo. */
+.change-path > span {
+  flex: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.change-path > .path-head {
+  max-width: 40%;
+}
+
+.change-path > .path-tail {
+  flex: 0 1 auto;
+}
+
+.change-path > .path-ellipsis,
+.change-path.collapsed > .path-middle {
+  display: none;
+}
+
+.change-path.collapsed > .path-ellipsis {
+  display: inline;
 }
 
 .change-dir {
@@ -789,6 +813,39 @@ button.toolbar-button:hover,
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Barras de rolagem ----------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
 }
 
 /* Carregamento ---------------------------------------------------------- */

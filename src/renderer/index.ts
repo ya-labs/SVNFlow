@@ -1454,6 +1454,34 @@ function renderToolbar(): void {
 
 // Lista lateral -------------------------------------------------------------
 
+// Caminho longo: o meio vira "…/" (ver fitChangePaths), mantendo visíveis a pasta
+// de primeiro nível, a pasta pai e o nome do arquivo (ex.: src/…/pai/arquivo.ts).
+function renderChangePath(directory: string, fileName: string): string {
+  const segments = directory.split('/').filter(Boolean);
+  const head = segments.length > 2 ? `${segments[0]}/` : '';
+  const middle = segments.length > 2 ? `${segments.slice(1, -1).join('/')}/` : '';
+  const parent = segments.length > 2 ? `${segments[segments.length - 1]}/` : directory;
+
+  return `<span class="change-path">${head ? `<span class="change-dir path-head">${escapeHtml(head)}</span><span class="change-dir path-middle">${escapeHtml(middle)}</span><span class="change-dir path-ellipsis">…/</span>` : ''}<span class="path-tail"><span class="change-dir">${escapeHtml(parent)}</span>${escapeHtml(fileName)}</span></span>`;
+}
+
+// Recolhe o meio só dos caminhos que não cabem. Escreve, lê e escreve em lotes
+// para forçar um único cálculo de layout mesmo com milhares de linhas.
+function fitChangePaths(root: ParentNode = document): void {
+  const paths = Array.from(root.querySelectorAll<HTMLElement>('.change-path')).filter((element) => element.querySelector('.path-middle'));
+  paths.forEach((element) => element.classList.remove('collapsed'));
+  // As partes têm overflow próprio: compara a largura natural somada com o espaço disponível.
+  const naturalWidth = (element: HTMLElement): number => ['.path-head', '.path-middle', '.path-tail']
+    .reduce((total, selector) => total + (element.querySelector<HTMLElement>(selector)?.scrollWidth ?? 0), 0);
+  const overflowing = paths.filter((element) => naturalWidth(element) > element.clientWidth);
+  overflowing.forEach((element) => element.classList.add('collapsed'));
+}
+
+function renderSplitPath(filePath: string): string {
+  const slash = filePath.lastIndexOf('/');
+  return renderChangePath(slash >= 0 ? filePath.slice(0, slash + 1) : '', filePath.slice(slash + 1));
+}
+
 function renderChangeRow(item: ChangeItem): string {
   const slash = item.path.lastIndexOf('/');
   const directory = slash >= 0 ? item.path.slice(0, slash + 1) : '';
@@ -1465,7 +1493,7 @@ function renderChangeRow(item: ChangeItem): string {
   return `
     <div class="change-row${item.ignoredOnCommit ? ' ignored-on-commit' : ''}" role="option" tabindex="0" data-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedPath}" title="${escapeHtml(`${item.label}: ${item.path === '.' ? ROOT_LABEL : item.path}`)}">
       ${checkbox}
-      <span class="change-path"><bdi><span class="change-dir">${escapeHtml(directory)}</span>${escapeHtml(fileName)}</bdi></span>
+      ${renderChangePath(directory, fileName)}
       <span class="change-icon" data-kind="${item.kind}" aria-label="${escapeHtml(item.label)}">${CHANGE_ICONS[item.kind]}</span>
     </div>
   `;
@@ -2199,7 +2227,7 @@ function renderRevisionDetail(detail: HTMLElement, revision: string): void {
       <ul class="path-list revision-files">
         ${paths.map((item) => {
           const kind = LOG_ACTION_KIND[item.action] ?? 'modified';
-          return `<li><button type="button" class="revision-file" data-log-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedLogPath}" title="${escapeHtml(item.path)}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span><span class="change-path"><bdi>${escapeHtml(relativeLogPath(item.path))}</bdi></span></button></li>`;
+          return `<li><button type="button" class="revision-file" data-log-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedLogPath}" title="${escapeHtml(item.path)}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${renderSplitPath(relativeLogPath(item.path))}</button></li>`;
         }).join('')}
       </ul>
       <div class="revision-diff" data-role="revision-diff"></div>
@@ -3624,7 +3652,25 @@ function renderAppBootstrap(): void {
   }
 }
 
+// Reajusta os caminhos longos depois de cada renderização e ao redimensionar a janela.
+function watchChangePaths(): void {
+  let scheduled = false;
+  const schedule = (): void => {
+    if (!scheduled) {
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        fitChangePaths();
+      });
+    }
+  };
+
+  new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('resize', schedule);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  watchChangePaths();
   renderAppBootstrap();
 });
 
