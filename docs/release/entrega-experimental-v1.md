@@ -10,13 +10,15 @@ Os critérios que definem a V1 ficam em [Critérios de Pronto da V1](criterios-p
 
 ## O Que a V1 Entrega
 
-O fluxo principal é **Sincronizar** ([ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md)): o app deixa o checkout SVN igual ao último commit do Git e publica com um commit SVN.
+O SVNFlow é um cliente SVN visual, com Git opcional por projeto ([ADR-008](../adrs/ADR-008-cliente-svn-com-git-opcional.md)).
 
-| Etapa | O que faz |
+| Área | O que faz |
 | --- | --- |
-| Ambiente | Cadastra o repositório Git e o checkout SVN, com escolha de pasta e validação. |
-| Sincronizar | Compara o último commit do Git com o checkout e mostra o que será criado, atualizado e removido. Após confirmação, copia os arquivos e roda `svn add`/`svn delete`. Em seguida, sugere uma mensagem de commit editável e publica após nova confirmação. |
-| Histórico | Commits SVN publicados, com o commit Git correspondente. |
+| Repositórios | Lista projetos a partir de URLs base do servidor SVN, mostra o histórico remoto e faz checkout com progresso. |
+| Projeto | Um checkout SVN. Opcionalmente, vincula um repositório Git. |
+| Alterações | `svn status` com seleção de arquivos, diff e commit só do que foi marcado. Com Git vinculado, antes copia o último commit da branch ([ADR-007](../adrs/ADR-007-sincronizacao-por-espelhamento.md)). |
+| Histórico | `svn log` do servidor com paginação, marca de revisões novas e diff por arquivo. |
+| Atualizar do servidor | `svn update` quando há revisões novas; conflitos ficam marcados para resolver. |
 
 As etapas abaixo ficam em **Modo avançado**, para o fluxo por patch e pacotes `.svnflow`:
 
@@ -90,7 +92,13 @@ Nenhum dado é enviado para servidor externo. Remover um ambiente da lista não 
 - **Um commit SVN por sincronização.** Os commits Git aparecem listados na mensagem, não como revisões separadas.
 - **Fim de linha.** A comparação é byte a byte. Se o checkout usa `svn:eol-style` com conversão (comum no Windows), arquivos podem aparecer como alterados sem mudança real.
 - **Links simbólicos e submódulos** não são copiados.
-- **Sem `svn update`.** Atualize o checkout fora do app se outra pessoa também commita no SVN.
+
+### Cliente SVN
+
+- **Conflitos** são mostrados e bloqueiam o commit do arquivo, mas a resolução é feita fora do app (edite o arquivo e rode `svn resolve`).
+- **Sem interface para** `svn:externals`, propriedades, travas (`svn lock`), branches e tags do SVN (o checkout de uma branch é feito pela tela Repositórios).
+- **Credenciais** pedidas pelo app ficam só na memória da sessão. A verificação de revisões novas em segundo plano não pede senha; ela só aparece quando você executa uma ação.
+- **Checkout com revisões misturadas** (partes do checkout em revisões diferentes) usa a revisão da raiz para contar as revisões novas.
 
 ### Modo avançado
 

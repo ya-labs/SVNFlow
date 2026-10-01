@@ -32,6 +32,10 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('svn:wc-diff', { environmentId, filePath }),
   commitSelected: (request) =>
     ipcRenderer.invoke('svn:commit-selected', request),
+  getIncoming: (environmentId) =>
+    ipcRenderer.invoke('svn:incoming', { environmentId }),
+  updateWorkingCopy: (environmentId, credentials) =>
+    ipcRenderer.invoke('svn:update', { environmentId, credentials }),
   getSyncFileDiff: (environmentId, filePath) =>
     ipcRenderer.invoke('sync:file-diff', { environmentId, filePath }),
   readSvnLog: (request) =>

@@ -143,6 +143,9 @@ export function runSvn(args: string[], options: SvnRunOptions = {}): Promise<Svn
       finish({ ok: false, stdout, stderr, exitCode, errorCode: classified.code, message: classified.message });
     });
 
+    // O svn pode terminar antes de ler a entrada; nesse caso a escrita dá EPIPE,
+    // que sem tratamento derrubaria o processo principal.
+    child.stdin.on('error', () => undefined);
     child.stdin.end(options.credentials ? `${options.credentials.password}\n` : '');
   });
 }

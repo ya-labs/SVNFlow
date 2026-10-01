@@ -1,12 +1,12 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
 import { checkoutProject } from '../svn-checkout';
 import { listRemote, suggestProjectName } from '../svn-repository-browser';
 import { clearSessionCredentials } from '../svn-session';
+import { startSvnserve } from './helpers/svnserve';
 
 function hasCommand(command: string): boolean {
   try {
@@ -21,34 +21,6 @@ const describeWithSvn = hasCommand('svn') && hasCommand('svnadmin') && hasComman
 
 function svn(args: string[], cwd: string): string {
   return execFileSync('svn', args, { cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
-}
-
-function freePort(): Promise<number> {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.listen(0, '127.0.0.1', () => {
-      const { port } = server.address() as net.AddressInfo;
-      server.close(() => resolve(port));
-    });
-  });
-}
-
-async function waitForPort(port: number): Promise<void> {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const ok = await new Promise<boolean>((resolve) => {
-      const socket = net.connect(port, '127.0.0.1', () => {
-        socket.end();
-        resolve(true);
-      });
-      socket.on('error', () => resolve(false));
-    });
-
-    if (ok) {
-      return;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
 }
 
 describe('suggestProjectName', () => {
@@ -142,12 +114,11 @@ describeWithSvn('repositórios e checkout', () => {
     const conf = path.join(reposDir, 'raiz', 'conf');
     writeFileSync(path.join(conf, 'svnserve.conf'), '[general]\nanon-access = none\nauth-access = write\npassword-db = passwd\nrealm = svnflow-teste\n');
     writeFileSync(path.join(conf, 'passwd'), '[users]\npessoa = segredo\n');
-    const port = await freePort();
-    server = spawn('svnserve', ['-d', '--foreground', '--listen-host', '127.0.0.1', '--listen-port', String(port), '-r', reposDir], { stdio: 'ignore' });
-    await waitForPort(port);
-
-    const url = `svn://127.0.0.1:${port}/raiz`;
     const configDir = path.join(root, 'svn-config');
+    const running = await startSvnserve(reposDir, 'raiz', configDir);
+    server = running.process;
+
+    const url = `svn://127.0.0.1:${running.port}/raiz`;
     expect((await listRemote(url, { configDir })).errorCode).toBe('AUTH_REQUIRED');
     expect((await listRemote(url, { configDir, credentials: { username: 'pessoa', password: 'segredo' } })).ok).toBe(true);
     // Pasta de configuração nova (sem cache do SVN): o acesso só funciona pela credencial da sessão.
