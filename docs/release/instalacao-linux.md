@@ -8,8 +8,8 @@ Na página de Releases do repositório, baixe um dos arquivos:
 
 | Arquivo | Para quem |
 | --- | --- |
-| `SVNFlow-<versão>-amd64.deb` | Ubuntu, Linux Mint, Debian e derivados. **Recomendado.** |
-| `SVNFlow-<versão>-x86_64.AppImage` | Qualquer distribuição, sem instalar. |
+| `SVNFlow-<versão>-amd64.deb` | Ubuntu, Linux Mint, Debian e derivados, quando você tem `sudo`. |
+| `SVNFlow-<versão>-x86_64.AppImage` | Qualquer distribuição, sem instalar e **sem sudo**. Use em computadores de empresa. |
 
 ## Instalar o `.deb`
 
@@ -27,23 +27,63 @@ Para remover:
 sudo apt remove svnflow
 ```
 
-## Usar o AppImage
+## Usar o AppImage (sem sudo)
+
+O AppImage roda direto da pasta pessoal, sem instalação e sem permissão de administrador. Use esta opção em computadores sem `sudo`, como os de empresa.
 
 ```bash
+cd ~/Downloads
 chmod +x SVNFlow-*-x86_64.AppImage
 ./SVNFlow-*-x86_64.AppImage
 ```
 
-Com o AppImage, instale o Git e o SVN você mesmo:
+O app precisa do Git e do SVN de linha de comando. Confira se estão disponíveis:
 
 ```bash
-sudo apt install git subversion
+git --version
+svn --version --quiet
 ```
 
-Se o AppImage não abrir:
+Se algum faltar, instale com `sudo apt install git subversion` ou peça ao suporte de TI.
 
-- **Erro sobre FUSE** (comum no Ubuntu 22.04+ e no Mint 21+): instale `sudo apt install libfuse2`.
-- **Erro sobre sandbox** (comum no Ubuntu 24.04+): rode `./SVNFlow-*-x86_64.AppImage --no-sandbox`.
+### Atalho no menu de aplicativos (sem sudo)
+
+Os comandos abaixo guardam o AppImage em `~/.local/opt/svnflow` e criam um atalho com ícone só para o seu usuário:
+
+```bash
+mkdir -p ~/.local/opt/svnflow ~/.local/share/applications ~/.local/share/icons/hicolor/512x512/apps
+mv ~/Downloads/SVNFlow-*-x86_64.AppImage ~/.local/opt/svnflow/SVNFlow.AppImage
+chmod +x ~/.local/opt/svnflow/SVNFlow.AppImage
+cd /tmp && ~/.local/opt/svnflow/SVNFlow.AppImage --appimage-extract usr/share/icons/hicolor/512x512/apps/svnflow.png >/dev/null \
+  && cp squashfs-root/usr/share/icons/hicolor/512x512/apps/svnflow.png ~/.local/share/icons/hicolor/512x512/apps/ \
+  && rm -rf squashfs-root
+cat > ~/.local/share/applications/svnflow.desktop <<EOF
+[Desktop Entry]
+Name=SVNFlow
+Exec=$HOME/.local/opt/svnflow/SVNFlow.AppImage %U
+Icon=svnflow
+Type=Application
+Categories=Development;
+StartupWMClass=svnflow
+EOF
+```
+
+O SVNFlow passa a aparecer no menu.
+
+- **Atualizar:** substitua `~/.local/opt/svnflow/SVNFlow.AppImage` pelo arquivo da versão nova e rode `chmod +x` de novo.
+- **Remover:** apague `~/.local/opt/svnflow`, `~/.local/share/applications/svnflow.desktop` e `~/.local/share/icons/hicolor/512x512/apps/svnflow.png`.
+
+### Se o AppImage não abrir
+
+Se aparecer um erro sobre **FUSE** ou `libfuse.so.2` (comum no Ubuntu 22.04+ e no Mint 21+), rode sem FUSE. Também não precisa de sudo:
+
+```bash
+./SVNFlow-*-x86_64.AppImage --appimage-extract-and-run
+```
+
+No atalho, troque a linha `Exec=` por `Exec=<sua pasta pessoal>/.local/opt/svnflow/SVNFlow.AppImage --appimage-extract-and-run %U`. Quem tem sudo também pode resolver com `sudo apt install libfuse2`.
+
+Não é preciso passar `--no-sandbox`: o AppImage desativa o sandbox do Chromium sozinho quando o sistema não permite usá-lo (comum no Ubuntu 24.04+).
 
 ## Primeiro uso
 
