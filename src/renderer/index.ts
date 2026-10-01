@@ -13,6 +13,7 @@ import type {
   ScreenAlert,
   ScreenBlocker,
   ScreenWorkspaceFile,
+  AppTheme,
   SvnflowDesktopApi,
   SyncPlan,
   SyncScreenState,
@@ -1966,6 +1967,46 @@ function openAddEnvironmentModal(): void {
   });
 }
 
+const THEME_OPTIONS: Array<{ value: AppTheme; label: string; description: string }> = [
+  { value: 'system', label: 'Sistema', description: 'Segue o tema do sistema operacional.' },
+  { value: 'light', label: 'Claro', description: 'Sempre claro.' },
+  { value: 'dark', label: 'Escuro', description: 'Sempre escuro.' }
+];
+
+async function openAppearanceModal(): Promise<void> {
+  const current = await api().getTheme();
+  const modal = openModal(`
+    <div class="modal-header">Aparência</div>
+    <div class="modal-body">
+      <p>Escolha o tema do SVNFlow. A mudança vale na hora e fica salva.</p>
+      <div class="theme-options" role="radiogroup" aria-label="Tema">
+        ${THEME_OPTIONS.map((option) => `
+          <label class="theme-option">
+            <input type="radio" name="theme" value="${option.value}" ${option.value === current ? 'checked' : ''} />
+            <span class="theme-preview" data-theme-preview="${option.value}" aria-hidden="true"><span></span><span></span><span></span></span>
+            <strong>${escapeHtml(option.label)}</strong>
+            <small>${escapeHtml(option.description)}</small>
+          </label>
+        `).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="button primary" data-role="modal-cancel">Fechar</button>
+    </div>
+  `);
+
+  closeActiveModal = closeModal;
+  bindClick(modal, '[data-role="modal-cancel"]', closeModal);
+  modal.querySelectorAll<HTMLInputElement>('input[name="theme"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      void api().setTheme(radio.value as AppTheme).then((theme) => {
+        setStatusMessage(`Tema: ${THEME_OPTIONS.find((option) => option.value === theme)?.label ?? theme}.`);
+      });
+    });
+  });
+  query<HTMLButtonElement>('[data-role="modal-cancel"]', modal)?.focus();
+}
+
 // Troca de visão ------------------------------------------------------------
 
 function showDesktopView(): void {
@@ -2005,6 +2046,11 @@ function bindDesktopShell(): void {
     } else {
       void loadDesktop();
     }
+  });
+
+  query<HTMLButtonElement>('[data-role="appearance"]')?.addEventListener('click', () => {
+    closeEnvironmentMenu();
+    void openAppearanceModal();
   });
 
   query<HTMLButtonElement>('[data-role="toggle-advanced"]')?.addEventListener('click', () => {

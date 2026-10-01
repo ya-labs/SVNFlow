@@ -34,6 +34,10 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('sync:revision-log', { environmentId, revision }),
   openEnvironmentFolder: (environmentId, which) =>
     ipcRenderer.invoke('shell:open-environment-folder', { environmentId, which }),
+  getTheme: () =>
+    ipcRenderer.invoke('appearance:get-theme'),
+  setTheme: (theme) =>
+    ipcRenderer.invoke('appearance:set-theme', { theme }),
   getWorkspaceScreenState: (environmentId) =>
     ipcRenderer.invoke('workspace:get-screen-state', { environmentId }),
   getPreviewScreenState: (environmentId) =>

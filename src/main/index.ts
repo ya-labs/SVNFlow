@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,7 +23,7 @@ import type {
   SyncScreenState,
   WorkspaceScreenState
 } from '../shared/ipc-types.js';
-import { readAppSettings, updateAppSettings } from './commands/app-settings.js';
+import { isAppTheme, readAppSettings, updateAppSettings, type AppTheme } from './commands/app-settings.js';
 import { validateCommitPreConditions } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { generateGitPatch, readGitAuthor } from './commands/git-patch.js';
@@ -684,6 +684,17 @@ function registerIpcHandlers(): void {
     commitSyncForEnvironment(payload.environmentId, payload.message ?? '')
   );
 
+  ipcMain.handle('appearance:get-theme', async (): Promise<AppTheme> => (await readAppSettings()).theme);
+
+  ipcMain.handle('appearance:set-theme', async (_event, payload: { theme: AppTheme }): Promise<AppTheme> => {
+    if (!isAppTheme(payload?.theme)) {
+      return (await readAppSettings()).theme;
+    }
+
+    nativeTheme.themeSource = payload.theme;
+    return (await updateAppSettings({ theme: payload.theme })).theme;
+  });
+
   ipcMain.handle('sync:file-diff', async (_event, payload: { environmentId?: string; filePath: string }): Promise<SyncFileDiff | undefined> => {
     const selected = await resolveSelectedEnvironmentById(payload.environmentId);
 
@@ -845,6 +856,7 @@ function createMainWindow(): BrowserWindow {
     minHeight: 520,
     title: 'SVNFlow',
     autoHideMenuBar: true,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#24292e' : '#ffffff',
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'index.js'),
       contextIsolation: true,
@@ -860,7 +872,9 @@ function createMainWindow(): BrowserWindow {
   return window;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Aplica o tema salvo antes de abrir a janela para evitar troca visível de cores.
+  nativeTheme.themeSource = (await readAppSettings()).theme;
   registerIpcHandlers();
   createMainWindow();
 

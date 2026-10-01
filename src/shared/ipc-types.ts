@@ -209,6 +209,8 @@ export interface SyncCommitResponse {
   screen: SyncScreenState;
 }
 
+export type AppTheme = 'system' | 'light' | 'dark';
+
 export interface SvnflowDesktopApi {
   appName: string;
   appVersion: string;
@@ -224,6 +226,8 @@ export interface SvnflowDesktopApi {
   getSyncFileDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   getSvnRevisionLog: (environmentId: string | undefined, revision: string) => Promise<SvnRevisionLog>;
   openEnvironmentFolder: (environmentId: string | undefined, which: 'git' | 'svn') => Promise<void>;
+  getTheme: () => Promise<AppTheme>;
+  setTheme: (theme: AppTheme) => Promise<AppTheme>;
   getWorkspaceScreenState: (environmentId?: string) => Promise<WorkspaceScreenState>;
   getPreviewScreenState: (environmentId?: string) => Promise<PreviewScreenState>;
   getPackagesScreenState: (environmentId?: string) => Promise<PackagesScreenState>;

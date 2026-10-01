@@ -63,4 +63,21 @@ describe('app-settings', () => {
 
     expect((await readAppSettings({ baseDirectory })).packagesDirectory).toBe('/tmp/pacotes-equipe');
   });
+
+  it('persiste o tema e ignora valores desconhecidos', async () => {
+    const baseDirectory = await mkdtemp(path.join(os.tmpdir(), 'svnflow-settings-'));
+
+    expect((await readAppSettings({ baseDirectory })).theme).toBe('system');
+
+    await updateAppSettings({ theme: 'dark' }, { baseDirectory });
+    const saved = await readAppSettings({ baseDirectory });
+    expect(saved.theme).toBe('dark');
+    expect(saved.packagesDirectory).toBe(path.join(baseDirectory, '.svnflow', 'packages'));
+
+    await updateAppSettings({ theme: 'roxo' as never }, { baseDirectory });
+    expect((await readAppSettings({ baseDirectory })).theme).toBe('dark');
+
+    await writeFile(path.join(baseDirectory, '.svnflow', 'settings.json'), JSON.stringify({ version: 1, theme: 'roxo' }));
+    expect((await readAppSettings({ baseDirectory })).theme).toBe('system');
+  });
 });
