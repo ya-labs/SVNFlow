@@ -16,6 +16,8 @@
   --accent-text: #ffffff;
   --accent-subtle: #eef3ff;
   --added: #16a34a;
+  --success: #16a34a;
+  --success-hover: #15803d;
   --added-bg: #effaf3;
   --added-strong-bg: #d9f3e2;
   --removed: #dc2626;
@@ -54,6 +56,8 @@
     --accent-text: #ffffff;
     --accent-subtle: rgba(79, 140, 255, 0.14);
     --added: #3fb96b;
+    --success: #238636;
+    --success-hover: #2ea043;
     --added-bg: rgba(63, 185, 107, 0.1);
     --added-strong-bg: rgba(63, 185, 107, 0.22);
     --removed: #f06464;
@@ -2429,4 +2433,102 @@ body {
 .diff-close:hover {
   background: var(--bg-hover);
   color: var(--text);
+}
+
+/* Publicar no SVN: verde em toda a etapa 2. */
+.button.success {
+  border-color: transparent;
+  background: var(--success);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.button.success:hover:not(:disabled) {
+  background: var(--success-hover);
+}
+
+.modal.modal-wide {
+  width: min(640px, 100%);
+}
+
+.publish-review {
+  gap: 14px;
+}
+
+.publish-warning {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--modified-bg);
+  box-shadow: inset 3px 0 0 var(--modified);
+}
+
+.review-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.review-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.review-url {
+  overflow: hidden;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.review-message {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+}
+
+.review-message p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  color: var(--text-muted);
+}
+
+.review-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.review-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  font-size: 12px;
+}
+
+.review-files {
+  max-height: 200px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  list-style: none;
+}
+
+.review-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 3px 6px;
 }

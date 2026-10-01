@@ -1978,7 +1978,7 @@ function renderCommitBox(): void {
     <input class="input" data-role="commit-summary" type="text" placeholder="Resumo (obrigatório)" value="${escapeHtml(draft.summary)}" aria-label="Resumo do commit SVN" />
     <textarea class="input" data-role="commit-description" placeholder="Descrição" aria-label="Descrição do commit SVN">${escapeHtml(draft.description)}</textarea>
     ${hasSuggestion ? '<button type="button" class="commit-box-link" data-role="reset-message">Restaurar mensagem sugerida</button>' : ''}
-    <button type="button" class="button primary block" data-role="commit-svn">${count > 0 ? `⇡ Publicar ${count} arquivo(s) no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
+    <button type="button" class="button success block" data-role="commit-svn">${count > 0 ? `⇡ Publicar ${count} arquivo(s) no SVN (commit)` : 'Selecione arquivos para commitar'}</button>
   `;
 
   const summary = query<HTMLInputElement>('[data-role="commit-summary"]', box)!;
@@ -2040,6 +2040,54 @@ async function copyToSvn(): Promise<void> {
   renderDesktop();
 }
 
+// Revisão final antes do commit: o commit cria uma revisão no servidor, visível
+// para a equipe, então a confirmação mostra tudo o que vai ser publicado.
+function publishReviewModal(items: ChangeItem[], draft: CommitDraft, url: string): Promise<boolean> {
+  const count = (kind: ChangeKind): number => items.filter((item) => item.kind === kind).length;
+  const totals = ([['added', 'novo(s)'], ['modified', 'alterado(s)'], ['deleted', 'removido(s)']] as Array<[ChangeKind, string]>)
+    .filter(([kind]) => count(kind) > 0)
+    .map(([kind, label]) => `<span class="review-chip" data-kind="${kind}"><span class="change-icon" data-kind="${kind}">${CHANGE_ICONS[kind]}</span>${count(kind)} ${label}</span>`)
+    .join('');
+  const title = desktop.screen?.environment?.gitWorkspacePath ? 'Etapa 2 de 2 · Publicar no servidor SVN' : 'Publicar no servidor SVN';
+
+  return new Promise((resolve) => {
+    const modal = openModal(`
+      <div class="modal-header">${escapeHtml(title)}</div>
+      <div class="modal-body publish-review">
+        <p class="publish-warning">Isto cria uma <strong>nova revisão no servidor</strong>, visível para toda a equipe. Confira antes de publicar.</p>
+        <div class="review-field">
+          <span class="review-label">Destino</span>
+          <code class="review-url" title="${escapeHtml(url)}">${escapeHtml(url || desktop.screen?.environment?.svnCheckoutPath || 'checkout SVN')}</code>
+        </div>
+        <div class="review-field">
+          <span class="review-label">Mensagem</span>
+          <div class="review-message"><strong>${escapeHtml(draft.summary.trim())}</strong>${draft.description.trim() ? `<p>${escapeHtml(draft.description.trim())}</p>` : ''}</div>
+        </div>
+        <div class="review-field">
+          <span class="review-label">${items.length} arquivo(s)</span>
+          <div class="review-chips">${totals}</div>
+          <ul class="review-files">${items.map((item) => `<li title="${escapeHtml(item.path)}"><span class="change-icon" data-kind="${item.kind}">${CHANGE_ICONS[item.kind]}</span>${renderSplitPath(item.path)}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button" data-role="modal-cancel">Voltar e revisar</button>
+        <button type="button" class="button success" data-role="modal-confirm">⇡ Publicar ${items.length} arquivo(s) no SVN</button>
+      </div>
+    `);
+    modal.classList.add('modal-wide');
+    const finish = (value: boolean) => {
+      closeModal();
+      resolve(value);
+    };
+
+    closeActiveModal = () => finish(false);
+    bindClick(modal, '[data-role="modal-cancel"]', () => finish(false));
+    bindClick(modal, '[data-role="modal-confirm"]', () => finish(true));
+    // Foco no "Voltar": Enter por engano não publica.
+    query<HTMLButtonElement>('[data-role="modal-cancel"]', modal)?.focus();
+  });
+}
+
 async function commitToSvn(): Promise<void> {
   const draft = desktop.commitDraft;
   const items = checkedItems();
@@ -2050,13 +2098,7 @@ async function commitToSvn(): Promise<void> {
   }
 
   const message = draft.description.trim() ? `${draft.summary.trim()}\n\n${draft.description.trim()}` : draft.summary.trim();
-  const preview = items.slice(0, 8).map((item) => `${CHANGE_ICONS[item.kind]} ${item.path}`).join('\n');
-  const confirmed = await confirmModal({
-    title: desktop.screen?.environment?.gitWorkspacePath ? 'Etapa 2 de 2 · Publicar no servidor SVN' : 'Publicar no servidor SVN',
-    message: `${items.length} arquivo(s) serão publicados oficialmente a partir de ${desktop.screen?.environment?.svnCheckoutPath ?? 'checkout SVN'}.`,
-    detail: `${message}\n\n${preview}${items.length > 8 ? `\n… e mais ${items.length - 8}` : ''}`,
-    confirmLabel: 'Commit para o SVN'
-  });
+  const confirmed = await publishReviewModal(items, draft, url);
 
   if (!confirmed) {
     return;
@@ -2064,7 +2106,7 @@ async function commitToSvn(): Promise<void> {
 
   setStatusMessage('Executando svn commit...');
   const paths = items.map((item) => item.path);
-  const result = await withCredentials(url, (credentials) => api().commitSelected({ environmentId: state.selectedEnvironmentId, paths, message, credentials }));
+  const result = await withCredentials(url, (credentials) => api().commitSelected({ environmentId: state.selectedEnvironmentId, paths, message, credentials, allowGitDifferences: desktop.showSvnChanges === true }));
 
   if (result.ok) {
     desktop.commitDraft = undefined;

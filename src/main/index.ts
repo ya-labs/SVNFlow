@@ -260,7 +260,7 @@ async function commitSelectedForEnvironment(request: CommitSelectedRequest): Pro
     return { ok: false, message: 'Nenhum projeto selecionado.', committed: [], errorCode: 'INVALID_SELECTION' };
   }
 
-  if (hasGit(selected) && (await buildSyncScreenState(selected.id)).plan?.status === 'ready') {
+  if (hasGit(selected) && request.allowGitDifferences !== true && (await buildSyncScreenState(selected.id)).plan?.status === 'ready') {
     return { ok: false, message: 'O checkout ainda não está igual ao Git. Copie os arquivos do Git antes de commitar.', committed: [], errorCode: 'INVALID_SELECTION' };
   }
 

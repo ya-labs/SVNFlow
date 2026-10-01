@@ -233,6 +233,9 @@ export interface CommitSelectedRequest {
   paths: string[];
   message: string;
   credentials?: SvnCredentials;
+  // Commit pela visão "Ver alterações do checkout SVN": publica o checkout como está,
+  // mesmo com diferenças do Git ainda não copiadas.
+  allowGitDifferences?: boolean;
 }
 
 export type AppTheme = 'system' | 'light' | 'dark';
