@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-import type { SvnflowDesktopApi } from '../shared/ipc-types.js';
+import type { SvnflowDesktopApi, SvnProgressEvent } from '../shared/ipc-types.js';
 
 function readAppVersion(): string {
   const argument = process.argv.find((item) => item.startsWith('--svnflow-version='));
@@ -36,6 +36,21 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('shell:open-environment-folder', { environmentId, which }),
   linkGit: (environmentId, gitWorkspacePath, baseBranch) =>
     ipcRenderer.invoke('project:link-git', { environmentId, gitWorkspacePath, baseBranch }),
+  getRepositoriesState: () =>
+    ipcRenderer.invoke('repos:get-state'),
+  saveRepositoryRoots: (roots) =>
+    ipcRenderer.invoke('repos:save-roots', { roots }),
+  listRemote: (url, credentials) =>
+    ipcRenderer.invoke('repos:list', { url, credentials }),
+  checkout: (request) =>
+    ipcRenderer.invoke('svn:checkout', request),
+  onSvnProgress: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: SvnProgressEvent) => listener(payload);
+    ipcRenderer.on('svn:progress', handler);
+    return () => {
+      ipcRenderer.removeListener('svn:progress', handler);
+    };
+  },
   listGitBranches: (environmentId) =>
     ipcRenderer.invoke('git:list-branches', { environmentId }),
   switchGitBranch: (environmentId, branch, kind) =>

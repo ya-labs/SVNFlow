@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,8 +12,11 @@ import type {
   EnvironmentScreenState,
   EnvironmentVisualStatus,
   ExecuteApplyResponse,
+  CheckoutRequest,
+  CheckoutResponse,
   ExportPackageRequest,
   LinkGitResponse,
+  RepositoriesState,
   PackagesScreenState,
   PreviewScreenState,
   RegisterEnvironmentInput,
@@ -24,7 +28,10 @@ import type {
   SyncScreenState,
   WorkspaceScreenState
 } from '../shared/ipc-types.js';
-import { isAppTheme, readAppSettings, updateAppSettings, type AppTheme } from './commands/app-settings.js';
+import { isAppTheme, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
+import { checkoutProject } from './commands/svn-checkout.js';
+import type { SvnCredentials } from './commands/svn-client.js';
+import { listRemote, type RemoteListing } from './commands/svn-repository-browser.js';
 import { validateCommitPreConditions } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { generateGitPatch, readGitAuthor } from './commands/git-patch.js';
@@ -654,6 +661,18 @@ async function showOpenDialog(event: IpcMainInvokeEvent, options: OpenDialogOpti
   return result.canceled ? undefined : result.filePaths[0];
 }
 
+function sanitizeCredentials(value: unknown): SvnCredentials | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const candidate = value as Partial<SvnCredentials>;
+
+  return typeof candidate.username === 'string' && candidate.username.trim() && typeof candidate.password === 'string'
+    ? { username: candidate.username.trim(), password: candidate.password }
+    : undefined;
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle('environment:get-screen-state', async (_event, payload?: { environmentId?: string }) =>
     buildEnvironmentScreenState(payload?.environmentId)
@@ -719,6 +738,45 @@ function registerIpcHandlers(): void {
       gitWorkspacePath: payload.gitWorkspacePath,
       baseBranch: payload.baseBranch
     });
+  });
+
+  ipcMain.handle('repos:get-state', async (): Promise<RepositoriesState> => ({
+    roots: (await readAppSettings()).repositoryRoots,
+    defaultCheckoutDirectory: path.join(os.homedir(), 'svn')
+  }));
+
+  ipcMain.handle('repos:save-roots', async (_event, payload: { roots: RepositoryRoot[] }): Promise<RepositoryRoot[]> =>
+    (await updateAppSettings({ repositoryRoots: Array.isArray(payload?.roots) ? payload.roots : [] })).repositoryRoots
+  );
+
+  ipcMain.handle('repos:list', async (_event, payload: { url: string; credentials?: SvnCredentials }): Promise<RemoteListing> =>
+    listRemote(typeof payload?.url === 'string' ? payload.url : '', { credentials: sanitizeCredentials(payload?.credentials) })
+  );
+
+  ipcMain.handle('svn:checkout', async (event, payload: CheckoutRequest): Promise<CheckoutResponse> => {
+    const operationId = typeof payload?.operationId === 'string' ? payload.operationId : '';
+    const checkout = await checkoutProject({
+      url: typeof payload?.url === 'string' ? payload.url : '',
+      destination: typeof payload?.destination === 'string' ? payload.destination : '',
+      revision: typeof payload?.revision === 'string' ? payload.revision : undefined,
+      credentials: sanitizeCredentials(payload?.credentials),
+      onProgress: ({ files, line }) => {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send('svn:progress', { operationId, files, line });
+        }
+      }
+    });
+
+    if (!checkout.ok) {
+      return { checkout };
+    }
+
+    const registration = await registerSavedEnvironmentFromLocalPaths({
+      name: typeof payload.name === 'string' ? payload.name : undefined,
+      svnCheckoutPath: checkout.destination
+    });
+
+    return { checkout, registration };
   });
 
   ipcMain.handle('git:list-branches', async (_event, payload: { environmentId?: string }): Promise<GitBranchList> => {
