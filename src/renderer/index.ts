@@ -1,4 +1,5 @@
 import type {
+  GitBranch,
   ApplyPlan,
   ApplySourceRequest,
   CommitScreenState,
@@ -1255,6 +1256,10 @@ function renderToolbar(): void {
 
   setText('environment-name', desktop.environments?.selected?.name ?? 'Nenhum ambiente');
   setText('git-branch', source ? `${source.branch ?? 'HEAD'} · ${source.shortCommit}` : '-');
+  const branchPicker = query<HTMLButtonElement>('[data-role="branch-picker"]');
+  if (branchPicker) {
+    branchPicker.disabled = !desktop.screen?.environment;
+  }
 
   if (plan?.status === 'ready') {
     setText('refresh-label', 'Diferenças com o Git');
@@ -1767,9 +1772,11 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
 
 // Menu de ambientes ---------------------------------------------------------
 
-function closeEnvironmentMenu(): void {
-  query<HTMLElement>('[data-role="environment-menu"]')?.setAttribute('hidden', '');
-  query<HTMLElement>('[data-role="environment-picker"]')?.setAttribute('aria-expanded', 'false');
+function closeMenus(): void {
+  for (const [menu, picker] of [['environment-menu', 'environment-picker'], ['branch-menu', 'branch-picker']]) {
+    query<HTMLElement>(`[data-role="${menu}"]`)?.setAttribute('hidden', '');
+    query<HTMLElement>(`[data-role="${picker}"]`)?.setAttribute('aria-expanded', 'false');
+  }
 }
 
 function toggleEnvironmentMenu(): void {
@@ -1781,10 +1788,11 @@ function toggleEnvironmentMenu(): void {
   }
 
   if (!menu.hidden) {
-    closeEnvironmentMenu();
+    closeMenus();
     return;
   }
 
+  closeMenus();
   const environments = desktop.environments;
   const items = (environments?.items ?? []).map((item) => `
     <li>
@@ -1806,7 +1814,7 @@ function toggleEnvironmentMenu(): void {
   picker.setAttribute('aria-expanded', 'true');
 
   bindClick(menu, '[data-environment-id]', async (button) => {
-    closeEnvironmentMenu();
+    closeMenus();
     state.selectedEnvironmentId = button.dataset.environmentId;
     desktop.selectedPath = undefined;
     desktop.selectedRevision = undefined;
@@ -1820,12 +1828,12 @@ function toggleEnvironmentMenu(): void {
   });
 
   bindClick(menu, '[data-role="menu-add"]', () => {
-    closeEnvironmentMenu();
+    closeMenus();
     openAddEnvironmentModal();
   });
 
   bindClick(menu, '[data-role="menu-remove"]', async () => {
-    closeEnvironmentMenu();
+    closeMenus();
     const selected = desktop.environments?.selected;
 
     if (!selected || !(await confirmModal({
@@ -1841,6 +1849,111 @@ function toggleEnvironmentMenu(): void {
     state.selectedEnvironmentId = undefined;
     desktop.banner = undefined;
     await loadDesktop();
+  });
+}
+
+// Menu de branches ----------------------------------------------------------
+
+function renderBranchItem(branch: GitBranch, current?: string): string {
+  const isCurrent = branch.kind === 'local' && branch.name === current;
+  return `
+    <li data-branch-filter="${escapeHtml(branch.name.toLowerCase())}">
+      <button type="button" class="dropdown-item" data-branch="${escapeHtml(branch.name)}" data-kind="${branch.kind}" aria-current="${isCurrent}">
+        <span class="branch-check" aria-hidden="true">${isCurrent ? '✓' : ''}</span>
+        <span class="dropdown-item-text">
+          <span>${escapeHtml(branch.name)}</span>
+          <small>${escapeHtml(branch.shortCommit)}${branch.committedAt ? ` · ${escapeHtml(formatDate(branch.committedAt))}` : ''}</small>
+        </span>
+      </button>
+    </li>
+  `;
+}
+
+async function toggleBranchMenu(): Promise<void> {
+  const menu = query<HTMLElement>('[data-role="branch-menu"]');
+  const picker = query<HTMLElement>('[data-role="branch-picker"]');
+
+  if (!menu || !picker) {
+    return;
+  }
+
+  if (!menu.hidden) {
+    closeMenus();
+    return;
+  }
+
+  closeMenus();
+  menu.style.left = `${picker.getBoundingClientRect().left}px`;
+  menu.innerHTML = '<div class="dropdown-header">Branches</div><p class="list-empty">Carregando branches...</p>';
+  menu.hidden = false;
+  picker.setAttribute('aria-expanded', 'true');
+
+  const branches = await api().listGitBranches(state.selectedEnvironmentId);
+
+  if (menu.hidden) {
+    return;
+  }
+
+  if (!branches.ok) {
+    menu.innerHTML = `<div class="dropdown-header">Branches</div><p class="list-empty">${escapeHtml(branches.message)}</p>`;
+    return;
+  }
+
+  menu.innerHTML = `
+    <div class="dropdown-header">Trocar de branch${branches.detached ? ' (HEAD destacado)' : ''}</div>
+    <div class="dropdown-filter"><input class="input" type="search" data-role="branch-filter" placeholder="Filtrar branches" aria-label="Filtrar branches" /></div>
+    <div class="dropdown-scroll">
+      <p class="dropdown-section">Locais</p>
+      <ul class="dropdown-list">${branches.local.map((branch) => renderBranchItem(branch, branches.current)).join('') || '<li class="list-empty">Nenhuma.</li>'}</ul>
+      ${branches.remote.length > 0 ? `<p class="dropdown-section">Remotas (cria uma branch local)</p><ul class="dropdown-list">${branches.remote.map((branch) => renderBranchItem(branch)).join('')}</ul>` : ''}
+    </div>
+    <p class="dropdown-note">Trocar de branch altera os arquivos do repositório Git. Alterações não commitadas bloqueiam a troca.</p>
+  `;
+
+  const filter = query<HTMLInputElement>('[data-role="branch-filter"]', menu)!;
+  filter.focus();
+  filter.addEventListener('input', () => {
+    const term = filter.value.trim().toLowerCase();
+    menu.querySelectorAll<HTMLElement>('[data-branch-filter]').forEach((item) => {
+      item.hidden = term.length > 0 && !(item.dataset.branchFilter ?? '').includes(term);
+    });
+  });
+  filter.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      menu.querySelector<HTMLButtonElement>('[data-branch-filter]:not([hidden]) [data-branch]')?.click();
+    }
+  });
+
+  bindClick(menu, '[data-branch]', async (button) => {
+    const branch = button.dataset.branch ?? '';
+    const kind = button.dataset.kind === 'remote' ? 'remote' : 'local';
+    closeMenus();
+
+    if (kind === 'local' && branch === branches.current) {
+      return;
+    }
+
+    setStatusMessage(`Trocando para ${branch}...`);
+    const result = await api().switchGitBranch(state.selectedEnvironmentId, branch, kind);
+
+    if (result.ok) {
+      desktop.banner = { tone: 'success', html: `<p><strong>${escapeHtml(result.message)}</strong> O checkout SVN foi comparado com o último commit dessa branch.</p>` };
+      desktop.selectedPath = undefined;
+      desktop.commitDraft = undefined;
+    } else {
+      const files = (result.changedFiles ?? []).slice(0, 8).map((file) => `<li>${escapeHtml(file)}</li>`).join('');
+      desktop.banner = {
+        tone: 'error',
+        html: `<p><strong>Branch não trocada.</strong> ${escapeHtml(result.message)}</p>${files ? `<ul>${files}</ul>` : ''}`
+      };
+    }
+
+    await loadDesktop({ quiet: true });
+    setStatusMessage(result.message);
+
+    if (state.showAdvanced) {
+      await renderActiveStage();
+    }
   });
 }
 
@@ -2021,7 +2134,7 @@ function showAdvancedView(stage: StageKey = state.activeStage): void {
   state.showAdvanced = true;
   writeShowAdvanced(true);
   state.activeStage = stage;
-  closeEnvironmentMenu();
+  closeMenus();
   query<HTMLElement>('[data-role="desktop-view"]')!.hidden = true;
   query<HTMLElement>('[data-role="advanced-view"]')!.hidden = false;
   renderToolbar();
@@ -2039,6 +2152,11 @@ function bindDesktopShell(): void {
     toggleEnvironmentMenu();
   });
 
+  query<HTMLButtonElement>('[data-role="branch-picker"]')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    void toggleBranchMenu();
+  });
+
   query<HTMLButtonElement>('[data-role="refresh"]')?.addEventListener('click', () => {
     desktop.banner = undefined;
     if (state.showAdvanced) {
@@ -2049,7 +2167,7 @@ function bindDesktopShell(): void {
   });
 
   query<HTMLButtonElement>('[data-role="appearance"]')?.addEventListener('click', () => {
-    closeEnvironmentMenu();
+    closeMenus();
     void openAppearanceModal();
   });
 
@@ -2062,15 +2180,16 @@ function bindDesktopShell(): void {
   });
 
   document.addEventListener('click', (event) => {
-    const menu = query<HTMLElement>('[data-role="environment-menu"]');
-    if (menu && !menu.hidden && !menu.contains(event.target as Node)) {
-      closeEnvironmentMenu();
+    const target = event.target as Node;
+    const openMenu = Array.from(document.querySelectorAll<HTMLElement>('.dropdown')).find((menu) => !menu.hidden);
+    if (openMenu && !openMenu.contains(target)) {
+      closeMenus();
     }
   });
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      closeEnvironmentMenu();
+      closeMenus();
       closeActiveModal?.();
     }
   });

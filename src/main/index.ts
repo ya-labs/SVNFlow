@@ -27,6 +27,7 @@ import { isAppTheme, readAppSettings, updateAppSettings, type AppTheme } from '.
 import { validateCommitPreConditions } from './commands/commit-validator.js';
 import { executeCommit, type ExecuteCommitResult } from './commands/commit-executor.js';
 import { generateGitPatch, readGitAuthor } from './commands/git-patch.js';
+import { listGitBranches, switchGitBranch, type GitBranchList, type SwitchGitBranchResult } from './commands/git-branches.js';
 import { buildFileDiff, buildSyncPlan, executeSync, readSvnRevisionLog, suggestSyncCommitMessage, type SvnRevisionLog, type SyncFileDiff } from './commands/git-svn-sync.js';
 import { buildMiniPrMarkdown, normalizeMiniPrDraft } from './commands/mini-pr.js';
 import { exportSvnflowPackage, type ExportPackageResult } from './commands/package-exporter.js';
@@ -682,6 +683,29 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('sync:commit', async (_event, payload: { environmentId?: string; message: string }) =>
     commitSyncForEnvironment(payload.environmentId, payload.message ?? '')
+  );
+
+  ipcMain.handle('git:list-branches', async (_event, payload: { environmentId?: string }): Promise<GitBranchList> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected) {
+      return { ok: false, message: 'Nenhum ambiente selecionado.', detached: false, local: [], remote: [] };
+    }
+
+    return listGitBranches(selected.gitWorkspacePath);
+  });
+
+  ipcMain.handle(
+    'git:switch-branch',
+    async (_event, payload: { environmentId?: string; branch: string; kind: 'local' | 'remote' }): Promise<SwitchGitBranchResult> => {
+      const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+      if (!selected || typeof payload?.branch !== 'string' || (payload.kind !== 'local' && payload.kind !== 'remote')) {
+        return { ok: false, message: 'Ambiente ou branch inválidos.', errorCode: 'BRANCH_NOT_FOUND' };
+      }
+
+      return switchGitBranch({ gitRepositoryPath: selected.gitWorkspacePath, branch: payload.branch, kind: payload.kind });
+    }
   );
 
   ipcMain.handle('appearance:get-theme', async (): Promise<AppTheme> => (await readAppSettings()).theme);

@@ -9,6 +9,7 @@ import type { PackageLibraryResult } from '../main/commands/package-library.js';
 import type { RegisterSavedEnvironmentResult } from '../main/commands/register-saved-environment.js';
 import type { SavedEnvironmentValidationStatus } from '../main/commands/saved-environments.js';
 import type { ApplyPlan, ExecuteApplyResult } from '../main/commands/svn-apply-flow.js';
+import type { GitBranch, GitBranchList, SwitchGitBranchResult } from '../main/commands/git-branches.js';
 import type { ExecuteSyncResult, SvnRevisionLog, SyncFileDiff, SyncPlan } from '../main/commands/git-svn-sync.js';
 
 export type {
@@ -17,12 +18,15 @@ export type {
   ExecuteCommitResult,
   ExecuteSyncResult,
   ExportPackageResult,
+  GitBranch,
+  GitBranchList,
   ImportPackageResult,
   MiniPrDraft,
   PackageHistoryResult,
   PackageLibraryResult,
   RegisterSavedEnvironmentResult,
   SvnRevisionLog,
+  SwitchGitBranchResult,
   SyncFileDiff,
   SyncPlan
 };
@@ -226,6 +230,8 @@ export interface SvnflowDesktopApi {
   getSyncFileDiff: (environmentId: string | undefined, filePath: string) => Promise<SyncFileDiff | undefined>;
   getSvnRevisionLog: (environmentId: string | undefined, revision: string) => Promise<SvnRevisionLog>;
   openEnvironmentFolder: (environmentId: string | undefined, which: 'git' | 'svn') => Promise<void>;
+  listGitBranches: (environmentId: string | undefined) => Promise<GitBranchList>;
+  switchGitBranch: (environmentId: string | undefined, branch: string, kind: 'local' | 'remote') => Promise<SwitchGitBranchResult>;
   getTheme: () => Promise<AppTheme>;
   setTheme: (theme: AppTheme) => Promise<AppTheme>;
   getWorkspaceScreenState: (environmentId?: string) => Promise<WorkspaceScreenState>;
