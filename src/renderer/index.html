@@ -41,7 +41,6 @@
         <span class="toolbar-spacer"></span>
         <button type="button" class="toolbar-link" data-role="open-repositories">Repositórios</button>
         <button type="button" class="toolbar-link" data-role="appearance">Aparência</button>
-        <button type="button" class="toolbar-link" data-role="toggle-advanced">Modo avançado</button>
       </header>
 
       <div class="dropdown" data-role="environment-menu" hidden></div>
@@ -64,24 +63,17 @@
           <div class="list-header">Servidores SVN</div>
           <div class="sidebar-list" data-role="repo-roots"></div>
           <div class="commit-box">
+            <div class="checkout-folder">
+              <span class="review-label">Pasta padrão de checkout</span>
+              <span class="checkout-folder-row">
+                <code class="checkout-folder-path" data-role="checkout-folder">~/svn</code>
+                <button type="button" class="button small" data-role="change-checkout-folder">Alterar…</button>
+              </span>
+            </div>
             <button type="button" class="button primary block" data-role="add-root">Adicionar URL…</button>
           </div>
         </aside>
         <section class="detail" data-role="repo-browser" aria-live="polite"></section>
-      </main>
-
-      <main class="advanced" data-role="advanced-view" hidden>
-        <aside class="advanced-nav">
-          <p class="advanced-nav-title">Modo avançado</p>
-          <nav aria-label="Etapas do modo avançado">
-            <ul class="stage-list" data-role="stage-list"></ul>
-          </nav>
-        </aside>
-        <section class="advanced-content">
-          <h2 data-role="stage-title">Ambiente</h2>
-          <p class="advanced-description" data-role="stage-description"></p>
-          <div class="stage-body" data-role="stage-body"></div>
-        </section>
       </main>
 
       <footer class="statusbar">

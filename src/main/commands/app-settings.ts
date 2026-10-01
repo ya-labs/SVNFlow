@@ -2,8 +2,6 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { resolveSvnflowPackagesDirectory } from './package-exporter.js';
-
 export type AppTheme = 'system' | 'light' | 'dark';
 
 // URL base de um servidor SVN informada pela pessoa. Fica só neste arquivo local.
@@ -13,16 +11,25 @@ export interface RepositoryRoot {
 }
 
 export interface AppSettings {
-  packagesDirectory: string;
   theme: AppTheme;
   repositoryRoots: RepositoryRoot[];
+  // Pasta onde os checkouts são sugeridos (cada projeto vira uma subpasta).
+  checkoutDirectory: string;
 }
 
 interface AppSettingsFile {
   version: 1;
-  packagesDirectory?: string;
   theme?: AppTheme;
   repositoryRoots?: RepositoryRoot[];
+  checkoutDirectory?: string;
+}
+
+export function resolveDefaultCheckoutDirectory(baseDirectory: string = os.homedir()): string {
+  return path.join(baseDirectory, 'svn');
+}
+
+function sanitizeDirectory(value: unknown): string | undefined {
+  return typeof value === 'string' && path.isAbsolute(value.trim()) ? path.normalize(value.trim()).replace(/(.)\/+$/, '$1') : undefined;
 }
 
 const THEMES: AppTheme[] = ['system', 'light', 'dark'];
@@ -79,9 +86,9 @@ export function resolveAppSettingsPath(baseDirectory: string = os.homedir()): st
 
 function defaultSettings(baseDirectory?: string): AppSettings {
   return {
-    packagesDirectory: resolveSvnflowPackagesDirectory(baseDirectory),
     theme: 'system',
-    repositoryRoots: []
+    repositoryRoots: [],
+    checkoutDirectory: resolveDefaultCheckoutDirectory(baseDirectory)
   };
 }
 
@@ -91,14 +98,10 @@ export async function readAppSettings(options: AppSettingsOptions = {}): Promise
 
   try {
     const parsed = JSON.parse(await readFile(storagePath, 'utf8')) as Partial<AppSettingsFile>;
-    const packagesDirectory = typeof parsed.packagesDirectory === 'string' && parsed.packagesDirectory.trim()
-      ? parsed.packagesDirectory.trim()
-      : defaults.packagesDirectory;
-
     return {
-      packagesDirectory,
       theme: isAppTheme(parsed.theme) ? parsed.theme : defaults.theme,
-      repositoryRoots: sanitizeRoots(parsed.repositoryRoots)
+      repositoryRoots: sanitizeRoots(parsed.repositoryRoots),
+      checkoutDirectory: sanitizeDirectory(parsed.checkoutDirectory) ?? defaults.checkoutDirectory
     };
   } catch {
     return defaults;
@@ -112,15 +115,15 @@ export async function updateAppSettings(
   const storagePath = options.storagePath ?? resolveAppSettingsPath(options.baseDirectory);
   const current = await readAppSettings(options);
   const next: AppSettings = {
-    packagesDirectory: changes.packagesDirectory?.trim() || current.packagesDirectory,
     theme: isAppTheme(changes.theme) ? changes.theme : current.theme,
-    repositoryRoots: changes.repositoryRoots ? sanitizeRoots(changes.repositoryRoots) : current.repositoryRoots
+    repositoryRoots: changes.repositoryRoots ? sanitizeRoots(changes.repositoryRoots) : current.repositoryRoots,
+    checkoutDirectory: sanitizeDirectory(changes.checkoutDirectory) ?? current.checkoutDirectory
   };
   const file: AppSettingsFile = {
     version: 1,
-    packagesDirectory: next.packagesDirectory,
     theme: next.theme,
-    repositoryRoots: next.repositoryRoots
+    repositoryRoots: next.repositoryRoots,
+    checkoutDirectory: next.checkoutDirectory
   };
 
   await mkdir(path.dirname(storagePath), { recursive: true });

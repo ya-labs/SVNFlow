@@ -4,7 +4,6 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, st
 import os from 'os';
 import path from 'path';
 
-import { readUncommittedChanges } from './git-patch.js';
 import { validateSvnCheckout } from './svn.js';
 import { parseStatusXml } from './svn-xml.js';
 import { svnLocalTarget } from './svn-path.js';
@@ -189,6 +188,25 @@ function readSource(gitWorkspacePath: string): SyncGitSource {
     shortCommit: commit.slice(0, 7),
     subject
   };
+}
+
+// Alterações locais do Git ainda não commitadas: ficam de fora da cópia, que usa o último commit.
+function readUncommittedChanges(gitRepositoryPath: string): { count: number; files: string[] } {
+  try {
+    const output = execFileSync('git', ['-C', gitRepositoryPath, 'status', '--porcelain'], {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    const files = output
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0)
+      .map((line) => line.slice(3).trim());
+
+    return { count: files.length, files };
+  } catch {
+    return { count: 0, files: [] };
+  }
 }
 
 function parentDirectories(filePath: string): string[] {

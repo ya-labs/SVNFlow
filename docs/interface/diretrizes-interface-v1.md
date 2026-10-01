@@ -90,8 +90,6 @@ Operações sensíveis (atualizar o checkout SVN e publicar commit) sempre passa
 
 A troca de branch acontece direto pelo menu, como no GitHub Desktop, mas é bloqueada quando há alterações não commitadas em arquivos versionados. Assim nada é levado de uma branch para outra sem querer.
 
-O fluxo por patch e pacotes `.svnflow` fica em *Modo avançado*, com navegação própria por etapas.
-
 ## Responsividade e Redimensionamento
 
 A janela do SVNFlow deve ser redimensionável em largura e altura.
@@ -107,7 +105,7 @@ Quando faltar espaço, o layout deve se adaptar por:
 - quebra ou tratamento visual de textos longos;
 - scroll apenas em regiões específicas e previsíveis.
 
-A lista de arquivos, o diff e a lista de etapas do modo avançado têm scroll próprio. A barra superior, a caixa de commit e a barra de status continuam visíveis.
+A lista de arquivos e o diff têm scroll próprio. A barra superior, a caixa de commit e a barra de status continuam visíveis.
 
 ## Navegação Principal
 
@@ -118,15 +116,7 @@ A visão principal tem duas abas ([ADR-008](../adrs/ADR-008-cliente-svn-com-git-
 
 A tela *Repositórios* fica num botão da barra superior.
 
-O *Modo avançado* mantém as etapas da V1 por patch e pacote:
-
-- Ambiente;
-- Workspace Git;
-- Preview;
-- Pacotes SVNFlow;
-- Aplicação SVN;
-- Commit SVN protegido;
-- Histórico local.
+O antigo *Modo avançado*, com o fluxo por patch e pacote, saiu do app pela [ADR-009](../adrs/ADR-009-remocao-do-modo-avancado.md).
 
 ## Estados Visuais Obrigatórios
 

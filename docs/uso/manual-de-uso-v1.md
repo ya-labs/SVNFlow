@@ -1,5 +1,7 @@
 # Manual de Uso da V1
 
+> **Documento histórico.** O fluxo por patch e pacotes `.svnflow` saiu do app pela [ADR-009](../adrs/ADR-009-remocao-do-modo-avancado.md). Este texto fica só como registro.
+
 ## Objetivo
 
 Este manual descreve como a V1 do SVNFlow deve ser usada em dois cenários:
