@@ -13,6 +13,8 @@ export interface SvnLogPage {
   // Caminho do projeto dentro do repositório (ex.: /projeto/trunk), para encurtar os caminhos do log.
   projectPath?: string;
   workingCopyRevision?: string;
+  // Revisões publicadas a partir deste checkout (já estão nele).
+  localRevisions?: string[];
   entries: SvnXmlLogEntry[];
   hasMore: boolean;
   detail?: string;
@@ -79,7 +81,8 @@ export async function readLog(input: ReadLogInput): Promise<SvnLogPage> {
     url,
     credentials: input.credentials,
     configDir: input.configDir,
-    timeoutMs: 120000
+    timeoutMs: 120000,
+    cancelable: true
   });
 
   if (!log.ok) {
@@ -114,7 +117,8 @@ export async function readRevisionDiff(input: RevisionDiffInput): Promise<SyncFi
     url: input.repositoryRoot,
     credentials: input.credentials,
     configDir: input.configDir,
-    timeoutMs: 120000
+    timeoutMs: 120000,
+    cancelable: true
   });
 
   if (!diff.ok) {

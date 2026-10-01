@@ -57,6 +57,9 @@ function query<T extends HTMLElement>(selector: string, root: ParentNode = docum
 
 // Mensagens de andamento terminam em "..." (ou "…"); enquanto uma delas está
 // na barra de status, o aviso de carregamento fica visível no topo da janela.
+// Operações que demoram mais que alguns segundos ganham o botão "Cancelar".
+let cancelTimer: number | undefined;
+
 function setStatusMessage(message: string): void {
   const status = query<HTMLElement>('[data-role="app-status"]');
 
@@ -70,6 +73,20 @@ function setStatusMessage(message: string): void {
   if (indicator) {
     indicator.hidden = !busy;
     setText('busy-label', message.trim().replace(/(\.\.\.|…)$/, '…'));
+  }
+
+  const cancel = query<HTMLButtonElement>('[data-role="busy-cancel"]');
+  window.clearTimeout(cancelTimer);
+
+  if (cancel) {
+    cancel.hidden = true;
+    cancel.disabled = false;
+
+    if (busy) {
+      cancelTimer = window.setTimeout(() => {
+        cancel.hidden = false;
+      }, 2500);
+    }
   }
 }
 
@@ -146,6 +163,7 @@ interface HistoryLogState {
   entries: SvnXmlLogEntry[];
   hasMore: boolean;
   workingCopyRevision?: string;
+  localRevisions?: string[];
   repositoryRoot?: string;
   projectPath?: string;
   error?: string;
@@ -260,7 +278,7 @@ function firstLine(message: string): string {
 
 function isNewOnServer(revision: string): boolean {
   const current = desktop.log.workingCopyRevision;
-  return current !== undefined && Number(revision) > Number(current);
+  return current !== undefined && Number(revision) > Number(current) && !desktop.log.localRevisions?.includes(revision);
 }
 
 function relativeLogPath(logPath: string): string {
@@ -301,6 +319,7 @@ async function loadHistory(more = false): Promise<void> {
     log.entries = more ? [...log.entries, ...page.entries] : page.entries;
     log.hasMore = page.hasMore;
     log.workingCopyRevision = page.workingCopyRevision;
+    log.localRevisions = page.localRevisions;
     log.repositoryRoot = page.repositoryRoot;
     log.projectPath = page.projectPath;
   }
@@ -351,7 +370,16 @@ function renderToolbar(): void {
   const gitLinked = Boolean(desktop.environments?.selected?.gitWorkspacePath);
   const localChanges = desktop.workingCopy?.changes.length ?? 0;
 
+  const hasProject = Boolean(desktop.environments?.selected);
   setText('environment-name', desktop.environments?.selected?.name ?? 'Nenhum projeto');
+
+  // Sem projeto, branch e verificação não têm sobre o que agir.
+  for (const role of ['branch-picker', 'refresh']) {
+    const button = query<HTMLButtonElement>(`[data-role="${role}"]`);
+    if (button) {
+      button.hidden = !hasProject;
+    }
+  }
   setText('git-branch', source ? `${source.branch ?? 'HEAD'} · ${source.shortCommit}` : desktop.screen?.environment ? 'Sem Git vinculado' : '-');
 
   const branchPicker = query<HTMLButtonElement>('[data-role="branch-picker"]');
@@ -372,6 +400,9 @@ function renderToolbar(): void {
   } else if (isCopyStep()) {
     setText('refresh-label', 'Diferenças com o Git');
     setText('refresh-value', `${count(plan!.changes.length, 'arquivo', 'arquivos')} a copiar`);
+  } else if (desktop.workingCopy?.errorCode === 'MISSING_FOLDER') {
+    setText('refresh-label', 'Pasta do projeto');
+    setText('refresh-value', 'Não encontrada');
   } else if (localChanges > 0) {
     setText('refresh-label', 'Alterações locais');
     setText('refresh-value', `${count(localChanges, 'alteração', 'alterações')} no checkout`);
@@ -853,15 +884,17 @@ function renderFlowSteps(current: 1 | 2): string {
   }
 
   const copyPending = hasGitDifferences();
+  // Sincronização bloqueada (ex.: conflito no checkout): a cópia não foi feita nem pode ser.
+  const copyBlocked = desktop.screen?.plan?.status === 'blocked';
   const step = (index: 1 | 2, title: string, detail: string): string => {
-    const status = index === current ? 'current' : index === 1 && !copyPending ? 'done' : index === 1 ? 'pending' : 'todo';
-    const marker = status === 'done' ? '✓' : String(index);
+    const status = index === current ? 'current' : index !== 1 ? 'todo' : copyBlocked ? 'blocked' : copyPending ? 'pending' : 'done';
+    const marker = status === 'done' ? '✓' : status === 'blocked' ? '!' : String(index);
     return `<li class="flow-step" data-status="${status}" ${index === current ? 'aria-current="step"' : ''}><span class="flow-marker">${marker}</span><span class="flow-text"><strong>${title}</strong><small>${detail}</small></span></li>`;
   };
 
   return `
     <ol class="flow-steps" aria-label="Etapas da sincronização">
-      ${step(1, 'Copiar do Git', copyPending ? 'só local' : 'concluído')}
+      ${step(1, 'Copiar do Git', copyBlocked ? 'bloqueado' : copyPending ? 'só local' : 'concluído')}
       <li class="flow-arrow" aria-hidden="true">›</li>
       ${step(2, 'Publicar no SVN', 'no servidor')}
     </ol>
@@ -1126,6 +1159,19 @@ async function openInEditor(which: 'git' | 'svn', filePath?: string): Promise<vo
   setStatusMessage(result.message);
 }
 
+async function relocateProject(): Promise<void> {
+  const selected = desktop.environments?.selected;
+  const folder = selected ? await api().selectDirectory('Escolher a nova pasta do checkout SVN') : undefined;
+
+  if (!selected || !folder) {
+    return;
+  }
+
+  const result = await api().relocateProject(selected.id, folder);
+  desktop.banner = { tone: result.ok ? 'success' : 'error', html: `<p><strong>${escapeHtml(result.message)}</strong></p>` };
+  await loadDesktop();
+}
+
 function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="add-environment"]', () => openAddEnvironmentModal());
   bindClick(detail, '[data-role="open-svn"]', () => api().openEnvironmentFolder(state.selectedEnvironmentId, 'svn'));
@@ -1136,6 +1182,17 @@ function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="link-git"]', () => openLinkGitModal());
   bindClick(detail, '[data-role="banner-update"]', () => updateFromServer());
   bindClick(detail, '[data-role="open-repositories-inline"]', () => showRepositoriesView());
+  bindClick(detail, '[data-role="relocate-project"]', () => relocateProject());
+  bindClick(detail, '[data-role="remove-missing-project"]', async () => {
+    const selected = desktop.environments?.selected;
+
+    if (selected && await confirmModal({ title: 'Remover projeto', message: `Remover "${selected.name}" da lista? Nenhuma pasta é apagada.`, confirmLabel: 'Remover', danger: true })) {
+      await api().removeEnvironment(selected.id);
+      state.selectedEnvironmentId = undefined;
+      desktop.banner = undefined;
+      await loadDesktop();
+    }
+  });
 }
 
 // Fecha o diff aberto e volta para a tela inicial da aba (ou para a revisão).
@@ -1303,6 +1360,24 @@ async function renderDetail(): Promise<void> {
     } else {
       detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', !desktop.log.loaded ? 'Carregando o histórico do servidor...' : desktop.log.entries.length > 0 ? 'Selecione um commit para ver a mensagem, os arquivos e o diff.' : 'Nenhum commit para mostrar.')}`;
     }
+    return;
+  }
+
+  // Pasta do projeto apagada ou movida: oferece apontar a nova pasta ou tirar da lista.
+  if (desktop.workingCopy?.errorCode === 'MISSING_FOLDER') {
+    const folder = desktop.environments?.selected?.svnCheckoutPath ?? '';
+    detail.innerHTML = `
+      ${renderBanner()}
+      ${blankSlate(
+        'A pasta do projeto não existe mais',
+        `O SVNFlow procurou em ${folder}. Ela pode ter sido movida, renomeada ou apagada.`,
+        `<div class="suggestions">
+           ${suggestion('Escolher a nova pasta', 'Aponte para onde o checkout está agora.', 'relocate-project', 'Escolher…')}
+           ${suggestion('Remover da lista', 'Tira o projeto do SVNFlow. Nenhuma pasta é apagada.', 'remove-missing-project', 'Remover')}
+         </div>`
+      )}
+    `;
+    bindDetailActions(detail);
     return;
   }
 
@@ -2528,6 +2603,12 @@ function bindDesktopShell(): void {
   });
 
   query<HTMLButtonElement>('[data-role="add-root"]')?.addEventListener('click', () => openAddRootModal());
+  query<HTMLButtonElement>('[data-role="busy-cancel"]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    const cancelled = await api().cancelSvnOperations();
+    setText('busy-label', cancelled > 0 ? 'Cancelando…' : 'Esta etapa não pode ser interrompida. Aguarde…');
+  });
   query<HTMLButtonElement>('[data-role="change-checkout-folder"]')?.addEventListener('click', () => void chooseCheckoutDirectory());
 
   query<HTMLButtonElement>('[data-role="appearance"]')?.addEventListener('click', () => {

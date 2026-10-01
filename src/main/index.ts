@@ -20,7 +20,7 @@ import type {
 import { isAppTheme, isSvnUrl, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
 import { checkoutProject } from './commands/svn-checkout.js';
 import { addToSvnIgnore, commitSelected, countIncoming, discardChanges, readWorkingCopyDiff, readWorkingCopyStatus, setIgnoreOnCommit, updateWorkingCopy, type DiscardResult, type SimpleResult, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
-import type { SvnCredentials } from './commands/svn-client.js';
+import { cancelSvnOperations, type SvnCredentials } from './commands/svn-client.js';
 import { listRemote, type RemoteListing } from './commands/svn-repository-browser.js';
 import { listGitBranches, switchGitBranch, type GitBranchList, type SwitchGitBranchResult } from './commands/git-branches.js';
 import { buildFileDiff, buildSyncPlan, executeSync, suggestSyncCommitMessage, type SyncFileDiff } from './commands/git-svn-sync.js';
@@ -157,6 +157,11 @@ async function commitSelectedForEnvironment(request: CommitSelectedRequest): Pro
 
   if (!result.ok) {
     return result;
+  }
+
+  if (result.revision) {
+    const committedRevisions = [...(selected.committedRevisions ?? []), result.revision].slice(-100);
+    await updateSavedEnvironment({ environmentId: selected.id, changes: { committedRevisions } });
   }
 
   if (hasGit(selected)) {
@@ -324,6 +329,26 @@ function registerIpcHandlers(): void {
     return { registration, screen };
   });
 
+  // Projeto cuja pasta mudou de lugar: aponta para o novo checkout, se for um checkout SVN válido.
+  ipcMain.handle('project:relocate', async (_event, payload: { environmentId: string; svnCheckoutPath: string }): Promise<SimpleResult> => {
+    const folder = typeof payload?.svnCheckoutPath === 'string' ? payload.svnCheckoutPath : '';
+
+    if (typeof payload?.environmentId !== 'string' || !path.isAbsolute(folder)) {
+      return { ok: false, message: 'Projeto ou pasta inválidos.' };
+    }
+
+    const status = await readWorkingCopyStatus(folder);
+
+    if (!status.ok) {
+      return { ok: false, message: `Essa pasta não é um checkout SVN válido: ${status.message}` };
+    }
+
+    const saved = await updateSavedEnvironment({ environmentId: payload.environmentId, changes: { svnCheckoutPath: folder } });
+    return saved.ok ? { ok: true, message: `Projeto agora aponta para ${folder}.` } : { ok: false, message: saved.message };
+  });
+
+  ipcMain.handle('svn:cancel', async (): Promise<number> => cancelSvnOperations());
+
   ipcMain.handle('environment:remove', async (_event, payload: { environmentId: string }) => {
     const result = await removeSavedEnvironment({ environmentId: payload.environmentId });
     return buildEnvironmentScreenState(undefined, result.ok ? 'Ambiente removido da lista local. Nenhuma pasta foi apagada.' : result.message);
@@ -367,7 +392,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('svn:incoming', async (_event, payload: { environmentId?: string }): Promise<IncomingResult> => {
     const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
-    return selected ? countIncoming(selected.svnCheckoutPath) : { ok: false, message: 'Nenhum projeto selecionado.', incoming: 0 };
+    return selected ? countIncoming(selected.svnCheckoutPath, { localRevisions: selected.committedRevisions }) : { ok: false, message: 'Nenhum projeto selecionado.', incoming: 0 };
   });
 
   ipcMain.handle('svn:update', async (_event, payload: { environmentId?: string; credentials?: SvnCredentials }): Promise<UpdateResult> => {
@@ -586,7 +611,8 @@ function registerIpcHandlers(): void {
       return { ok: false, message: 'Nenhum projeto selecionado.', entries: [], hasMore: false };
     }
 
-    return readLog({ checkoutPath: selected.svnCheckoutPath, before, credentials });
+    const page = await readLog({ checkoutPath: selected.svnCheckoutPath, before, credentials });
+    return { ...page, localRevisions: selected.committedRevisions };
   });
 
   ipcMain.handle('svn:revision-diff', async (_event, payload: { repositoryRoot: string; revision: string; path: string; credentials?: SvnCredentials }): Promise<SyncFileDiff> => {

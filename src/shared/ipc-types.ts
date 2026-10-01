@@ -143,6 +143,9 @@ export interface SvnflowDesktopApi {
   getEnvironmentScreenState: (environmentId?: string) => Promise<EnvironmentScreenState>;
   registerEnvironment: (input: RegisterEnvironmentInput) => Promise<RegisterEnvironmentResponse>;
   removeEnvironment: (environmentId: string) => Promise<EnvironmentScreenState>;
+  relocateProject: (environmentId: string, svnCheckoutPath: string) => Promise<SimpleResult>;
+  // Interrompe checkout, update, listagem e histórico em andamento. Commit não é interrompido.
+  cancelSvnOperations: () => Promise<number>;
   selectDirectory: (title: string, defaultPath?: string) => Promise<string | undefined>;
   getSyncScreenState: (environmentId?: string) => Promise<SyncScreenState>;
   executeSync: (environmentId?: string) => Promise<SyncExecuteResponse>;

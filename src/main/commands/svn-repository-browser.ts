@@ -58,7 +58,8 @@ export async function listRemote(url: string, options: ListRemoteOptions = {}): 
     url: target,
     credentials: options.credentials,
     configDir: options.configDir,
-    timeoutMs: 60000
+    timeoutMs: 60000,
+    cancelable: true
   });
 
   if (!result.ok) {

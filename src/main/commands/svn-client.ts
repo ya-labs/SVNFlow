@@ -1,4 +1,5 @@
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
+import { existsSync } from 'fs';
 
 export interface SvnCredentials {
   username: string;
@@ -14,6 +15,8 @@ export type SvnErrorCode =
   | 'NETWORK'
   | 'TIMEOUT'
   | 'SVN_UNAVAILABLE'
+  | 'MISSING_FOLDER'
+  | 'CANCELLED'
   | 'FAILED';
 
 export interface SvnRunOptions {
@@ -23,6 +26,8 @@ export interface SvnRunOptions {
   configDir?: string;
   timeoutMs?: number;
   onLine?: (line: string) => void;
+  // Operação que a pessoa pode interromper pelo botão "Cancelar" do aviso de carregamento.
+  cancelable?: boolean;
 }
 
 export interface SvnRunResult {
@@ -75,7 +80,33 @@ export function buildSvnArgs(args: string[], credentials?: SvnCredentials, confi
   return ['--non-interactive', ...config, ...authentication, ...args];
 }
 
+// Processos em andamento que podem ser cancelados pela interface.
+const cancelableChildren = new Set<ChildProcess>();
+const cancelledChildren = new WeakSet<ChildProcess>();
+
+// Interrompe as operações canceláveis em andamento. Devolve quantas foram interrompidas.
+export function cancelSvnOperations(): number {
+  const running = [...cancelableChildren];
+  running.forEach((child) => {
+    cancelledChildren.add(child);
+    child.kill('SIGTERM');
+  });
+  return running.length;
+}
+
 export function runSvn(args: string[], options: SvnRunOptions = {}): Promise<SvnRunResult> {
+  // Sem a pasta, o spawn falha com ENOENT, que seria lido como "svn não instalado".
+  if (options.cwd && !existsSync(options.cwd)) {
+    return Promise.resolve({
+      ok: false,
+      stdout: '',
+      stderr: '',
+      exitCode: null,
+      errorCode: 'MISSING_FOLDER',
+      message: 'A pasta do projeto não existe mais neste computador.'
+    });
+  }
+
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
@@ -86,7 +117,8 @@ export function runSvn(args: string[], options: SvnRunOptions = {}): Promise<Svn
       if (!settled) {
         settled = true;
         clearTimeout(timer);
-        resolve(result);
+        cancelableChildren.delete(child);
+        resolve(cancelledChildren.has(child) ? { ...result, ok: false, errorCode: 'CANCELLED', message: 'Operação cancelada.' } : result);
       }
     };
 
@@ -95,6 +127,10 @@ export function runSvn(args: string[], options: SvnRunOptions = {}): Promise<Svn
       env: svnEnvironment(),
       stdio: ['pipe', 'pipe', 'pipe']
     });
+
+    if (options.cancelable) {
+      cancelableChildren.add(child);
+    }
 
     const timer = setTimeout(() => {
       child.kill('SIGTERM');

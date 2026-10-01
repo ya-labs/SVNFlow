@@ -75,6 +75,16 @@ describeWithSvn('atualizar checkout (svn update)', () => {
     expect((await countIncoming(mine)).incoming).toBe(0);
   });
 
+  it('não conta como novidade a revisão publicada a partir do próprio checkout', async () => {
+    writeFileSync(path.join(mine, 'b.txt'), 'b meu\n');
+    const output = svn(['commit', '-m', 'Meu commit'], mine);
+    const revision = output.match(/(?:Committed revision|revisão) (\d+)/i)?.[1] ?? '';
+    expect(revision).not.toBe('');
+
+    expect((await countIncoming(mine)).incoming).toBe(1);
+    expect((await countIncoming(mine, { localRevisions: [revision] })).incoming).toBe(0);
+  });
+
   it('marca conflito sem resolver sozinho e bloqueia novo update', async () => {
     writeFileSync(path.join(other, 'a.txt'), 'versão da outra pessoa\n');
     svn(['commit', '--quiet', '-m', 'Outra pessoa muda a'], other);

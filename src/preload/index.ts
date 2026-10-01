@@ -14,6 +14,10 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('environment:get-screen-state', { environmentId }),
   registerEnvironment: (input) =>
     ipcRenderer.invoke('environment:register', input),
+  cancelSvnOperations: () =>
+    ipcRenderer.invoke('svn:cancel'),
+  relocateProject: (environmentId, svnCheckoutPath) =>
+    ipcRenderer.invoke('project:relocate', { environmentId, svnCheckoutPath }),
   removeEnvironment: (environmentId) =>
     ipcRenderer.invoke('environment:remove', { environmentId }),
   selectDirectory: (title, defaultPath) =>

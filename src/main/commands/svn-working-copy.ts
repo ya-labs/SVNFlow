@@ -347,7 +347,7 @@ export interface UpdateResult {
 }
 
 // Quantas revisões do servidor mexeram no projeto depois da revisão do checkout.
-export async function countIncoming(checkoutPath: string, options: WorkingCopyOptions = {}): Promise<IncomingResult> {
+export async function countIncoming(checkoutPath: string, options: WorkingCopyOptions & { localRevisions?: string[] } = {}): Promise<IncomingResult> {
   const local = await runSvnInSession(['info', '--xml', '.'], { cwd: checkoutPath, configDir: options.configDir });
 
   if (!local.ok) {
@@ -381,7 +381,11 @@ export async function countIncoming(checkoutPath: string, options: WorkingCopyOp
     return { ok: false, message: log.message, incoming: 0, workingCopyRevision: info.revision, errorCode: log.errorCode };
   }
 
-  const incoming = log.stdout.split('\n').filter((line) => /^r\d+ \|/.test(line)).length;
+  // Revisões publicadas daqui já estão no checkout e não contam como novidade.
+  const ownRevisions = new Set(options.localRevisions ?? []);
+  const incoming = log.stdout.split('\n')
+    .map((line) => line.match(/^r(\d+) \|/)?.[1])
+    .filter((revision): revision is string => revision !== undefined && !ownRevisions.has(revision)).length;
 
   return { ...base, incoming, message: `${count(incoming, 'revisão nova', 'revisões novas')} no servidor.` };
 }
@@ -403,8 +407,15 @@ export async function updateWorkingCopy(checkoutPath: string, options: WorkingCo
     url: before.url,
     credentials: options.credentials,
     configDir: options.configDir,
-    timeoutMs: 10 * 60 * 1000
+    timeoutMs: 10 * 60 * 1000,
+    cancelable: true
   });
+
+  if (result.errorCode === 'CANCELLED') {
+    // Update interrompido deixa o checkout travado: o cleanup libera para uso.
+    await runSvnInSession(['cleanup', '.'], { cwd: checkoutPath, configDir: options.configDir });
+    return { ok: false, message: 'Atualização cancelada. O checkout pode ter ficado parcialmente atualizado; atualize de novo quando quiser.', updated: [], conflicts: [], errorCode: 'CANCELLED' };
+  }
 
   if (!result.ok) {
     return { ok: false, message: result.message, updated: [], conflicts: [], detail: svnErrorDetail(result.stderr), errorCode: result.errorCode };

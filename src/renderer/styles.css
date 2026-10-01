@@ -556,6 +556,12 @@ button.toolbar-button:hover,
   color: #ffffff;
 }
 
+.flow-step[data-status='blocked'] .flow-marker {
+  border-color: var(--removed);
+  background: var(--removed);
+  color: #ffffff;
+}
+
 .flow-step[data-status='pending'] .flow-marker {
   border-color: var(--modified);
   color: var(--modified);
@@ -1011,6 +1017,22 @@ button.toolbar-button:hover,
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.busy-cancel {
+  flex: none;
+  pointer-events: auto;
+  padding: 2px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.busy-cancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .busy-spinner {

@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { buildSvnArgs, classifySvnError, runSvn } from '../svn-client';
+import { buildSvnArgs, cancelSvnOperations, classifySvnError, runSvn } from '../svn-client';
 import { startSvnserve } from './helpers/svnserve';
 import { parseInfoXml } from '../svn-xml';
 
@@ -52,6 +52,32 @@ describe('svn-client', () => {
     try {
       const result = await runSvn(['info'], { credentials: { username: 'pessoa', password: 'x'.repeat(1024 * 1024) } });
       expect(result.ok).toBe(true);
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(fakeBin, { recursive: true, force: true });
+    }
+  });
+
+  it('avisa que a pasta do projeto sumiu em vez de dizer que o svn não está instalado', async () => {
+    const result = await runSvn(['status'], { cwd: path.join(os.tmpdir(), 'svnflow-pasta-que-nao-existe') });
+    expect(result.errorCode).toBe('MISSING_FOLDER');
+    expect(result.message).toContain('não existe mais');
+  });
+
+  it('cancela só as operações marcadas como canceláveis', async () => {
+    const fakeBin = mkdtempSync(path.join(os.tmpdir(), 'svnflow-fake-svn-'));
+    writeFileSync(path.join(fakeBin, 'svn'), '#!/bin/sh\nexec sleep 30\n', { mode: 0o755 });
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${fakeBin}${path.delimiter}${originalPath}`;
+
+    try {
+      const cancelable = runSvn(['list', 'svn://servidor/caminho'], { cancelable: true });
+      const protectedRun = runSvn(['commit'], { timeoutMs: 1500 });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(cancelSvnOperations()).toBe(1);
+      expect(await cancelable).toMatchObject({ ok: false, errorCode: 'CANCELLED' });
+      expect((await protectedRun).errorCode).toBe('TIMEOUT');
     } finally {
       process.env.PATH = originalPath;
       rmSync(fakeBin, { recursive: true, force: true });

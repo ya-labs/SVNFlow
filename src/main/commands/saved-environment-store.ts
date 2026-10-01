@@ -52,6 +52,7 @@ export interface SavedEnvironmentChanges {
 	lastValidatedAt?: string;
 	lastValidationStatus?: Exclude<SavedEnvironmentValidationStatus, 'pending'>;
 	syncExclusions?: string[];
+	committedRevisions?: string[];
 }
 
 const STORAGE_FILE_NAME = 'saved-environments.json';
@@ -131,7 +132,10 @@ function sanitizeSavedEnvironment(environment: SavedEnvironment): SavedEnvironme
 		svnRevision: normalizeOptionalText(environment.svnRevision),
 		lastValidatedAt: normalizeOptionalText(environment.lastValidatedAt),
 		lastValidationStatus: environment.lastValidationStatus,
-		syncExclusions: normalizeExclusions(environment.syncExclusions)
+		syncExclusions: normalizeExclusions(environment.syncExclusions),
+		committedRevisions: Array.isArray(environment.committedRevisions)
+			? environment.committedRevisions.filter((revision) => typeof revision === 'string' && /^\d+$/.test(revision)).slice(-100)
+			: undefined
 	};
 }
 
