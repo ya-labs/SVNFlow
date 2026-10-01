@@ -63,7 +63,7 @@ O app grava apenas na pasta do usuário e nos caminhos escolhidos pela pessoa:
 | Arquivo ou pasta | Conteúdo |
 | --- | --- |
 | `~/.svnflow/saved-environments.json` | Ambientes salvos. |
-| `~/.svnflow/settings.json` | Pasta de pacotes escolhida. |
+| `~/.svnflow/settings.json` | Tema escolhido em Aparência e pasta de pacotes. |
 | `~/.svnflow/packages/` | Pasta padrão de pacotes exportados. |
 | `~/.svnflow/package-history.json` | Histórico local. |
 

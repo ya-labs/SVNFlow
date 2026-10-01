@@ -81,7 +81,7 @@ O layout principal segue o padrão de clientes Git desktop, com o GitHub Desktop
 - painel de detalhe com o diff do arquivo selecionado, numeração de linhas e cores de adição e remoção;
 - barra de status com a última mensagem do app;
 - modais para adicionar ambiente e confirmar operações sensíveis;
-- tema claro e escuro conforme a preferência do sistema.
+- tema claro e escuro, escolhido em *Aparência* (Sistema, Claro ou Escuro). O padrão segue o sistema.
 
 Operações sensíveis (atualizar o checkout SVN e publicar commit) sempre passam por um modal de confirmação que descreve o efeito.
 
