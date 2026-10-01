@@ -2167,6 +2167,22 @@ function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="open-repositories-inline"]', () => showRepositoriesView());
 }
 
+// Fecha o diff aberto e volta para a tela inicial da aba (ou para a revisão).
+function closeDiff(): boolean {
+  if (desktop.tab === 'changes' && desktop.selectedPath) {
+    desktop.selectedPath = undefined;
+  } else if (desktop.tab === 'history' && desktop.selectedRevision) {
+    desktop.selectedRevision = undefined;
+    desktop.selectedLogPath = undefined;
+  } else {
+    return false;
+  }
+
+  renderSidebar();
+  void renderDetail();
+  return true;
+}
+
 async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId: number): Promise<void> {
   detail.innerHTML = `${renderBanner()}<div class="diff-header">${escapeHtml(item.path)}</div><p class="list-empty">Carregando diff...</p>`;
   const copyStep = isCopyStep();
@@ -2179,7 +2195,7 @@ async function renderDiffDetail(detail: HTMLElement, item: ChangeItem, requestId
   }
 
   const sourceLabel = copyStep ? 'Git → checkout SVN' : item.label;
-  const header = `<div class="diff-header"><span class="change-icon" data-kind="${item.kind}">${CHANGE_ICONS[item.kind]}</span>${escapeHtml(item.path)}<span class="diff-header-source">${escapeHtml(sourceLabel)}</span></div>`;
+  const header = `<div class="diff-header"><span class="change-icon" data-kind="${item.kind}">${CHANGE_ICONS[item.kind]}</span>${escapeHtml(item.path)}<span class="diff-header-source">${escapeHtml(sourceLabel)}</span><button type="button" class="diff-close" data-role="close-diff" title="Fechar diff (Esc)" aria-label="Fechar diff">×</button></div>`;
   let body: string;
 
   if (item.kind === 'conflicted') {
@@ -2216,7 +2232,7 @@ async function renderRevisionDiff(container: HTMLElement, revision: string, logP
     return;
   }
 
-  const header = `<div class="diff-header">${escapeHtml(relativeLogPath(logPath))}<span class="diff-header-source">r${escapeHtml(revision)}</span></div>`;
+  const header = `<div class="diff-header">${escapeHtml(relativeLogPath(logPath))}<span class="diff-header-source">r${escapeHtml(revision)}</span><button type="button" class="diff-close" data-role="close-diff" title="Fechar diff (Esc)" aria-label="Fechar diff">×</button></div>`;
 
   if (diff.kind === 'binary') {
     container.innerHTML = header + blankSlate('Arquivo binário', 'O conteúdo binário não pode ser exibido como diff.');
@@ -2314,7 +2330,7 @@ async function renderDetail(): Promise<void> {
     if (desktop.selectedRevision) {
       renderRevisionDetail(detail, desktop.selectedRevision);
     } else {
-      detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', desktop.log.loaded ? 'Nenhum commit para mostrar.' : 'Carregando o histórico do servidor...')}`;
+      detail.innerHTML = `${renderBanner()}${blankSlate('Histórico', !desktop.log.loaded ? 'Carregando o histórico do servidor...' : desktop.log.entries.length > 0 ? 'Selecione um commit para ver a mensagem, os arquivos e o diff.' : 'Nenhum commit para mostrar.')}`;
     }
     return;
   }
@@ -3538,6 +3554,12 @@ function bindDesktopShell(): void {
     }
   });
 
+  query<HTMLElement>('[data-role="detail"]')?.addEventListener('click', (event) => {
+    if ((event.target as HTMLElement).closest('[data-role="close-diff"]')) {
+      closeDiff();
+    }
+  });
+
   document.addEventListener('mousedown', (event) => {
     if (!(event.target as HTMLElement).closest('.context-menu')) {
       closeContextMenu();
@@ -3547,9 +3569,17 @@ function bindDesktopShell(): void {
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+      const target = event.target as HTMLElement;
+      const hadOverlay = Boolean(document.querySelector('.context-menu') || closeActiveModal
+        || Array.from(document.querySelectorAll<HTMLElement>('.dropdown')).some((menu) => !menu.hidden));
       closeContextMenu();
       closeMenus();
       closeActiveModal?.();
+
+      // Sem menu ou modal aberto, Esc fecha o diff (fora de campos de texto).
+      if (!hadOverlay && !target.closest('input, textarea')) {
+        closeDiff();
+      }
     }
   });
 }
