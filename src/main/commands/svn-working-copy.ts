@@ -1,4 +1,5 @@
-import { readFile, stat } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 
 import { isBinary, MAX_DIFF_FILE_BYTES, toDiffResult, type SyncFileDiff } from './git-svn-sync.js';
@@ -12,9 +13,15 @@ export interface WorkingCopyChange {
   path: string;
   kind: WorkingCopyKind;
   isDirectory: boolean;
+  // Só as propriedades mudaram (ex.: svn:ignore da pasta).
+  propertiesOnly: boolean;
+  // No changelist ignore-on-commit (mesma convenção do TortoiseSVN).
+  ignoredOnCommit: boolean;
   selectable: boolean;
   defaultSelected: boolean;
 }
+
+export const IGNORE_ON_COMMIT = 'ignore-on-commit';
 
 export interface WorkingCopyStatus {
   ok: boolean;
@@ -95,9 +102,10 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
 
   for (const entry of parseStatusXml(statusResult.stdout)) {
     const relative = toPosix(entry.path);
-    const kind = (entry.props === 'conflicted' ? 'conflicted' : entry.item) as WorkingCopyKind;
+    const propertiesOnly = entry.item === 'normal' && entry.props === 'modified';
+    const kind = (entry.props === 'conflicted' ? 'conflicted' : propertiesOnly ? 'modified' : entry.item) as WorkingCopyKind;
 
-    if (relative === '.' || !KNOWN_KINDS.has(kind)) {
+    if ((relative === '.' && !propertiesOnly) || !KNOWN_KINDS.has(kind)) {
       continue;
     }
 
@@ -108,12 +116,16 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
       continue;
     }
 
+    const ignoredOnCommit = entry.changelist === IGNORE_ON_COMMIT;
+
     collected.push({
       path: relative,
       kind,
       isDirectory: directory,
+      propertiesOnly,
+      ignoredOnCommit,
       selectable: kind !== 'conflicted' && kind !== 'obstructed',
-      defaultSelected: kind !== 'unversioned' && kind !== 'conflicted' && kind !== 'obstructed'
+      defaultSelected: !ignoredOnCommit && kind !== 'unversioned' && kind !== 'conflicted' && kind !== 'obstructed'
     });
   }
 
@@ -122,7 +134,7 @@ export async function readWorkingCopyStatus(checkoutPath: string, options: Worki
   const conflicted = collected.filter((change) => change.kind === 'conflicted').map((change) => change.path);
   const changes = collected
     .filter((change) => !(change.kind === 'unversioned' && conflicted.some((conflictPath) => isConflictArtifact(change.path, conflictPath))))
-    .sort((a, b) => a.path.localeCompare(b.path));
+    .sort((a, b) => Number(a.ignoredOnCommit) - Number(b.ignoredOnCommit) || a.path.localeCompare(b.path));
   const conflicts = conflicted.length;
 
   return {
@@ -142,7 +154,19 @@ export async function readWorkingCopyDiff(checkoutPath: string, filePath: string
   const target = path.join(checkoutPath, filePath);
 
   if (await isDirectory(target)) {
-    return { ...base, kind: 'directory' };
+    // Pasta com propriedades alteradas (ex.: svn:ignore): mostra a mudança da propriedade.
+    const propertyDiff = await runSvnInSession(['diff', '--depth', 'empty', '--', filePath], { cwd: checkoutPath });
+    const start = propertyDiff.ok ? propertyDiff.stdout.search(/^Property changes on:/m) : -1;
+
+    if (start < 0) {
+      return { ...base, kind: 'directory' };
+    }
+
+    const lines = propertyDiff.stdout.slice(start).replace(/\n$/, '').split('\n')
+      .filter((line) => !/^(Property changes on:|_{5,})/.test(line))
+      .map((line) => line.replace(/^## (.+) ##$/, '@@ $1 @@').replace(/^(Added|Modified|Deleted): (.+)$/, '\\ Propriedade $2'));
+
+    return { ...base, kind: 'text', lines };
   }
 
   const status = await runSvnInSession(['status', '--xml', '--', filePath], { cwd: checkoutPath });
@@ -257,7 +281,27 @@ export async function commitSelected(input: CommitSelectedInput): Promise<Commit
   }
 
   const targets = [...expanded].sort();
-  const result = await runSvnInSession(['commit', '--depth', 'empty', '-m', message, '--', ...targets], { ...session, timeoutMs: 10 * 60 * 1000 });
+
+  // Mudança de propriedade de pasta (ex.: svn:ignore) só commita com a pasta na
+  // revisão mais nova; --depth empty atualiza a pasta sem mexer nos arquivos dela.
+  for (const change of changes.filter((item) => item.propertiesOnly)) {
+    const refreshed = await runSvnInSession(['update', '--depth', 'empty', '--accept', 'postpone', '--', change.path], session);
+    const conflicted = refreshed.ok && /^.C|^C/m.test(refreshed.stdout);
+
+    if (!refreshed.ok || conflicted) {
+      return {
+        ...base,
+        ok: false,
+        message: conflicted
+          ? `As propriedades de ${change.path === '.' ? 'raiz do projeto' : change.path} mudaram no servidor também e ficaram em conflito. Resolva antes de commitar.`
+          : `Não foi possível atualizar ${change.path} antes do commit: ${refreshed.message}`,
+        detail: svnErrorDetail(refreshed.stderr),
+        errorCode: conflicted ? 'CONFLICT_SELECTED' : refreshed.errorCode
+      };
+    }
+  }
+  // --keep-changelists: um arquivo "ignorado no commit" que a pessoa decidiu publicar continua marcado como ignorado.
+  const result = await runSvnInSession(['commit', '--depth', 'empty', '--keep-changelists', '-m', message, '--', ...targets], { ...session, timeoutMs: 10 * 60 * 1000 });
 
   if (!result.ok) {
     const outOfDate = result.errorCode === 'OUT_OF_DATE';
@@ -399,5 +443,209 @@ export async function updateWorkingCopy(checkoutPath: string, options: WorkingCo
       : updated.length === 0
         ? `O checkout já estava na revisão ${revision ?? '?'}.`
         : `Atualizado para a revisão ${revision ?? '?'}: ${updated.length} arquivo(s).`
+  };
+}
+
+export interface DiscardInput extends WorkingCopyOptions {
+  checkoutPath: string;
+  paths: string[];
+  // Move um caminho para a Lixeira do sistema (no app: shell.trashItem).
+  moveToTrash: (absolutePath: string) => Promise<void>;
+}
+
+export interface DiscardResult {
+  ok: boolean;
+  message: string;
+  discarded: string[];
+  errors: string[];
+  errorCode?: 'NOTHING_SELECTED' | 'INVALID_SELECTION' | SvnErrorCode;
+}
+
+async function pathExists(target: string): Promise<boolean> {
+  try {
+    await stat(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Guarda uma cópia do conteúdo atual na Lixeira antes de reverter, como o
+// GitHub Desktop: descartar por engano tem volta.
+async function backupToTrash(absolutePath: string, moveToTrash: DiscardInput['moveToTrash']): Promise<void> {
+  if (!(await pathExists(absolutePath)) || (await isDirectory(absolutePath))) {
+    return;
+  }
+
+  const folder = await mkdtemp(path.join(os.tmpdir(), 'svnflow-descartado-'));
+  const copy = path.join(folder, path.basename(absolutePath));
+  await copyFile(absolutePath, copy);
+  await moveToTrash(copy);
+  await rm(folder, { recursive: true, force: true });
+}
+
+export async function discardChanges(input: DiscardInput): Promise<DiscardResult> {
+  const base = { discarded: [] as string[], errors: [] as string[] };
+
+  if (input.paths.length === 0) {
+    return { ...base, ok: false, message: 'Selecione pelo menos um arquivo para descartar.', errorCode: 'NOTHING_SELECTED' };
+  }
+
+  const status = await readWorkingCopyStatus(input.checkoutPath, input);
+
+  if (!status.ok) {
+    return { ...base, ok: false, message: status.message, errorCode: status.errorCode };
+  }
+
+  const byPath = new Map(status.changes.map((change) => [change.path, change]));
+  const selected = [...new Set(input.paths)].map((item) => byPath.get(item));
+
+  if (selected.some((change) => !change)) {
+    return { ...base, ok: false, message: 'A seleção mudou. Atualize a lista de alterações e tente de novo.', errorCode: 'INVALID_SELECTION' };
+  }
+
+  const session = { cwd: input.checkoutPath, configDir: input.configDir };
+
+  for (const change of selected as WorkingCopyChange[]) {
+    const absolute = path.join(input.checkoutPath, change.path);
+
+    try {
+      if (change.kind === 'unversioned') {
+        await input.moveToTrash(absolute);
+      } else {
+        if (['modified', 'replaced', 'conflicted', 'added'].includes(change.kind) && !change.propertiesOnly) {
+          await backupToTrash(absolute, input.moveToTrash);
+        }
+
+        const depth = change.propertiesOnly ? 'empty' : 'infinity';
+        const reverted = await runSvnInSession(['revert', '--depth', depth, '--', change.path], session);
+
+        if (!reverted.ok) {
+          throw new Error(`${reverted.message} ${svnErrorDetail(reverted.stderr)}`.trim());
+        }
+
+        // Arquivo adicionado volta a ser "fora do SVN" depois do revert: sai do disco (já está na Lixeira).
+        if (change.kind === 'added' && (await pathExists(absolute))) {
+          await rm(absolute, { recursive: true, force: true });
+        }
+      }
+
+      base.discarded.push(change.path);
+    } catch (error) {
+      base.errors.push(`${change.path}: ${error instanceof Error ? error.message : 'erro desconhecido'}`);
+    }
+  }
+
+  const ok = base.errors.length === 0;
+
+  return {
+    ...base,
+    ok,
+    message: ok
+      ? `${base.discarded.length} alteração(ões) descartada(s). Uma cópia do conteúdo foi para a Lixeira.`
+      : `${base.discarded.length} descartada(s), ${base.errors.length} com erro.`
+  };
+}
+
+export interface IgnoreOnCommitInput extends WorkingCopyOptions {
+  checkoutPath: string;
+  path: string;
+  // true: coloca no changelist ignore-on-commit; false: tira.
+  ignore: boolean;
+  // Aplica a todos os arquivos versionados dentro da pasta.
+  recursive?: boolean;
+}
+
+export interface SimpleResult {
+  ok: boolean;
+  message: string;
+  detail?: string;
+}
+
+function isSafeRelative(value: string): boolean {
+  return value.length > 0 && !path.isAbsolute(value) && !value.split(/[\\/]/).includes('..');
+}
+
+export async function setIgnoreOnCommit(input: IgnoreOnCommitInput): Promise<SimpleResult> {
+  if (!isSafeRelative(input.path)) {
+    return { ok: false, message: 'Caminho inválido.' };
+  }
+
+  const args = input.ignore
+    ? ['changelist', ...(input.recursive ? ['--depth', 'infinity'] : []), IGNORE_ON_COMMIT, '--', input.path]
+    : ['changelist', '--remove', ...(input.recursive ? ['--depth', 'infinity'] : []), '--', input.path];
+  const result = await runSvnInSession(args, { cwd: input.checkoutPath, configDir: input.configDir });
+
+  if (!result.ok) {
+    return { ok: false, message: result.message, detail: svnErrorDetail(result.stderr) };
+  }
+
+  const what = input.recursive ? `Arquivos de ${input.path}` : input.path;
+
+  return {
+    ok: true,
+    message: input.ignore
+      ? `${what} ficará fora do commit por padrão (ignore-on-commit). Continua no SVN.`
+      : `${what} voltou a entrar no commit normalmente.`
+  };
+}
+
+export interface SvnIgnoreInput extends WorkingCopyOptions {
+  checkoutPath: string;
+  // Item fora do SVN que será ignorado.
+  path: string;
+  // 'item': ignora o próprio arquivo ou pasta; 'extension': ignora *.ext na mesma pasta.
+  mode: 'item' | 'extension';
+}
+
+export async function addToSvnIgnore(input: SvnIgnoreInput): Promise<SimpleResult> {
+  if (!isSafeRelative(input.path)) {
+    return { ok: false, message: 'Caminho inválido.' };
+  }
+
+  const status = await readWorkingCopyStatus(input.checkoutPath, input);
+  const change = status.changes.find((item) => item.path === input.path);
+
+  if (!change || change.kind !== 'unversioned') {
+    return { ok: false, message: 'O svn:ignore só vale para arquivos e pastas que ainda não estão no SVN. Para arquivos versionados, use "Ignorar no commit".' };
+  }
+
+  const name = path.posix.basename(input.path);
+  const extension = path.posix.extname(name);
+
+  if (input.mode === 'extension' && !extension) {
+    return { ok: false, message: 'O arquivo não tem extensão.' };
+  }
+
+  const parent = path.posix.dirname(input.path);
+  const pattern = input.mode === 'extension' ? `*${extension}` : name;
+  const session = { cwd: input.checkoutPath, configDir: input.configDir };
+  const current = await runSvnInSession(['propget', 'svn:ignore', '--', parent], session);
+  // Sem a propriedade definida, o propget falha: começa de uma lista vazia.
+  const patterns = current.ok ? current.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [];
+
+  if (patterns.includes(pattern)) {
+    return { ok: true, message: `${pattern} já está no svn:ignore ${parent === '.' ? 'da raiz do projeto' : `de ${parent}`}.` };
+  }
+
+  const folder = await mkdtemp(path.join(os.tmpdir(), 'svnflow-ignore-'));
+  const file = path.join(folder, 'svn-ignore.txt');
+
+  try {
+    await writeFile(file, `${[...patterns, pattern].join('\n')}\n`, 'utf8');
+    const result = await runSvnInSession(['propset', 'svn:ignore', '-F', file, '--', parent], session);
+
+    if (!result.ok) {
+      return { ok: false, message: result.message, detail: svnErrorDetail(result.stderr) };
+    }
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+
+  const where = parent === '.' ? 'da raiz do projeto' : `de ${parent}`;
+
+  return {
+    ok: true,
+    message: `${pattern} adicionado ao svn:ignore ${where}. Commite a alteração ${where} (aparece na lista) para valer para a equipe.`
   };
 }

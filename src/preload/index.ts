@@ -34,6 +34,16 @@ const api: SvnflowDesktopApi = {
     ipcRenderer.invoke('svn:commit-selected', request),
   getIncoming: (environmentId) =>
     ipcRenderer.invoke('svn:incoming', { environmentId }),
+  discardChanges: (environmentId, paths) =>
+    ipcRenderer.invoke('svn:discard', { environmentId, paths }),
+  setIgnoreOnCommit: (environmentId, path, ignore, recursive) =>
+    ipcRenderer.invoke('svn:ignore-on-commit', { environmentId, path, ignore, recursive }),
+  addToSvnIgnore: (environmentId, path, mode) =>
+    ipcRenderer.invoke('svn:svn-ignore', { environmentId, path, mode }),
+  openInEditor: (environmentId, which, path) =>
+    ipcRenderer.invoke('shell:open-in-editor', { environmentId, which, path }),
+  showItemInFolder: (environmentId, path) =>
+    ipcRenderer.invoke('shell:show-item', { environmentId, path }),
   updateWorkingCopy: (environmentId, credentials) =>
     ipcRenderer.invoke('svn:update', { environmentId, credentials }),
   getSyncFileDiff: (environmentId, filePath) =>

@@ -1641,3 +1641,111 @@ details summary {
   color: var(--removed);
   background: var(--removed-bg);
 }
+
+/* Menu de contexto, descartar e ignorar --------------------------------- */
+
+.context-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 240px;
+  max-width: 360px;
+  padding: 4px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.context-item {
+  display: block;
+  width: 100%;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context-item:hover:not(:disabled),
+.context-item:focus-visible {
+  background: var(--accent);
+  color: var(--accent-text);
+  outline: none;
+}
+
+.context-item.danger {
+  color: var(--removed);
+}
+
+.context-item.danger:hover:not(:disabled),
+.context-item.danger:focus-visible {
+  background: var(--removed);
+  color: #ffffff;
+}
+
+.context-item:disabled {
+  opacity: 0.45;
+}
+
+.context-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1;
+}
+
+.list-toolbar .select-all {
+  flex: 1;
+  min-width: 0;
+}
+
+.button.small {
+  min-height: 22px;
+  padding: 1px 8px;
+  font-size: 12px;
+}
+
+.list-group {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.change-row.ignored-on-commit .change-path {
+  opacity: 0.65;
+}
+
+.suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.repo-search {
+  width: 240px;
+  max-width: 40%;
+  margin-left: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  font-family: var(--font);
+  outline: none;
+}
+
+.repo-search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}

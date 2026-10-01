@@ -1161,7 +1161,13 @@ interface ChangeItem {
   // Itens do checkout SVN têm caixa de seleção para o commit.
   checkable: boolean;
   selectable: boolean;
+  workingCopyKind?: string;
+  isDirectory?: boolean;
+  propertiesOnly?: boolean;
+  ignoredOnCommit?: boolean;
 }
+
+const ROOT_LABEL = '(raiz do projeto)';
 
 interface CommitDraft {
   key: string;
@@ -1182,9 +1188,13 @@ interface DesktopState {
   // Caminhos marcados para o commit e caminhos já vistos (para aplicar o padrão só aos novos).
   checked: Set<string>;
   knownPaths: Set<string>;
+  // Caminhos que já estavam em "ignorar no commit" na última leitura.
+  knownIgnored: Set<string>;
   commitDraft?: CommitDraft;
   banner?: { tone: 'success' | 'warning' | 'error'; html: string };
   requestId: number;
+  // Projeto a que pertencem os dados carregados (histórico, seleção, novidades).
+  loadedEnvironmentId?: string;
 }
 
 interface HistoryLogState {
@@ -1203,7 +1213,7 @@ function emptyHistoryLog(): HistoryLogState {
   return { loaded: false, loading: false, entries: [], hasMore: false };
 }
 
-const desktop: DesktopState = { tab: 'changes', requestId: 0, checked: new Set(), knownPaths: new Set(), log: emptyHistoryLog() };
+const desktop: DesktopState = { tab: 'changes', requestId: 0, checked: new Set(), knownPaths: new Set(), knownIgnored: new Set(), log: emptyHistoryLog() };
 
 const CHANGE_ICONS: Record<ChangeKind, string> = { added: '+', modified: '•', deleted: '−', conflicted: '!' };
 
@@ -1238,12 +1248,17 @@ function currentChangeItems(): ChangeItem[] {
 
   return (desktop.workingCopy?.changes ?? []).map((change) => {
     const mapped = WORKING_COPY_LABELS[change.kind] ?? { kind: 'modified' as ChangeKind, label: change.kind };
+    const label = change.propertiesOnly ? 'Propriedades alteradas (ex.: svn:ignore)' : change.isDirectory ? `${mapped.label} (pasta)` : mapped.label;
     return {
       path: change.path,
       kind: mapped.kind,
-      label: change.isDirectory ? `${mapped.label} (pasta)` : mapped.label,
+      label: change.ignoredOnCommit ? `${label} · ignorado no commit` : label,
       checkable: true,
-      selectable: change.selectable
+      selectable: change.selectable,
+      workingCopyKind: change.kind,
+      isDirectory: change.isDirectory,
+      propertiesOnly: change.propertiesOnly,
+      ignoredOnCommit: change.ignoredOnCommit
     };
   });
 }
@@ -1269,7 +1284,14 @@ function reconcileSelection(): void {
     if (!change.selectable) {
       desktop.checked.delete(change.path);
     }
+
+    // Acabou de entrar em "ignorar no commit": sai da seleção.
+    if (change.ignoredOnCommit && !desktop.knownIgnored.has(change.path)) {
+      desktop.checked.delete(change.path);
+    }
   }
+
+  desktop.knownIgnored = new Set(changes.filter((change) => change.ignoredOnCommit).map((change) => change.path));
 
   for (const known of [...desktop.knownPaths]) {
     if (!present.has(known)) {
@@ -1282,6 +1304,7 @@ function reconcileSelection(): void {
 function resetSelection(): void {
   desktop.checked = new Set();
   desktop.knownPaths = new Set();
+  desktop.knownIgnored = new Set();
 }
 
 function firstLine(message: string): string {
@@ -1308,11 +1331,17 @@ async function loadHistory(more = false): Promise<void> {
   log.loading = true;
   renderSidebar();
 
+  const environmentId = state.selectedEnvironmentId;
   const last = log.entries[log.entries.length - 1];
   const before = more && last ? String(Number(last.revision) - 1) : undefined;
   const page = await withCredentials(desktop.workingCopy?.url ?? '', (credentials) =>
-    api().readSvnLog({ environmentId: state.selectedEnvironmentId, before, credentials })
+    api().readSvnLog({ environmentId, before, credentials })
   );
+
+  // Resposta de um projeto que já não está aberto: descarta.
+  if (state.selectedEnvironmentId !== environmentId || desktop.log !== log) {
+    return;
+  }
 
   log.loading = false;
   log.loaded = true;
@@ -1412,13 +1441,13 @@ function renderToolbar(): void {
 function renderChangeRow(item: ChangeItem): string {
   const slash = item.path.lastIndexOf('/');
   const directory = slash >= 0 ? item.path.slice(0, slash + 1) : '';
-  const fileName = item.path.slice(slash + 1);
+  const fileName = item.path === '.' ? ROOT_LABEL : item.path.slice(slash + 1);
   const checkbox = item.checkable
     ? `<input type="checkbox" class="change-check" data-check-path="${escapeHtml(item.path)}" ${desktop.checked.has(item.path) ? 'checked' : ''} ${item.selectable ? '' : 'disabled'} aria-label="Incluir ${escapeHtml(item.path)} no commit" tabindex="-1" />`
     : '';
 
   return `
-    <div class="change-row" role="option" tabindex="0" data-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedPath}" title="${escapeHtml(`${item.label}: ${item.path}`)}">
+    <div class="change-row${item.ignoredOnCommit ? ' ignored-on-commit' : ''}" role="option" tabindex="0" data-path="${escapeHtml(item.path)}" aria-selected="${item.path === desktop.selectedPath}" title="${escapeHtml(`${item.label}: ${item.path === '.' ? ROOT_LABEL : item.path}`)}">
       ${checkbox}
       <span class="change-path"><bdi><span class="change-dir">${escapeHtml(directory)}</span>${escapeHtml(fileName)}</bdi></span>
       <span class="change-icon" data-kind="${item.kind}" aria-label="${escapeHtml(item.label)}">${CHANGE_ICONS[item.kind]}</span>
@@ -1482,14 +1511,22 @@ function renderSidebar(): void {
     const checked = checkedItems().length;
     const allChecked = selectable.length > 0 && checked === selectable.length;
     header = `
-      <label class="list-header select-all">
-        <input type="checkbox" data-role="select-all" ${allChecked ? 'checked' : ''} ${selectable.length === 0 ? 'disabled' : ''} />
-        <span>${items.length} alteração(ões) · ${checked} selecionada(s)</span>
-      </label>
+      <div class="list-header list-toolbar">
+        <label class="select-all">
+          <input type="checkbox" data-role="select-all" ${allChecked ? 'checked' : ''} ${selectable.length === 0 ? 'disabled' : ''} />
+          <span>${items.length} alteração(ões) · ${checked} selecionada(s)</span>
+        </label>
+        <button type="button" class="button small danger" data-role="discard-selected" ${checked === 0 ? 'disabled' : ''} title="Descartar as alterações marcadas">Descartar</button>
+      </div>
     `;
   }
 
-  list.innerHTML = `${header}${items.map(renderChangeRow).join('')}`;
+  const regular = items.filter((item) => !item.ignoredOnCommit);
+  const ignored = items.filter((item) => item.ignoredOnCommit);
+
+  list.innerHTML = `${header}${regular.map(renderChangeRow).join('')}${ignored.length > 0
+    ? `<div class="list-group" title="Arquivos no changelist ignore-on-commit: continuam no SVN, mas vêm desmarcados.">Ignorados no commit (${ignored.length})</div>${ignored.map(renderChangeRow).join('')}`
+    : ''}`;
 
   const selectAll = query<HTMLInputElement>('[data-role="select-all"]', list);
   if (selectAll && checkedItems().length > 0 && !selectAll.checked) {
@@ -1508,6 +1545,139 @@ function toggleChecked(filePath: string, checked?: boolean): void {
 
   renderSidebar();
   renderCommitBox();
+}
+
+function displayPath(filePath: string): string {
+  return filePath === '.' ? ROOT_LABEL : filePath;
+}
+
+async function discardItems(items: ChangeItem[]): Promise<void> {
+  if (items.length === 0) {
+    return;
+  }
+
+  const created = items.filter((item) => item.workingCopyKind === 'unversioned' || item.workingCopyKind === 'added').length;
+  const preview = items.slice(0, 8).map((item) => `${CHANGE_ICONS[item.kind]} ${displayPath(item.path)}`).join('\n');
+  const confirmed = await confirmModal({
+    title: items.length === 1 ? 'Descartar mudanças' : `Descartar ${items.length} mudanças`,
+    message: `As alterações serão desfeitas e o arquivo voltará ao estado do SVN.${created > 0 ? ' Arquivos novos serão removidos.' : ''} Uma cópia do conteúdo atual vai para a Lixeira, caso você precise recuperar.`,
+    detail: `${preview}${items.length > 8 ? `\n… e mais ${items.length - 8}` : ''}`,
+    confirmLabel: 'Descartar',
+    danger: true
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  const result = await api().discardChanges(state.selectedEnvironmentId, items.map((item) => item.path));
+  desktop.banner = {
+    tone: result.ok ? 'success' : 'error',
+    html: `<p><strong>${escapeHtml(result.message)}</strong></p>${result.errors.length > 0 ? `<ul>${result.errors.map((error) => `<li>${escapeHtml(error)}</li>`).join('')}</ul>` : ''}`
+  };
+  desktop.selectedPath = undefined;
+  setStatusMessage(result.message);
+  await loadDesktop({ quiet: true });
+}
+
+async function runWorkingCopyAction(action: () => Promise<{ ok: boolean; message: string; detail?: string }>): Promise<void> {
+  const result = await action();
+  desktop.banner = {
+    tone: result.ok ? 'success' : 'error',
+    html: `<p><strong>${escapeHtml(result.message)}</strong></p>${result.detail ? `<pre class="review-markdown">${escapeHtml(result.detail)}</pre>` : ''}`
+  };
+  setStatusMessage(result.message);
+  await loadDesktop({ quiet: true });
+}
+
+type ContextMenuEntry = 'separator' | { label: string; action: () => void | Promise<void>; danger?: boolean; disabled?: boolean; title?: string };
+
+function closeContextMenu(): void {
+  document.querySelector('.context-menu')?.remove();
+}
+
+function openContextMenu(x: number, y: number, entries: ContextMenuEntry[]): void {
+  closeContextMenu();
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = entries.map((entry, index) => entry === 'separator'
+    ? '<div class="context-separator" role="separator"></div>'
+    : `<button type="button" role="menuitem" class="context-item${entry.danger ? ' danger' : ''}" data-index="${index}" ${entry.disabled ? 'disabled' : ''} title="${escapeHtml(entry.title ?? '')}">${escapeHtml(entry.label)}</button>`
+  ).join('');
+  document.body.appendChild(menu);
+
+  // Mantém o menu dentro da janela.
+  const bounds = menu.getBoundingClientRect();
+  menu.style.left = `${Math.min(x, window.innerWidth - bounds.width - 4)}px`;
+  menu.style.top = `${Math.min(y, window.innerHeight - bounds.height - 4)}px`;
+
+  menu.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-index]');
+    const entry = button ? entries[Number(button.dataset.index)] : undefined;
+
+    if (entry && entry !== 'separator' && !entry.disabled) {
+      closeContextMenu();
+      void entry.action();
+    }
+  });
+  query<HTMLButtonElement>('.context-item:not([disabled])', menu)?.focus();
+}
+
+function changeContextEntries(item: ChangeItem): ContextMenuEntry[] {
+  const name = item.path === '.' ? ROOT_LABEL : item.path.slice(item.path.lastIndexOf('/') + 1);
+  const parent = item.path.includes('/') ? item.path.slice(0, item.path.lastIndexOf('/')) : '';
+  const extension = !item.isDirectory && name.includes('.') && !name.startsWith('.') ? name.slice(name.lastIndexOf('.')) : '';
+  const onDisk = item.workingCopyKind !== 'missing' && item.workingCopyKind !== 'deleted';
+  const selected = checkedItems();
+  const entries: ContextMenuEntry[] = [
+    { label: 'Descartar mudanças…', danger: true, action: () => discardItems([item]) }
+  ];
+
+  if (selected.length > 1 && selected.some((checked) => checked.path === item.path)) {
+    entries.push({ label: `Descartar ${selected.length} mudanças selecionadas…`, danger: true, action: () => discardItems(selected) });
+  }
+
+  entries.push(
+    'separator',
+    { label: 'Abrir no VS Code', disabled: !onDisk, action: () => openInEditor('svn', item.path === '.' ? undefined : item.path) },
+    { label: 'Mostrar na pasta', disabled: !onDisk, action: () => api().showItemInFolder(state.selectedEnvironmentId, item.path) },
+    'separator'
+  );
+
+  if (item.workingCopyKind === 'unversioned') {
+    entries.push({
+      label: `Ignorar "${name}" (svn:ignore)`,
+      action: () => runWorkingCopyAction(() => api().addToSvnIgnore(state.selectedEnvironmentId, item.path, 'item'))
+    });
+
+    if (extension) {
+      entries.push({
+        label: `Ignorar arquivos *${extension} nesta pasta`,
+        action: () => runWorkingCopyAction(() => api().addToSvnIgnore(state.selectedEnvironmentId, item.path, 'extension'))
+      });
+    }
+  } else if (!item.propertiesOnly) {
+    entries.push(item.ignoredOnCommit
+      ? { label: 'Voltar a incluir no commit', action: () => runWorkingCopyAction(() => api().setIgnoreOnCommit(state.selectedEnvironmentId, item.path, false)) }
+      : {
+          label: 'Ignorar no commit',
+          title: 'O arquivo continua no SVN, mas fica desmarcado e separado na lista de commit (ignore-on-commit).',
+          action: () => runWorkingCopyAction(() => api().setIgnoreOnCommit(state.selectedEnvironmentId, item.path, true))
+        });
+
+    if (parent) {
+      entries.push(item.ignoredOnCommit
+        ? { label: `Voltar a incluir a pasta "${parent}"`, action: () => runWorkingCopyAction(() => api().setIgnoreOnCommit(state.selectedEnvironmentId, parent, false, true)) }
+        : {
+            label: `Ignorar no commit a pasta "${parent}"`,
+            title: 'Todos os arquivos versionados da pasta ficam desmarcados por padrão no commit.',
+            action: () => runWorkingCopyAction(() => api().setIgnoreOnCommit(state.selectedEnvironmentId, parent, true, true))
+          });
+    }
+  }
+
+  return entries;
 }
 
 function selectSidebarItem(element: HTMLElement): void {
@@ -1539,6 +1709,11 @@ function bindSidebar(): void {
       return;
     }
 
+    if (target.matches('[data-role="discard-selected"]')) {
+      void discardItems(checkedItems());
+      return;
+    }
+
     if (target.matches('[data-role="load-more"]')) {
       void loadHistory(true);
       return;
@@ -1561,8 +1736,32 @@ function bindSidebar(): void {
     }
   });
 
+  list?.addEventListener('contextmenu', (event) => {
+    const row = (event.target as HTMLElement).closest<HTMLElement>('.change-row');
+    const item = row ? currentChangeItems().find((candidate) => candidate.path === row.dataset.path) : undefined;
+
+    if (!row || !item?.checkable) {
+      return;
+    }
+
+    event.preventDefault();
+    selectSidebarItem(row);
+    openContextMenu(event.clientX, event.clientY, changeContextEntries(item));
+  });
+
   list?.addEventListener('keydown', (event) => {
     const focused = document.activeElement as HTMLElement | null;
+
+    // Shift+F10 ou tecla de menu abrem o menu de contexto pelo teclado.
+    if ((event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) && focused?.matches('.change-row')) {
+      const item = currentChangeItems().find((candidate) => candidate.path === focused.dataset.path);
+      if (item?.checkable) {
+        event.preventDefault();
+        const bounds = focused.getBoundingClientRect();
+        openContextMenu(bounds.left + 24, bounds.bottom, changeContextEntries(item));
+      }
+      return;
+    }
 
     // Espaço marca ou desmarca o arquivo em foco, como no GitHub Desktop.
     if (event.key === ' ' && focused?.matches('.change-row')) {
@@ -1793,19 +1992,35 @@ function blankSlate(title: string, message: string, extra = ''): string {
   return `<div class="blank-slate"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p>${extra}</div>`;
 }
 
-function suggestion(title: string, description: string, role: string, label: string): string {
+function suggestion(title: string, description: string, role: string, label: string, extra?: { role: string; label: string }): string {
   return `
     <div class="suggestion">
       <span class="suggestion-text"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span></span>
-      <button type="button" class="button" data-role="${role}">${escapeHtml(label)}</button>
+      <span class="suggestion-actions">
+        ${extra ? `<button type="button" class="button" data-role="${extra.role}">${escapeHtml(extra.label)}</button>` : ''}
+        <button type="button" class="button" data-role="${role}">${escapeHtml(label)}</button>
+      </span>
     </div>
   `;
+}
+
+async function openInEditor(which: 'git' | 'svn', filePath?: string): Promise<void> {
+  const result = await api().openInEditor(state.selectedEnvironmentId, which, filePath);
+
+  if (!result.ok) {
+    desktop.banner = { tone: 'error', html: `<p><strong>${escapeHtml(result.message)}</strong></p>` };
+    void renderDetail();
+  }
+
+  setStatusMessage(result.message);
 }
 
 function bindDetailActions(detail: HTMLElement): void {
   bindClick(detail, '[data-role="add-environment"]', () => openAddEnvironmentModal());
   bindClick(detail, '[data-role="open-svn"]', () => api().openEnvironmentFolder(state.selectedEnvironmentId, 'svn'));
   bindClick(detail, '[data-role="open-git"]', () => api().openEnvironmentFolder(state.selectedEnvironmentId, 'git'));
+  bindClick(detail, '[data-role="code-svn"]', () => openInEditor('svn'));
+  bindClick(detail, '[data-role="code-git"]', () => openInEditor('git'));
   bindClick(detail, '[data-role="refresh-detail"]', () => loadDesktop());
   bindClick(detail, '[data-role="open-advanced"]', () => showAdvancedView('environment'));
   bindClick(detail, '[data-role="link-git"]', () => openLinkGitModal());
@@ -1973,7 +2188,7 @@ async function renderDetail(): Promise<void> {
         desktop.screen?.message ?? 'Não foi possível ler o projeto.',
         `<div class="banner" data-tone="error"><ul>${(plan?.blockers ?? []).map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join('')}</ul></div>
          <div class="suggestions">
-           ${suggestion('Abrir checkout SVN', 'Resolva conflitos ou problemas direto na pasta.', 'open-svn', 'Abrir pasta')}
+           ${suggestion('Abrir checkout SVN', 'Resolva conflitos ou problemas direto na pasta.', 'open-svn', 'Abrir pasta', { role: 'code-svn', label: 'Abrir no VS Code' })}
            ${suggestion('Revisar projeto', 'Confira os caminhos e valide o projeto no modo avançado.', 'open-advanced', 'Abrir')}
          </div>`
       )}
@@ -2012,9 +2227,9 @@ async function renderDetail(): Promise<void> {
       title,
       message,
       `<div class="suggestions">
-        ${suggestion('Abrir checkout SVN', svnPath, 'open-svn', 'Abrir pasta')}
+        ${suggestion('Abrir checkout SVN', svnPath, 'open-svn', 'Abrir pasta', { role: 'code-svn', label: 'Abrir no VS Code' })}
         ${gitLinked
-          ? suggestion('Abrir repositório Git', plan?.gitWorkspacePath ?? '', 'open-git', 'Abrir pasta')
+          ? suggestion('Abrir repositório Git', plan?.gitWorkspacePath ?? '', 'open-git', 'Abrir pasta', { role: 'code-git', label: 'Abrir no VS Code' })
           : suggestion('Vincular repositório Git', 'Sincronize o último commit de um repositório Git com este checkout.', 'link-git', 'Vincular…')}
         ${items.length === 0 ? suggestion('Verificar novamente', 'Compare de novo depois de editar arquivos ou fazer um commit no Git.', 'refresh-detail', 'Verificar') : ''}
       </div>`
@@ -2035,7 +2250,6 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
     setStatusMessage('Verificando alterações...');
   }
   const refresh = query<HTMLButtonElement>('[data-role="refresh"]');
-  const previousEnvironment = state.selectedEnvironmentId;
 
   if (refresh) {
     refresh.disabled = true;
@@ -2045,10 +2259,17 @@ async function loadDesktop(options: { quiet?: boolean } = {}): Promise<void> {
     desktop.environments = await api().getEnvironmentScreenState(state.selectedEnvironmentId);
     state.selectedEnvironmentId = desktop.environments.selectedEnvironmentId;
 
-    if (previousEnvironment !== state.selectedEnvironmentId) {
+    // Compara com o projeto dos dados em tela: o menu troca state.selectedEnvironmentId
+    // antes de chamar loadDesktop, então comparar com ele não detectava a troca.
+    if (desktop.loadedEnvironmentId !== state.selectedEnvironmentId) {
       resetSelection();
       desktop.log = emptyHistoryLog();
       desktop.selectedRevision = undefined;
+      desktop.selectedLogPath = undefined;
+      desktop.selectedPath = undefined;
+      desktop.incoming = undefined;
+      desktop.commitDraft = undefined;
+      desktop.loadedEnvironmentId = state.selectedEnvironmentId;
     }
 
     const hasEnvironment = desktop.environments.items.length > 0;
@@ -2572,13 +2793,15 @@ interface ReposViewState {
   currentUrl?: string;
   listing?: RemoteListing;
   loading: boolean;
+  // Texto da busca na pasta atual (filtra por nome ou, no histórico, por mensagem e autor).
+  search: string;
   // Histórico remoto da pasta atual, sem precisar de checkout.
   showHistory: boolean;
   history?: { url: string; entries: SvnXmlLogEntry[]; hasMore: boolean; projectPath?: string; error?: string; loading: boolean };
   expandedRevision?: string;
 }
 
-const repos: ReposViewState = { loading: false, showHistory: false };
+const repos: ReposViewState = { loading: false, showHistory: false, search: '' };
 
 function svnUrlBase(url: string): string {
   return url.trim().replace(/\/+$/, '');
@@ -2738,6 +2961,7 @@ function renderRepoBrowser(): void {
   const header = `
     <div class="diff-header repo-header">
       <span class="breadcrumb">${breadcrumb()}</span>
+      <input class="input repo-search" type="search" data-role="repo-search" placeholder="${repos.showHistory ? 'Buscar no histórico' : 'Buscar nesta pasta'}" value="${escapeHtml(repos.search)}" aria-label="Buscar" />
       <span class="diff-header-source">
         <button type="button" class="button" data-role="toggle-remote-history">${repos.showHistory ? 'Ver arquivos' : 'Ver histórico'}</button>
         <button type="button" class="button" data-role="checkout-current">Fazer checkout desta pasta…</button>
@@ -2757,7 +2981,7 @@ function renderRepoBrowser(): void {
       ? `<div class="banner" data-tone="success"><p>Este projeto segue o padrão <strong>trunk/branches/tags</strong>. O desenvolvimento principal fica em <strong>trunk</strong>.</p><p><button type="button" class="button primary" data-role="checkout-trunk">Fazer checkout do trunk…</button></p></div>`
       : '';
     const rows = listing.entries.map((entry) => `
-      <tr>
+      <tr data-filter="${escapeHtml(entry.name.toLowerCase())}">
         <td class="repo-name">
           ${entry.kind === 'dir'
             ? `<button type="button" class="link-button" data-open-dir="${escapeHtml(entry.url)}"><span class="repo-icon" aria-hidden="true">📁</span>${escapeHtml(entry.name)}</button>`
@@ -2778,7 +3002,14 @@ function renderRepoBrowser(): void {
     `;
   }
 
-  detail.innerHTML = `${header}<div class="repo-body">${body}</div>`;
+  detail.innerHTML = `${header}<div class="repo-body">${body}<p class="list-empty" data-role="repo-no-results" hidden>Nada encontrado para a busca.</p></div>`;
+
+  const search = query<HTMLInputElement>('[data-role="repo-search"]', detail)!;
+  search.addEventListener('input', () => {
+    repos.search = search.value;
+    applyRepoSearch(detail);
+  });
+  applyRepoSearch(detail);
 
   bindClick(detail, '[data-crumb]', (button) => browseRemote(button.dataset.crumb ?? ''));
   bindClick(detail, '[data-open-dir]', (button) => browseRemote(button.dataset.openDir ?? ''));
@@ -2818,7 +3049,7 @@ function renderRemoteHistory(): string {
     const expanded = repos.expandedRevision === entry.revision;
     const projectPath = history.projectPath;
     const files = expanded
-      ? `<tr class="remote-history-detail"><td colspan="4">
+      ? `<tr class="remote-history-detail" data-detail-of="${escapeHtml(entry.revision)}"><td colspan="4">
           ${entry.message.includes('\n') ? `<p class="commit-message-view">${escapeHtml(entry.message.split('\n').slice(1).join('\n').trim())}</p>` : ''}
           <ul class="path-list">${entry.paths.filter((item) => item.kind !== 'dir' || item.action === 'D').map((item) => {
             const kind = LOG_ACTION_KIND[item.action] ?? 'modified';
@@ -2829,7 +3060,7 @@ function renderRemoteHistory(): string {
       : '';
 
     return `
-      <tr>
+      <tr data-filter="${escapeHtml(`${entry.message} ${entry.author ?? ''} r${entry.revision}`.toLowerCase())}">
         <td><button type="button" class="link-button" data-expand-revision="${escapeHtml(entry.revision)}" aria-expanded="${expanded}">${escapeHtml(firstLine(entry.message) || '(sem mensagem)')}</button></td>
         <td>r${escapeHtml(entry.revision)}</td>
         <td>${escapeHtml(entry.author ?? '')}</td>
@@ -2875,6 +3106,29 @@ async function loadRemoteHistory(more: boolean): Promise<void> {
   renderRepoBrowser();
 }
 
+// Filtra as linhas já desenhadas, sem redesenhar (o campo de busca não perde o foco).
+function applyRepoSearch(detail: HTMLElement): void {
+  const term = repos.search.trim().toLowerCase();
+  let visible = 0;
+  let total = 0;
+
+  detail.querySelectorAll<HTMLElement>('tr[data-filter]').forEach((row) => {
+    const match = !term || (row.dataset.filter ?? '').includes(term);
+    row.hidden = !match;
+    total += 1;
+    visible += match ? 1 : 0;
+    const detailRow = row.nextElementSibling as HTMLElement | null;
+    if (detailRow?.matches('.remote-history-detail')) {
+      detailRow.hidden = !match;
+    }
+  });
+
+  const empty = query<HTMLElement>('[data-role="repo-no-results"]', detail);
+  if (empty) {
+    empty.hidden = !(term && total > 0 && visible === 0);
+  }
+}
+
 async function browseRemote(url: string): Promise<void> {
   if (!url) {
     return;
@@ -2884,6 +3138,7 @@ async function browseRemote(url: string): Promise<void> {
   repos.loading = true;
   repos.showHistory = false;
   repos.expandedRevision = undefined;
+  repos.search = '';
   renderRepoRoots();
   renderRepoBrowser();
   setStatusMessage(`Listando ${repos.currentUrl}...`);
@@ -2963,9 +3218,6 @@ function openCheckoutModal(url: string): void {
         <label class="modal-field">Nome do projeto
           <input class="input" name="name" type="text" value="${escapeHtml(name)}" />
         </label>
-        <label class="modal-field"><span>Revisão <small>(opcional)</small></span>
-          <input class="input" name="revision" type="text" placeholder="Mais recente (HEAD)" />
-        </label>
         <p class="checkout-progress" data-role="checkout-progress" hidden></p>
         <p class="modal-error" data-role="checkout-error" hidden></p>
       </div>
@@ -3016,7 +3268,6 @@ function openCheckoutModal(url: string): void {
           operationId,
           url,
           destination: input('destination').value.trim(),
-          revision: input('revision').value.trim() || undefined,
           name: input('name').value.trim() || undefined,
           credentials
         });
@@ -3147,8 +3398,16 @@ function bindDesktopShell(): void {
     }
   });
 
+  document.addEventListener('mousedown', (event) => {
+    if (!(event.target as HTMLElement).closest('.context-menu')) {
+      closeContextMenu();
+    }
+  });
+  window.addEventListener('blur', closeContextMenu);
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+      closeContextMenu();
       closeMenus();
       closeActiveModal?.();
     }

@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell, type IpcMainInvokeEvent, type OpenDialogOptions } from 'electron';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,7 +31,7 @@ import type {
 } from '../shared/ipc-types.js';
 import { isAppTheme, isSvnUrl, readAppSettings, updateAppSettings, type AppTheme, type RepositoryRoot } from './commands/app-settings.js';
 import { checkoutProject } from './commands/svn-checkout.js';
-import { commitSelected, countIncoming, readWorkingCopyDiff, readWorkingCopyStatus, updateWorkingCopy, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
+import { addToSvnIgnore, commitSelected, countIncoming, discardChanges, readWorkingCopyDiff, readWorkingCopyStatus, setIgnoreOnCommit, updateWorkingCopy, type DiscardResult, type SimpleResult, type CommitSelectedResult, type IncomingResult, type UpdateResult, type WorkingCopyStatus } from './commands/svn-working-copy.js';
 import type { SvnCredentials } from './commands/svn-client.js';
 import { listRemote, type RemoteListing } from './commands/svn-repository-browser.js';
 import { validateCommitPreConditions } from './commands/commit-validator.js';
@@ -672,6 +673,31 @@ function isSafeRelativePath(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && !path.isAbsolute(value) && !value.split(/[\\/]/).includes('..');
 }
 
+// Abre pastas e arquivos no VS Code (ou VSCodium) pelo comando de linha de comando.
+function openInEditor(targets: string[]): Promise<SimpleResult> {
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+
+  const tryCommand = (commands: string[]): Promise<SimpleResult> => {
+    const [command, ...rest] = commands;
+
+    if (!command) {
+      return Promise.resolve({ ok: false, message: 'VS Code não encontrado. Instale o VS Code e confira se o comando "code" funciona no terminal.' });
+    }
+
+    return new Promise((resolve) => {
+      const child = spawn(command, targets, { detached: true, stdio: 'ignore', env });
+      child.once('error', () => resolve(tryCommand(rest)));
+      child.once('spawn', () => {
+        child.unref();
+        resolve({ ok: true, message: 'Aberto no VS Code.' });
+      });
+    });
+  };
+
+  return tryCommand(['code', 'codium']);
+}
+
 function sanitizeCredentials(value: unknown): SvnCredentials | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
@@ -768,6 +794,60 @@ function registerIpcHandlers(): void {
     }
 
     return updateWorkingCopy(selected.svnCheckoutPath, { credentials: sanitizeCredentials(payload?.credentials) });
+  });
+
+  ipcMain.handle('svn:discard', async (_event, payload: { environmentId?: string; paths: string[] }): Promise<DiscardResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+    const paths = Array.isArray(payload?.paths) ? payload.paths.filter(isSafeRelativePath) : [];
+
+    if (!selected) {
+      return { ok: false, message: 'Nenhum projeto selecionado.', discarded: [], errors: [] };
+    }
+
+    return discardChanges({ checkoutPath: selected.svnCheckoutPath, paths, moveToTrash: (target) => shell.trashItem(target) });
+  });
+
+  ipcMain.handle('svn:ignore-on-commit', async (_event, payload: { environmentId?: string; path: string; ignore: boolean; recursive?: boolean }): Promise<SimpleResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected || !isSafeRelativePath(payload?.path)) {
+      return { ok: false, message: 'Projeto ou caminho inválidos.' };
+    }
+
+    return setIgnoreOnCommit({ checkoutPath: selected.svnCheckoutPath, path: payload.path, ignore: payload.ignore === true, recursive: payload.recursive === true });
+  });
+
+  ipcMain.handle('svn:svn-ignore', async (_event, payload: { environmentId?: string; path: string; mode: 'item' | 'extension' }): Promise<SimpleResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (!selected || !isSafeRelativePath(payload?.path)) {
+      return { ok: false, message: 'Projeto ou caminho inválidos.' };
+    }
+
+    return addToSvnIgnore({ checkoutPath: selected.svnCheckoutPath, path: payload.path, mode: payload.mode === 'extension' ? 'extension' : 'item' });
+  });
+
+  ipcMain.handle('shell:open-in-editor', async (_event, payload: { environmentId?: string; which: 'git' | 'svn'; path?: string }): Promise<SimpleResult> => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+    const folder = payload?.which === 'git' ? selected?.gitWorkspacePath : selected?.svnCheckoutPath;
+
+    if (!folder) {
+      return { ok: false, message: 'Pasta do projeto não encontrada.' };
+    }
+
+    if (payload.path !== undefined && !isSafeRelativePath(payload.path)) {
+      return { ok: false, message: 'Caminho inválido.' };
+    }
+
+    return openInEditor(payload.path ? [folder, path.join(folder, payload.path)] : [folder]);
+  });
+
+  ipcMain.handle('shell:show-item', async (_event, payload: { environmentId?: string; path: string }) => {
+    const selected = await resolveSelectedEnvironmentById(payload?.environmentId);
+
+    if (selected && isSafeRelativePath(payload?.path)) {
+      shell.showItemInFolder(path.join(selected.svnCheckoutPath, payload.path));
+    }
   });
 
   ipcMain.handle('svn:commit-selected', async (_event, payload: CommitSelectedRequest): Promise<CommitSelectedResult> =>
